@@ -93,4 +93,23 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
     }
+
+    @Test
+    void legacyAuthAlias_shouldSupportLogin() throws Exception {
+        AuthLoginRequest request = AuthLoginRequest.builder()
+                .email("daniel@example.com")
+                .password("secret123")
+                .build();
+        when(authService.login(any(AuthLoginRequest.class))).thenReturn(AuthTokenResponse.builder()
+                .accessToken("access-token")
+                .refreshToken("refresh-token")
+                .tokenType("Bearer")
+                .build());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"));
+    }
 }
