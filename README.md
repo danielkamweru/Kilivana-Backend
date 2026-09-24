@@ -75,6 +75,19 @@ API docs JSON is available at:
 - Local: http://localhost:8080/api-docs
 - Public ngrok: https://either-juvenile-progeny.ngrok-free.dev/api-docs
 
+## API Contract Coverage
+
+The backend keeps the existing `/api/v1/ecommerce/...` and admin routes and also exposes the documented canonical routes, including:
+
+- Authentication: register, login, logout, refresh, password recovery/reset, and current-user lookup
+- Users and profiles: user lookup, own-profile update, addresses, and farmer, buyer, supplier, inspector, and driver profile CRUD
+- Marketplace: products, categories, seller products, cart, checkout, orders, payments, and refunds
+- Operations: inspections, notifications, logistics assignment/status, tracking locations, and proof of delivery
+
+Profile and business records preserve the existing scalar-ID relationship model. Each profile has a unique `userId`, products retain `sellerId` and `categoryId`, orders retain `buyerId` and `addressId`, and logistics records retain `orderId` and `driverId`. No existing entity package or table structure was moved.
+
+The current development authentication service returns demo access/refresh tokens. Production deployment still requires JWT or secure session-token storage, revocation, and role-based authorization instead of the development-open security configuration.
+
 ## Security and CORS
 
 The application is configured with Spring Security so the main public routes remain open while other endpoints stay protected. The following endpoints are allowed publicly:
