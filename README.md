@@ -66,54 +66,82 @@ The backend will run on:
 
 Swagger UI is available at:
 
-- http://localhost:8080/swagger-ui/index.html
-- http://localhost:8080/swagger-ui.html
+- Local: http://localhost:8080/swagger-ui/index.html
+- Local fallback: http://localhost:8080/swagger-ui.html
+- Public ngrok: https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
 
 API docs JSON is available at:
 
-- http://localhost:8080/api-docs
+- Local: http://localhost:8080/api-docs
+- Public ngrok: https://either-juvenile-progeny.ngrok-free.dev/api-docs
 
 ## Security and CORS
 
-The project is configured to allow public access to Swagger, actuator, and API endpoints while keeping other routes protected by Spring Security.
+The application is configured with Spring Security so the main public routes remain open while other endpoints stay protected. The following endpoints are allowed publicly:
 
-CORS is enabled for local frontend development and ngrok origins such as:
+- `/api/v1/**`
+- `/swagger-ui/**`
+- `/swagger-ui.html`
+- `/api-docs/**`
+- `/actuator/**`
+
+CORS is enabled for local frontend development and ngrok origins, including:
 
 - http://localhost:3000
 - http://localhost:5173
+- http://localhost:8080
 - https://*.ngrok-free.dev
 - https://*.ngrok.app
 
 ## Ngrok Public Access
 
-To expose the app publicly:
+To expose the app publicly, start ngrok in the terminal:
 
 ```bash
 ngrok http 8080
 ```
 
-Then use the generated public URL, for example:
+The working public Swagger route is:
 
-- https://your-random-domain.ngrok-free.dev
+- https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
 
-Swagger UI through ngrok:
+The working health route is:
 
-- https://your-random-domain.ngrok-free.dev/swagger-ui/index.html
+- https://either-juvenile-progeny.ngrok-free.dev/actuator/health
 
-If you see a browser warning from ngrok, add this header in the request:
+If you see a browser warning or 403 page from ngrok, add this header in the browser request or API client:
 
 ```http
 ngrok-skip-browser-warning: true
 ```
 
-This is a browser-side warning from ngrok, not a backend failure.
+This is a browser-side warning from ngrok and not an application error.
+
+## Development Notes
+
+### Local startup sequence
+
+1. Make sure PostgreSQL is running.
+2. Confirm the `kilivana` database exists.
+3. Confirm the `kilivana_user` role exists with the correct password.
+4. Start the Spring Boot app.
+5. Open Swagger or health endpoints in the browser.
+
+### Common checks
+
+```bash
+pg_isready -h localhost -p 5432
+psql -h localhost -p 5432 -U kilivana_user -d kilivana -c "select 1;"
+curl http://localhost:8080/actuator/health
+```
 
 ## Useful Commands
 
 ```bash
+mvn clean install
+mvn spring-boot:run
 mvn test
 mvn clean package
-./mvnw spring-boot:run
 ```
 
 ## Git Convention
@@ -125,7 +153,7 @@ This repository follows conventional commits for alignment and readability, for 
 - `docs: add project README`
 - `chore: update configuration`
 
-The project currently stays well under the recommended limit of 20 commits while keeping a clean, readable history.
+The project stays well under the recommended limit of 20 commits while keeping a clear and consistent history.
 
 ## License
 
