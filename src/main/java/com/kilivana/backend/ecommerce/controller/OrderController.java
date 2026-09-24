@@ -36,6 +36,16 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> getOrders(
+            @RequestParam(required = false) Long buyerId,
+            @RequestParam(required = false) String status,
+            Pageable pageable) {
+        Page<OrderResponse> orders = orderService.searchOrders(buyerId, status, pageable)
+                .map(this::mapToResponse);
+        return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
     @GetMapping("/buyer/{buyerId}")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrdersByBuyer(@PathVariable Long buyerId) {
         List<Order> orders = orderService.getOrdersByBuyer(buyerId);
