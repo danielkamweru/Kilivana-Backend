@@ -88,6 +88,50 @@ Profile and business records preserve the existing scalar-ID relationship model.
 
 The current development authentication service returns demo access/refresh tokens. Production deployment still requires JWT or secure session-token storage, revocation, and role-based authorization instead of the development-open security configuration.
 
+## Frontend Integration Contract
+
+Use `http://localhost:8080` as the local base URL. The existing versioned routes remain supported, and compatibility aliases are available for the shorter authentication/user paths used by the frontend specification:
+
+| Operation | Preferred route | Compatibility route |
+| --- | --- | --- |
+| Register | `POST /api/v1/auth/register` | `POST /api/users` |
+| Login | `POST /api/v1/auth/login` | `POST /api/auth/login` |
+| Refresh | `POST /api/v1/auth/refresh` | `POST /api/auth/refresh` |
+| Current user | `GET /api/v1/auth/me` | `GET /api/auth/me` |
+
+Registration body:
+
+```json
+{
+	"name": "Daniel Kamweru",
+	"email": "daniel@example.com",
+	"phone": "0712345678",
+	"password": "secret123",
+	"role": "BUYER"
+}
+```
+
+Login body:
+
+```json
+{
+	"email": "daniel@example.com",
+	"password": "secret123"
+}
+```
+
+Every successful response uses `{ "success": true, "message": "Success", "data": ... }`. Validation and business errors use `{ "success": false, "message": ..., "data": ..., "error": { "code": ..., "details": ... } }`.
+
+The current development login response contains `accessToken`, `refreshToken`, `tokenType`, and `user`. The values are development demo tokens, not JWTs. Do not implement frontend JWT refresh or protected-route assumptions until a real JWT provider/filter is added.
+
+For the current development `/me` and own-resource routes, send:
+
+```http
+X-User-Id: <user-id>
+```
+
+The API documentation is available at `http://localhost:8080/api-docs`, and the interactive Swagger UI is at `http://localhost:8080/swagger-ui/index.html`.
+
 ## Security and CORS
 
 The application is configured with Spring Security so the main public routes remain open while other endpoints stay protected. The following endpoints are allowed publicly:
