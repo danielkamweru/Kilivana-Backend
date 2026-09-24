@@ -69,6 +69,16 @@ public class InspectionController {
         return ResponseEntity.ok(ApiResponse.success(inspection));
     }
 
+    @PostMapping("/{id}/result")
+    public ResponseEntity<ApiResponse<InspectionResponse>> submitInspectionResult(@PathVariable Long id, @RequestParam String result, @RequestBody InspectionRequest request) {
+        return updateInspectionResult(id, result, request);
+    }
+
+    @PostMapping("/{id}/evidence")
+    public ResponseEntity<ApiResponse<InspectionResponse>> submitEvidence(@PathVariable Long id, @RequestBody InspectionRequest request) {
+        return updateInspectionResult(id, "CHANGES_REQUIRED", request);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteInspection(@PathVariable Long id) {
         inspectionService.deleteInspection(id);

@@ -50,10 +50,26 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success(notification));
     }
 
+    @PostMapping("/{id}/read")
+    public ResponseEntity<ApiResponse<NotificationResponse>> markAsReadPost(@PathVariable Long id) {
+        return markAsRead(id);
+    }
+
     @PutMapping("/user/{userId}/read-all")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead(@PathVariable Long userId) {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok(ApiResponse.successMessage("All notifications marked as read"));
+    }
+
+    @PostMapping("/read-all")
+    public ResponseEntity<ApiResponse<Void>> markOwnNotificationsAsRead(@RequestHeader("X-User-Id") Long userId) {
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(ApiResponse.successMessage("All notifications marked as read"));
+    }
+
+    @PostMapping("/user/{userId}/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllAsReadPost(@PathVariable Long userId) {
+        return markAllAsRead(userId);
     }
 
     @DeleteMapping("/{id}")
