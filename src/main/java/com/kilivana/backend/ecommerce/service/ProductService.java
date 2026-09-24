@@ -63,7 +63,7 @@ public class ProductService {
     }
 
     public Page<ProductResponse> searchProducts(String name, Long categoryId, String sellerType, Pageable pageable) {
-        return productRepository.searchProducts(name, categoryId, sellerType != null ? com.kilivana.backend.common.enums.SellerType.valueOf(sellerType) : null, pageable)
+        return productRepository.searchProducts(name, categoryId, sellerType, pageable)
                 .map(this::mapToResponse);
     }
 

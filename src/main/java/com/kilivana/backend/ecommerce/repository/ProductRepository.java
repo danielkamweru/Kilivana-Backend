@@ -26,14 +26,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.status = :status ORDER BY p.createdAt DESC")
     Page<Product> findByStatusWithPagination(@Param("status") ProductStatus status, Pageable pageable);
     
-    @Query("SELECT p FROM Product p WHERE " +
+    @Query(value = "SELECT * FROM products p WHERE " +
            "(:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
-           "(:categoryId IS NULL OR p.categoryId = :categoryId) AND " +
-           "(:sellerType IS NULL OR p.sellerType = :sellerType) AND " +
-           "p.status = 'ACTIVE'")
+           "(:categoryId IS NULL OR p.category_id = :categoryId) AND " +
+           "(:sellerType IS NULL OR p.seller_type = :sellerType) AND " +
+           "p.status = 'ACTIVE'", nativeQuery = true)
     Page<Product> searchProducts(@Param("name") String name, 
                                  @Param("categoryId") Long categoryId,
-                                 @Param("sellerType") SellerType sellerType,
+                                 @Param("sellerType") String sellerType,
                                  Pageable pageable);
     
     @Query("SELECT p FROM Product p WHERE p.sellerId = :sellerId AND p.status = :status")
