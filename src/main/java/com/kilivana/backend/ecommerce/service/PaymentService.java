@@ -42,6 +42,10 @@ public class PaymentService {
         return paymentRepository.findByOrderId(orderId);
     }
 
+    public List<Payment> getAllPayments() {
+        return paymentRepository.findAll();
+    }
+
     @Transactional
     public Payment updatePaymentStatus(Long id, PaymentStatus status) {
         Payment payment = paymentRepository.findById(id)
