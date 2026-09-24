@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping({"/api/v1/users", "/api/v1"})
 @RequiredArgsConstructor
 public class AddressController {
 
@@ -25,8 +25,21 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success(addressService.getAddressesByUser(userId)));
     }
 
+    @GetMapping("/addresses")
+    public ResponseEntity<ApiResponse<List<AddressResponse>>> getOwnAddresses(@RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(addressService.getAddressesByUser(userId)));
+    }
+
     @PostMapping("/{userId}/addresses")
     public ResponseEntity<ApiResponse<AddressResponse>> createAddress(@PathVariable Long userId, @Valid @RequestBody AddressRequest request) {
+        AddressResponse response = addressService.createAddress(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    @PostMapping("/addresses")
+    public ResponseEntity<ApiResponse<AddressResponse>> createOwnAddress(
+            @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody AddressRequest request) {
         AddressResponse response = addressService.createAddress(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
@@ -36,8 +49,24 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success(addressService.updateAddress(userId, addressId, request)));
     }
 
+    @PutMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<AddressResponse>> updateOwnAddress(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long addressId,
+            @Valid @RequestBody AddressRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(addressService.updateAddress(userId, addressId, request)));
+    }
+
     @DeleteMapping("/{userId}/addresses/{addressId}")
     public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable Long userId, @PathVariable Long addressId) {
+        addressService.deleteAddress(userId, addressId);
+        return ResponseEntity.ok(ApiResponse.successMessage("Address deleted successfully"));
+    }
+
+    @DeleteMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<Void>> deleteOwnAddress(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long addressId) {
         addressService.deleteAddress(userId, addressId);
         return ResponseEntity.ok(ApiResponse.successMessage("Address deleted successfully"));
     }

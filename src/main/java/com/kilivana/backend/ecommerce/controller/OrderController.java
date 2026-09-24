@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/ecommerce/orders")
+@RequestMapping({"/api/v1/ecommerce/orders", "/api/v1/orders"})
 @RequiredArgsConstructor
 public class OrderController {
 
@@ -55,6 +55,18 @@ public class OrderController {
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
         Order order = orderService.updateOrderStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(@PathVariable Long id) {
+        Order order = orderService.updateOrderStatus(id, OrderStatus.CANCELLED);
+        return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
+    }
+
+    @PostMapping("/{id}/confirm-receipt")
+    public ResponseEntity<ApiResponse<OrderResponse>> confirmReceipt(@PathVariable Long id) {
+        Order order = orderService.updateOrderStatus(id, OrderStatus.COMPLETED);
         return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
     }
 

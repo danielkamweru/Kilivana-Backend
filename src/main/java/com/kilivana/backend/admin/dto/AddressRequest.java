@@ -1,7 +1,6 @@
 package com.kilivana.backend.admin.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +19,5 @@ public class AddressRequest {
     private Double longitude;
     private String label;
 
-    @NotNull(message = "User id is required")
     private Long userId;
 }

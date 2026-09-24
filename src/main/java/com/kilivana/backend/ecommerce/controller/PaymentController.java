@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/ecommerce/payments")
+@RequestMapping({"/api/v1/ecommerce/payments", "/api/v1/payments"})
 @RequiredArgsConstructor
 public class PaymentController {
 
@@ -26,6 +26,16 @@ public class PaymentController {
         Payment payment = paymentService.createPayment(request.getOrderId(), request.getProvider(), request.getReference(), request.getAmount());
         PaymentResponse response = new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getProvider(), payment.getReference(), payment.getAmount(), payment.getStatus(), payment.getPaidAt(), payment.getCreatedAt(), payment.getUpdatedAt());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+    }
+
+    @PostMapping("/initiate")
+    public ResponseEntity<ApiResponse<PaymentResponse>> initiatePayment(@RequestBody PaymentRequest request) {
+        return createPayment(request);
+    }
+
+    @PostMapping("/webhook")
+    public ResponseEntity<ApiResponse<PaymentResponse>> paymentWebhook(@RequestBody PaymentRequest request) {
+        return createPayment(request);
     }
 
     @GetMapping("/{id}")
@@ -46,5 +56,11 @@ public class PaymentController {
         Payment payment = paymentService.updatePaymentStatus(id, status);
         PaymentResponse response = new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getProvider(), payment.getReference(), payment.getAmount(), payment.getStatus(), payment.getPaidAt(), payment.getCreatedAt(), payment.getUpdatedAt());
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<ApiResponse<PaymentResponse>> refundPayment(@PathVariable Long id) {
+        Payment payment = paymentService.updatePaymentStatus(id, PaymentStatus.REFUNDED);
+        return ResponseEntity.ok(ApiResponse.success(paymentService.mapToResponse(payment)));
     }
 }

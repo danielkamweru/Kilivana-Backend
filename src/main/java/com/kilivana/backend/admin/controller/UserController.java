@@ -65,6 +65,11 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(user));
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<UserResponse>> patchUserStatus(@PathVariable Long id, @RequestParam UserStatus status) {
+        return updateUserStatus(id, status);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);

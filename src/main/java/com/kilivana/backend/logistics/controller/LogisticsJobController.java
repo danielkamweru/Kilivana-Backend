@@ -61,16 +61,31 @@ public class LogisticsJobController {
         return ResponseEntity.ok(ApiResponse.success(job));
     }
 
+    @PostMapping("/{id}/assign")
+    public ResponseEntity<ApiResponse<LogisticsJob>> assignDriverPost(@PathVariable Long id, @RequestParam Long driverId) {
+        return assignDriver(id, driverId);
+    }
+
     @PutMapping("/{id}/accept")
     public ResponseEntity<ApiResponse<LogisticsJob>> acceptJob(@PathVariable Long id, @RequestParam Long driverId) {
         LogisticsJob job = logisticsService.acceptJob(id, driverId);
         return ResponseEntity.ok(ApiResponse.success(job));
     }
 
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<ApiResponse<LogisticsJob>> acceptJobPost(@PathVariable Long id, @RequestParam Long driverId) {
+        return acceptJob(id, driverId);
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<LogisticsJob>> updateJobStatus(@PathVariable Long id, @RequestParam DeliveryStatus status) {
         LogisticsJob job = logisticsService.updateJobStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success(job));
+    }
+
+    @PostMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<LogisticsJob>> updateJobStatusPost(@PathVariable Long id, @RequestParam DeliveryStatus status) {
+        return updateJobStatus(id, status);
     }
 
     @PutMapping("/{id}/cancel")

@@ -3,6 +3,8 @@ package com.kilivana.backend.common.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kilivana.backend.admin.dto.UserRegistrationRequest;
 import com.kilivana.backend.admin.dto.UserResponse;
+import com.kilivana.backend.common.dto.AuthLoginRequest;
+import com.kilivana.backend.common.dto.AuthTokenResponse;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
@@ -68,5 +70,27 @@ class AuthControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value("daniel@example.com"));
+    }
+
+    @Test
+    void login_shouldReturnTokens() throws Exception {
+        AuthLoginRequest request = AuthLoginRequest.builder()
+                .email("daniel@example.com")
+                .password("secret123")
+                .build();
+        AuthTokenResponse response = AuthTokenResponse.builder()
+                .accessToken("access-token")
+                .refreshToken("refresh-token")
+                .tokenType("Bearer")
+                .build();
+
+        when(authService.login(any(AuthLoginRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
     }
 }
