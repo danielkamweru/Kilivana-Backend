@@ -3,6 +3,7 @@ package com.kilivana.backend.ecommerce.controller;
 import com.kilivana.backend.ecommerce.dto.OrderRequest;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.service.OrderService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.OrderStatus;
@@ -78,6 +79,16 @@ public class OrderController {
     public ResponseEntity<ApiResponse<OrderResponse>> confirmReceipt(@PathVariable Long id) {
         Order order = orderService.updateOrderStatus(id, OrderStatus.COMPLETED);
         return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
+    }
+
+    @PostMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<OrderResponse>> postOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
+        return updateOrderStatus(id, status);
+    }
+
+    @GetMapping("/{id}/timeline")
+    public ResponseEntity<ApiResponse<List<OrderEvent>>> getOrderTimeline(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getOrderTimeline(id)));
     }
 
     @DeleteMapping("/{id}")

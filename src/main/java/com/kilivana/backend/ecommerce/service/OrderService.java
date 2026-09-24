@@ -3,6 +3,8 @@ package com.kilivana.backend.ecommerce.service;
 import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.entity.OrderEvent;
+import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ import java.util.List;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderEventRepository orderEventRepository;
 
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
@@ -38,7 +41,9 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         order.setStatus(status);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderEventRepository.save(OrderEvent.builder().orderId(orderId).status(status).build());
+        return saved;
     }
 
     @Transactional
@@ -51,7 +56,14 @@ public class OrderService {
                 .total(total)
                 .addressId(addressId)
                 .build();
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderEventRepository.save(OrderEvent.builder().orderId(saved.getId()).status(saved.getStatus()).build());
+        return saved;
+    }
+
+    public List<OrderEvent> getOrderTimeline(Long orderId) {
+        getOrderById(orderId);
+        return orderEventRepository.findByOrderIdOrderByCreatedAtAsc(orderId);
     }
 
     @Transactional
