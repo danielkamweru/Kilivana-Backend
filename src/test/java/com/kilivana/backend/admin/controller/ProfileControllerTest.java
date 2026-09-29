@@ -1,8 +1,10 @@
 package com.kilivana.backend.admin.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kilivana.backend.admin.dto.*;
 import com.kilivana.backend.admin.service.ProfileService;
+import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,12 +12,17 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -99,5 +106,164 @@ class ProfileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void uploadFarmerImage_shouldReturnImages() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "test.png", MediaType.IMAGE_PNG_VALUE, "fake-image-data".getBytes());
+
+        List<ImageResponse> images = List.of(ImageResponse.builder()
+                .id(1L)
+                .url("https://res.cloudinary.com/demo/image/upload/fake.png")
+                .publicId("farmer/10/fake")
+                .isPrimary(true)
+                .sortOrder(0)
+                .createdAt(LocalDateTime.now())
+                .build());
+
+        when(profileService.uploadFarmerProfileImage(10L, 10L, image, null))
+                .thenReturn(images);
+
+        mockMvc.perform(multipart("/api/v1/profiles/farmers/10/images")
+                        .file(image)
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].isPrimary").value(true));
+    }
+
+    @Test
+    void getFarmerImages_shouldReturnImages() throws Exception {
+        List<ImageResponse> images = List.of(
+                ImageResponse.builder().id(1L).url("https://res.cloudinary.com/demo/image/upload/a.png")
+                        .publicId("a").isPrimary(true).sortOrder(0).build(),
+                ImageResponse.builder().id(2L).url("https://res.cloudinary.com/demo/image/upload/b.png")
+                        .publicId("b").isPrimary(false).sortOrder(1).build());
+
+        when(profileService.getFarmerProfileImages(10L, 10L)).thenReturn(images);
+
+        mockMvc.perform(get("/api/v1/profiles/farmers/10/images")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].isPrimary").value(true));
+    }
+
+    @Test
+    void deleteFarmerImage_shouldReturnSuccess() throws Exception {
+        doNothing().when(profileService).deleteFarmerProfileImage(10L, 10L, 1L);
+
+        mockMvc.perform(delete("/api/v1/profiles/farmers/10/images/1")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void setPrimaryFarmerImage_shouldReturnSuccess() throws Exception {
+        doNothing().when(profileService).setPrimaryFarmerProfileImage(10L, 10L, 1L);
+
+        mockMvc.perform(put("/api/v1/profiles/farmers/10/images/1/primary")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void uploadSupplierImage_shouldReturnImages() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "supplier.png", MediaType.IMAGE_PNG_VALUE, "fake-data".getBytes());
+
+        List<ImageResponse> images = List.of(ImageResponse.builder()
+                .id(1L)
+                .url("https://res.cloudinary.com/demo/image/upload/supplier.png")
+                .publicId("supplier/10/supplier")
+                .isPrimary(true)
+                .sortOrder(0)
+                .build());
+
+        when(profileService.uploadSupplierProfileImage(10L, 10L, image, null))
+                .thenReturn(images);
+
+        mockMvc.perform(multipart("/api/v1/profiles/suppliers/10/images")
+                        .file(image)
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void getSupplierImages_shouldReturnImages() throws Exception {
+        List<ImageResponse> images = List.of(ImageResponse.builder()
+                .id(1L).url("https://res.cloudinary.com/demo/image/upload/supplier.png")
+                .publicId("supplier").isPrimary(true).sortOrder(0).build());
+
+        when(profileService.getSupplierProfileImages(10L, 10L)).thenReturn(images);
+
+        mockMvc.perform(get("/api/v1/profiles/suppliers/10/images")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void deleteSupplierImage_shouldReturnSuccess() throws Exception {
+        doNothing().when(profileService).deleteSupplierProfileImage(10L, 10L, 1L);
+
+        mockMvc.perform(delete("/api/v1/profiles/suppliers/10/images/1")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void uploadDriverImage_shouldReturnImages() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image", "driver.png", MediaType.IMAGE_PNG_VALUE, "fake-data".getBytes());
+
+        List<ImageResponse> images = List.of(ImageResponse.builder()
+                .id(1L)
+                .url("https://res.cloudinary.com/demo/image/upload/driver.png")
+                .publicId("driver/10/driver")
+                .isPrimary(true)
+                .sortOrder(0)
+                .build());
+
+        when(profileService.uploadDriverProfileImage(10L, 10L, image, null))
+                .thenReturn(images);
+
+        mockMvc.perform(multipart("/api/v1/profiles/drivers/10/images")
+                        .file(image)
+                        .header("X-User-Id", "10")
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void getDriverImages_shouldReturnImages() throws Exception {
+        List<ImageResponse> images = List.of(ImageResponse.builder()
+                .id(1L).url("https://res.cloudinary.com/demo/image/upload/driver.png")
+                .publicId("driver").isPrimary(true).sortOrder(0).build());
+
+        when(profileService.getDriverProfileImages(10L, 10L)).thenReturn(images);
+
+        mockMvc.perform(get("/api/v1/profiles/drivers/10/images")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void deleteDriverImage_shouldReturnSuccess() throws Exception {
+        doNothing().when(profileService).deleteDriverProfileImage(10L, 10L, 1L);
+
+        mockMvc.perform(delete("/api/v1/profiles/drivers/10/images/1")
+                        .header("X-User-Id", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }
