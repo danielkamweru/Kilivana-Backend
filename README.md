@@ -71,6 +71,7 @@ Swagger UI is available at:
 - Local: http://localhost:8080/swagger-ui/index.html
 - Local fallback: http://localhost:8080/swagger-ui.html
 - Public ngrok: https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
+- ngrok dev: https://either-juvenile-progeny.ngrok-free.dev
 
 API docs JSON is available at:
 
