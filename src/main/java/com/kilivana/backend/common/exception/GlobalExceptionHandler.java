@@ -1,16 +1,21 @@
 package com.kilivana.backend.common.exception;
 
 import com.kilivana.backend.common.dto.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -70,8 +75,32 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
+                .code("FILE_TOO_LARGE")
+                .details("File size exceeds maximum allowed limit of 10MB")
+                .build();
+        
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.error("File size exceeds maximum allowed limit of 10MB", error));
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIOException(IOException ex) {
+        log.error("IO exception during file operation", ex);
+        ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
+                .code("FILE_OPERATION_ERROR")
+                .details("File operation failed: " + ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("File operation failed", error));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        log.error("Unhandled exception", ex);
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
                 .code("INTERNAL_SERVER_ERROR")
                 .details("An unexpected error occurred")
