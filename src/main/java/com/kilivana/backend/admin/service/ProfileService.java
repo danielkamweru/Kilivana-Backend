@@ -3,14 +3,22 @@ package com.kilivana.backend.admin.service;
 import com.kilivana.backend.admin.dto.*;
 import com.kilivana.backend.admin.entity.*;
 import com.kilivana.backend.admin.repository.*;
+import com.kilivana.backend.common.dto.ImageResponse;
+import com.kilivana.backend.common.entity.BaseImageEntity;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.common.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,12 +30,18 @@ public class ProfileService {
     private final DriverProfileRepository driverProfileRepository;
     private final InspectorProfileRepository inspectorProfileRepository;
     private final SupplierProfileRepository supplierProfileRepository;
+    private final FarmerProfileImageRepository farmerProfileImageRepository;
+    private final SupplierProfileImageRepository supplierProfileImageRepository;
+    private final DriverProfileImageRepository driverProfileImageRepository;
+    private final CloudinaryService cloudinaryService;
 
     @Transactional(readOnly = true)
     public FarmerProfileResponse getFarmerProfile(Long userId) {
         ensureRole(userId, UserRole.FARMER);
-        return FarmerProfileResponse.fromEntity(farmerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId)));
+        FarmerProfile profile = farmerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId));
+        List<ImageResponse> images = mapProfileImages(farmerProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+        return FarmerProfileResponse.fromEntity(profile, images);
     }
 
     @Transactional
@@ -110,8 +124,10 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public DriverProfileResponse getDriverProfile(Long userId) {
         ensureRole(userId, UserRole.DRIVER);
-        return DriverProfileResponse.fromEntity(driverProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId)));
+        DriverProfile profile = driverProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
+        List<ImageResponse> images = mapProfileImages(driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+        return DriverProfileResponse.fromEntity(profile, images);
     }
 
     @Transactional
@@ -150,6 +166,10 @@ public class ProfileService {
     public void deleteDriverProfile(Long userId) {
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
+        driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
+            cloudinaryService.deleteImage(image.getPublicId());
+        });
+        driverProfileImageRepository.deleteByUserId(userId);
         driverProfileRepository.delete(profile);
     }
 
@@ -198,8 +218,10 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public SupplierProfileResponse getSupplierProfile(Long userId) {
         ensureRole(userId, UserRole.SUPPLIER);
-        return SupplierProfileResponse.fromEntity(supplierProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId)));
+        SupplierProfile profile = supplierProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
+        List<ImageResponse> images = mapProfileImages(supplierProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+        return SupplierProfileResponse.fromEntity(profile, images);
     }
 
     @Transactional
@@ -236,13 +258,214 @@ public class ProfileService {
     public void deleteSupplierProfile(Long userId) {
         SupplierProfile profile = supplierProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
+        supplierProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
+            cloudinaryService.deleteImage(image.getPublicId());
+        });
+        supplierProfileImageRepository.deleteByUserId(userId);
         supplierProfileRepository.delete(profile);
+    }
+
+    @Transactional
+    public List<ImageResponse> uploadFarmerProfileImage(Long authenticatedUserId, Long userId, MultipartFile image, Boolean isPrimary) throws IOException {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.FARMER);
+        farmerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId));
+
+        if (Boolean.TRUE.equals(isPrimary)) {
+            farmerProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                    .ifPresent(existing -> {
+                        existing.setIsPrimary(false);
+                        farmerProfileImageRepository.save(existing);
+                    });
+        }
+
+        String folder = "kilivana/farmers/" + userId;
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+
+        FarmerProfileImage profileImage = FarmerProfileImage.builder()
+                .userId(userId)
+                .resourceId(userId)
+                .url(cloudinaryService.getSecureUrl(uploadResult))
+                .publicId(cloudinaryService.getPublicId(uploadResult))
+                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .sortOrder(0)
+                .isPrimary(Boolean.TRUE.equals(isPrimary))
+                .build();
+
+        FarmerProfileImage saved = farmerProfileImageRepository.save(profileImage);
+        return mapProfileImages(farmerProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional
+    public List<ImageResponse> uploadSupplierProfileImage(Long authenticatedUserId, Long userId, MultipartFile image, Boolean isPrimary) throws IOException {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.SUPPLIER);
+        supplierProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
+
+        if (Boolean.TRUE.equals(isPrimary)) {
+            supplierProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                    .ifPresent(existing -> {
+                        existing.setIsPrimary(false);
+                        supplierProfileImageRepository.save(existing);
+                    });
+        }
+
+        String folder = "kilivana/suppliers/" + userId;
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+
+        SupplierProfileImage profileImage = SupplierProfileImage.builder()
+                .userId(userId)
+                .resourceId(userId)
+                .url(cloudinaryService.getSecureUrl(uploadResult))
+                .publicId(cloudinaryService.getPublicId(uploadResult))
+                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .sortOrder(0)
+                .isPrimary(Boolean.TRUE.equals(isPrimary))
+                .build();
+
+        supplierProfileImageRepository.save(profileImage);
+        return mapProfileImages(supplierProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional
+    public List<ImageResponse> uploadDriverProfileImage(Long authenticatedUserId, Long userId, MultipartFile image, Boolean isPrimary) throws IOException {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.DRIVER);
+        driverProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
+
+        if (Boolean.TRUE.equals(isPrimary)) {
+            driverProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                    .ifPresent(existing -> {
+                        existing.setIsPrimary(false);
+                        driverProfileImageRepository.save(existing);
+                    });
+        }
+
+        String folder = "kilivana/drivers/" + userId;
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+
+        DriverProfileImage profileImage = DriverProfileImage.builder()
+                .userId(userId)
+                .resourceId(userId)
+                .url(cloudinaryService.getSecureUrl(uploadResult))
+                .publicId(cloudinaryService.getPublicId(uploadResult))
+                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .sortOrder(0)
+                .isPrimary(Boolean.TRUE.equals(isPrimary))
+                .build();
+
+        driverProfileImageRepository.save(profileImage);
+        return mapProfileImages(driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImageResponse> getFarmerProfileImages(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.FARMER);
+        return mapProfileImages(farmerProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImageResponse> getSupplierProfileImages(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.SUPPLIER);
+        return mapProfileImages(supplierProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImageResponse> getDriverProfileImages(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.DRIVER);
+        return mapProfileImages(driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional
+    public void deleteFarmerProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.FARMER);
+        FarmerProfileImage image = farmerProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this farmer");
+        }
+        cloudinaryService.deleteImage(image.getPublicId());
+        farmerProfileImageRepository.delete(image);
+    }
+
+    @Transactional
+    public void deleteSupplierProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.SUPPLIER);
+        SupplierProfileImage image = supplierProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this supplier");
+        }
+        cloudinaryService.deleteImage(image.getPublicId());
+        supplierProfileImageRepository.delete(image);
+    }
+
+    @Transactional
+    public void deleteDriverProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.DRIVER);
+        DriverProfileImage image = driverProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this driver");
+        }
+        cloudinaryService.deleteImage(image.getPublicId());
+        driverProfileImageRepository.delete(image);
+    }
+
+    @Transactional
+    public void setPrimaryFarmerProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.FARMER);
+        FarmerProfileImage image = farmerProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this farmer");
+        }
+        farmerProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                .filter(existing -> !existing.getId().equals(imageId))
+                .ifPresent(existing -> {
+                    existing.setIsPrimary(false);
+                    farmerProfileImageRepository.save(existing);
+                });
+        image.setIsPrimary(true);
+        farmerProfileImageRepository.save(image);
+    }
+
+    private List<ImageResponse> mapProfileImages(List<? extends BaseImageEntity> images) {
+        return images.stream()
+                .map(image -> ImageResponse.builder()
+                        .id(image.getId())
+                        .url(image.getUrl())
+                        .publicId(image.getPublicId())
+                        .assetId(image.getAssetId())
+                        .sortOrder(image.getSortOrder())
+                        .isPrimary(image.getIsPrimary())
+                        .createdAt(image.getCreatedAt())
+                        .updatedAt(image.getUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private void ensureRole(Long userId, UserRole expectedRole) {
         UserRole actualRole = userService.getUserById(userId).getRole();
         if (actualRole != expectedRole) {
             throw new BadRequestException("User " + userId + " must have role " + expectedRole);
+        }
+    }
+
+    private void ensureOwnershipOrAdmin(Long authenticatedUserId, Long profileUserId) {
+        UserRole role = userService.getUserById(authenticatedUserId).getRole();
+        if (role != UserRole.ADMIN && !authenticatedUserId.equals(profileUserId)) {
+            throw new BadRequestException("You do not have permission to access this resource");
         }
     }
 }
