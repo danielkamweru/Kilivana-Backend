@@ -36,7 +36,6 @@ Create the database and user locally if they do not already exist:
 
 ```sql
 CREATE DATABASE kilivana;
-CREATE USER kilivana_user WITH PASSWORD 'daniel kamweru';
 GRANT ALL PRIVILEGES ON DATABASE kilivana TO kilivana_user;
 ```
 
@@ -45,7 +44,7 @@ Then confirm the app configuration in `src/main/resources/application.properties
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/kilivana
 spring.datasource.username=kilivana_user
-spring.datasource.password=daniel kamweru
+
 ```
 
 ## Run the Application
