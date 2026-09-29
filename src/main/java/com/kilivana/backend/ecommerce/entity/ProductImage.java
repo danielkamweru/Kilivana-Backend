@@ -27,6 +27,18 @@ public class ProductImage {
     @Column(nullable = false)
     private String url;
 
+    @Column(name = "public_id", nullable = false, unique = true)
+    private String publicId;
+
+    @Column(name = "asset_id")
+    private String assetId;
+
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
+    @Column(name = "is_primary")
+    private Boolean isPrimary;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

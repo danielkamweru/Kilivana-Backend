@@ -1,5 +1,6 @@
 package com.kilivana.backend.ecommerce.controller;
 
+import com.kilivana.backend.ecommerce.dto.ProductImageResponse;
 import com.kilivana.backend.ecommerce.dto.ProductRequest;
 import com.kilivana.backend.ecommerce.dto.ProductResponse;
 import com.kilivana.backend.ecommerce.entity.Product;
@@ -11,9 +12,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -23,9 +27,25 @@ public class ProductController {
 
     private final ProductService productService;
 
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestPart("product") ProductRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
+        ProductResponse product;
+        if (images != null && !images.isEmpty()) {
+            product = productService.createProductWithImages(request, images, userId);
+        } else {
+            product = productService.createProduct(request, userId);
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
+    }
+
     @PostMapping
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody ProductRequest request) {
-        ProductResponse product = productService.createProduct(request);
+    public ResponseEntity<ApiResponse<ProductResponse>> createProductJson(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody ProductRequest request) {
+        ProductResponse product = productService.createProduct(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
     }
 
@@ -57,21 +77,109 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(products));
     }
 
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestPart("product") ProductRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
+        productService.ensureProductOwnership(id, userId);
+        ProductResponse product;
+        if (images != null && !images.isEmpty()) {
+            product = productService.updateProductWithImages(id, request, images);
+        } else {
+            product = productService.updateProduct(id, request);
+        }
+        return ResponseEntity.ok(ApiResponse.success(product));
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProductJson(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody ProductRequest request) {
+        productService.ensureProductOwnership(id, userId);
         ProductResponse product = productService.updateProduct(id, request);
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProductStatus(@PathVariable Long id, @RequestParam ProductStatus status) {
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProductStatus(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestParam ProductStatus status) {
+        productService.ensureProductOwnership(id, userId);
         ProductResponse product = productService.updateProductStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) throws IOException {
+        productService.ensureProductOwnership(id, userId);
         productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.successMessage("Product deleted successfully"));
+    }
+
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProductImageResponse>> uploadProductImage(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestPart("image") MultipartFile image,
+            @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
+            @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
+        productService.ensureProductOwnership(id, userId);
+        ProductImageResponse imageResponse = productService.uploadProductImage(id, image, sortOrder, isPrimary);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(imageResponse));
+    }
+
+    @GetMapping("/{id}/images")
+    public ResponseEntity<ApiResponse<List<ProductImageResponse>>> getProductImages(@PathVariable Long id) {
+        ProductResponse product = productService.getProductById(id);
+        return ResponseEntity.ok(ApiResponse.success(product.getImages()));
+    }
+
+    @PutMapping(value = "/{productId}/images/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProductImageResponse>> updateProductImage(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long productId,
+            @PathVariable Long imageId,
+            @RequestPart("image") MultipartFile image,
+            @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
+            @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
+        productService.ensureProductOwnership(productId, userId);
+        ProductImageResponse imageResponse = productService.updateProductImage(productId, imageId, image, sortOrder, isPrimary);
+        return ResponseEntity.ok(ApiResponse.success(imageResponse));
+    }
+
+    @PutMapping("/{productId}/images/{imageId}/primary")
+    public ResponseEntity<ApiResponse<Void>> setPrimaryImage(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long productId,
+            @PathVariable Long imageId) {
+        productService.ensureProductOwnership(productId, userId);
+        productService.setPrimaryImage(productId, imageId);
+        return ResponseEntity.ok(ApiResponse.successMessage("Primary image updated successfully"));
+    }
+
+    @PutMapping("/{productId}/images/reorder")
+    public ResponseEntity<ApiResponse<Void>> reorderImages(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long productId,
+            @RequestBody List<Long> imageIdsInOrder) {
+        productService.ensureProductOwnership(productId, userId);
+        productService.reorderImages(productId, imageIdsInOrder);
+        return ResponseEntity.ok(ApiResponse.successMessage("Images reordered successfully"));
+    }
+
+    @DeleteMapping("/{productId}/images/{imageId}")
+    public ResponseEntity<ApiResponse<Void>> deleteProductImage(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long productId,
+            @PathVariable Long imageId) throws IOException {
+        productService.ensureProductOwnership(productId, userId);
+        productService.deleteProductImage(productId, imageId);
+        return ResponseEntity.ok(ApiResponse.successMessage("Image deleted successfully"));
     }
 }

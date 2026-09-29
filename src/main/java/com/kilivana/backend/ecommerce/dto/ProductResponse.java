@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -31,4 +32,5 @@ public class ProductResponse {
     private ProductStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<ProductImageResponse> images;
 }
