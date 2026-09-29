@@ -1,0 +1,89 @@
+package com.kilivana.backend.common.service;
+
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.kilivana.backend.common.exception.BadRequestException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Map;
+
+@Slf4j
+@Service
+public class CloudinaryService {
+
+    private final Cloudinary cloudinary;
+
+    public CloudinaryService(Cloudinary cloudinary) {
+        this.cloudinary = cloudinary;
+    }
+
+    public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
+        validateImageFile(file);
+
+        Map<String, Object> uploadParams = ObjectUtils.asMap(
+            "folder", folder,
+            "resource_type", "image",
+            "use_filename", true,
+            "unique_filename", true,
+            "overwrite", false
+        );
+
+        try {
+            return cloudinary.uploader().upload(file.getBytes(), uploadParams);
+        } catch (IOException e) {
+            log.error("Cloudinary upload failed for folder: {}", folder, e);
+            throw e;
+        }
+    }
+
+    public void deleteImage(String publicId) {
+        if (publicId != null && !publicId.isBlank()) {
+            try {
+                cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            } catch (IOException e) {
+                log.error("Cloudinary delete failed for publicId: {}", publicId, e);
+            }
+        }
+    }
+
+    public Map<String, Object> replaceImage(String oldPublicId, MultipartFile newFile, String folder) throws IOException {
+        Map<String, Object> uploadResult = uploadImage(newFile, folder);
+
+        if (uploadResult != null && uploadResult.get("public_id") != null) {
+            deleteImage(oldPublicId);
+        }
+
+        return uploadResult;
+    }
+
+    public String getSecureUrl(Map<String, Object> uploadResult) {
+        return (String) uploadResult.get("secure_url");
+    }
+
+    public String getPublicId(Map<String, Object> uploadResult) {
+        return (String) uploadResult.get("public_id");
+    }
+
+    public String getAssetId(Map<String, Object> uploadResult) {
+        return (String) uploadResult.get("asset_id");
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Image file is required");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BadRequestException("File must be an image (JPEG, PNG, GIF, etc.)");
+        }
+
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new BadRequestException("Image file size must be less than 10MB");
+        }
+    }
+}
