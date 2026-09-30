@@ -34,6 +34,7 @@ public class ProfileService {
     private final FarmerProfileImageRepository farmerProfileImageRepository;
     private final SupplierProfileImageRepository supplierProfileImageRepository;
     private final DriverProfileImageRepository driverProfileImageRepository;
+    private final InspectorProfileImageRepository inspectorProfileImageRepository;
     private final CloudinaryService cloudinaryService;
 
     @Transactional(readOnly = true)
@@ -190,8 +191,10 @@ public class ProfileService {
     public InspectorProfileResponse getInspectorProfile(Long authenticatedUserId, Long userId) {
         ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.INSPECTOR);
-        return InspectorProfileResponse.fromEntity(inspectorProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId)));
+        InspectorProfile profile = inspectorProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
+        List<ImageResponse> images = mapProfileImages(inspectorProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+        return InspectorProfileResponse.fromEntity(profile, images);
     }
 
     @Transactional
@@ -229,6 +232,10 @@ public class ProfileService {
         ensureOwnershipOrAdmin(authenticatedUserId, userId);
         InspectorProfile profile = inspectorProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
+        inspectorProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
+            cloudinaryService.deleteImage(image.getPublicId());
+        });
+        inspectorProfileImageRepository.deleteByUserId(userId);
         inspectorProfileRepository.delete(profile);
     }
 
@@ -459,6 +466,96 @@ public class ProfileService {
                 });
         image.setIsPrimary(true);
         farmerProfileImageRepository.save(image);
+    }
+
+    @Transactional
+    public List<ImageResponse> uploadInspectorProfileImage(Long authenticatedUserId, Long userId, MultipartFile image, Boolean isPrimary) throws IOException {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.INSPECTOR);
+        inspectorProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
+
+        if (Boolean.TRUE.equals(isPrimary)) {
+            inspectorProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                    .ifPresent(existing -> {
+                        existing.setIsPrimary(false);
+                        inspectorProfileImageRepository.save(existing);
+                    });
+        }
+
+        String folder = "kilivana/inspectors/" + userId;
+        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+
+        InspectorProfileImage profileImage = InspectorProfileImage.builder()
+                .userId(userId)
+                .resourceId(userId)
+                .url(cloudinaryService.getSecureUrl(uploadResult))
+                .publicId(cloudinaryService.getPublicId(uploadResult))
+                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .sortOrder(0)
+                .isPrimary(Boolean.TRUE.equals(isPrimary))
+                .build();
+
+        inspectorProfileImageRepository.save(profileImage);
+        return mapProfileImages(inspectorProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImageResponse> getInspectorProfileImages(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.INSPECTOR);
+        return mapProfileImages(inspectorProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId));
+    }
+
+    @Transactional
+    public void deleteInspectorProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.INSPECTOR);
+        InspectorProfileImage image = inspectorProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this inspector");
+        }
+        cloudinaryService.deleteImage(image.getPublicId());
+        inspectorProfileImageRepository.delete(image);
+    }
+
+    @Transactional
+    public void setPrimaryInspectorProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.INSPECTOR);
+        InspectorProfileImage image = inspectorProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this inspector");
+        }
+        inspectorProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                .filter(existing -> !existing.getId().equals(imageId))
+                .ifPresent(existing -> {
+                    existing.setIsPrimary(false);
+                    inspectorProfileImageRepository.save(existing);
+                });
+        image.setIsPrimary(true);
+        inspectorProfileImageRepository.save(image);
+    }
+
+    @Transactional
+    public void setPrimarySupplierProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.SUPPLIER);
+        SupplierProfileImage image = supplierProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this supplier");
+        }
+        supplierProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                .filter(existing -> !existing.getId().equals(imageId))
+                .ifPresent(existing -> {
+                    existing.setIsPrimary(false);
+                    supplierProfileImageRepository.save(existing);
+                });
+        image.setIsPrimary(true);
+        supplierProfileImageRepository.save(image);
     }
 
     private List<ImageResponse> mapProfileImages(List<? extends BaseImageEntity> images) {
