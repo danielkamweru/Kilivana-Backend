@@ -11,7 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Logistics", description = "Delivery job creation, driver assignment and status")
 @RestController
 @RequestMapping("/api/v1/logistics/jobs")
 @RequiredArgsConstructor

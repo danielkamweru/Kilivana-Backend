@@ -8,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Products", description = "Product listing exposed under the compatibility route prefix")
 @RestController
 @RequestMapping("/api/v1/sellers")
 @RequiredArgsConstructor

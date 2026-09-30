@@ -19,7 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Administration", description = "Administrative dashboard, reports and cross-domain operations")
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor

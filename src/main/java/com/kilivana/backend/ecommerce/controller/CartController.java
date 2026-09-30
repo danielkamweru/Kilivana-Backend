@@ -15,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Cart & Checkout", description = "Buyer cart items and checkout")
 @RestController
 @RequestMapping("/api/v1/ecommerce/carts")
 @RequiredArgsConstructor

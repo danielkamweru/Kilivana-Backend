@@ -12,7 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Orders", description = "Order dispute filing, status and resolution")
 @RestController
 @RequestMapping("/api/v1/ecommerce/disputes")
 @RequiredArgsConstructor
