@@ -6,6 +6,7 @@ import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.dto.AuthLoginRequest;
 import com.kilivana.backend.common.dto.AuthTokenResponse;
 import com.kilivana.backend.common.dto.PasswordResetRequest;
+import com.kilivana.backend.common.dto.RefreshTokenRequest;
 import com.kilivana.backend.common.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +43,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<AuthTokenResponse>> refresh(@RequestBody AuthTokenResponse request) {
+    public ResponseEntity<ApiResponse<AuthTokenResponse>> refresh(@RequestBody RefreshTokenRequest request) {
         AuthTokenResponse response = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
