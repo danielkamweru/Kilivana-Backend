@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,7 +37,17 @@ public class LogisticsService {
 
     @Transactional
     public LogisticsJob createJob(LogisticsJob job) {
-        return logisticsJobRepository.save(job);
+        // Rebuild instead of saving the submitted instance. A client that includes an
+        // "id" would otherwise make save() merge into that existing row and overwrite a
+        // job it does not own. Identity, driver assignment and timestamps are ours.
+        LogisticsJob toSave = LogisticsJob.builder()
+                .orderId(job.getOrderId())
+                .pickupAddress(job.getPickupAddress())
+                .destinationAddress(job.getDestinationAddress())
+                .status(job.getStatus() == null ? DeliveryStatus.PENDING_ASSIGNMENT : job.getStatus())
+                .driverId(null)
+                .build();
+        return logisticsJobRepository.save(toSave);
     }
 
     public LogisticsJob getJobById(Long id) {
@@ -139,7 +150,18 @@ public class LogisticsService {
 
     @Transactional
     public ProofOfDelivery createProofOfDelivery(ProofOfDelivery proof) {
-        return proofOfDeliveryRepository.save(proof);
+        // Rebuild rather than save the submitted instance. Proof of delivery is the
+        // record that a delivery happened, so accepting a client-supplied "id" would
+        // let a caller overwrite an existing proof instead of filing a new one.
+        ProofOfDelivery toSave = ProofOfDelivery.builder()
+                .logisticsJobId(proof.getLogisticsJobId())
+                .recipientName(proof.getRecipientName())
+                .signatureUrl(proof.getSignatureUrl())
+                .photoUrl(proof.getPhotoUrl())
+                .otpReference(proof.getOtpReference())
+                .deliveredAt(LocalDateTime.now())
+                .build();
+        return proofOfDeliveryRepository.save(toSave);
     }
 
     public ProofOfDelivery getProofById(Long id) {
