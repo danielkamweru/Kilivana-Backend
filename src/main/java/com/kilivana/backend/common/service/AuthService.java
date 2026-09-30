@@ -10,8 +10,12 @@ import com.kilivana.backend.common.dto.PasswordResetRequest;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.UnauthorizedException;
+import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.security.JwtProperties;
+import com.kilivana.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,14 +27,20 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final JwtProperties jwtProperties;
 
     @Transactional
     public UserResponse register(UserRegistrationRequest request) {
+        if (request.getRole() == UserRole.ADMIN) {
+            throw new BadRequestException(
+                    "Administrator accounts cannot be self-registered");
+        }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email already exists");
+            throw new ConflictException("Email already exists");
         }
         if (userRepository.existsByPhone(request.getPhone())) {
-            throw new BadRequestException("Phone already exists");
+            throw new ConflictException("Phone already exists");
         }
 
         User user = User.builder()
@@ -54,10 +64,19 @@ public class AuthService {
             throw new UnauthorizedException("Invalid email or password");
         }
 
+        if (user.getStatus() == UserStatus.SUSPENDED || user.getStatus() == UserStatus.INACTIVE) {
+            throw new UnauthorizedException("This account is " + user.getStatus().name().toLowerCase());
+        }
+
+        return buildTokenResponse(user);
+    }
+
+    private AuthTokenResponse buildTokenResponse(User user) {
         return AuthTokenResponse.builder()
-                .accessToken("demo-access-token-" + user.getId())
-                .refreshToken("demo-refresh-token-" + user.getId())
+                .accessToken(jwtService.generateAccessToken(user))
+                .refreshToken(jwtService.generateRefreshToken(user))
                 .tokenType("Bearer")
+                .expiresIn(jwtProperties.getAccessTokenExpiration() / 1000)
                 .user(mapToResponse(user))
                 .build();
     }
@@ -104,20 +123,19 @@ public class AuthService {
     }
 
     public AuthTokenResponse refreshToken(String refreshToken) {
-        if (refreshToken == null || !refreshToken.startsWith("demo-refresh-token-")) {
+        if (!jwtService.isTokenType(refreshToken, JwtService.TYPE_REFRESH)) {
             throw new UnauthorizedException("Invalid refresh token");
         }
 
-        Long userId = Long.parseLong(refreshToken.replace("demo-refresh-token-", ""));
+        Long userId = jwtService.extractUserId(refreshToken);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
 
-        return AuthTokenResponse.builder()
-                .accessToken("demo-access-token-" + user.getId())
-                .refreshToken("demo-refresh-token-" + user.getId())
-                .tokenType("Bearer")
-                .user(mapToResponse(user))
-                .build();
+        if (user.getStatus() == UserStatus.SUSPENDED || user.getStatus() == UserStatus.INACTIVE) {
+            throw new UnauthorizedException("This account is " + user.getStatus().name().toLowerCase());
+        }
+
+        return buildTokenResponse(user);
     }
 
     private UserResponse mapToResponse(User user) {
