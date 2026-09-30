@@ -4,6 +4,7 @@ import com.kilivana.backend.ecommerce.dto.CategoryRequest;
 import com.kilivana.backend.ecommerce.dto.CategoryResponse;
 import com.kilivana.backend.ecommerce.service.CategoryService;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.enums.SellerType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,7 @@ public class CategoryController {
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getCategoriesByType(@PathVariable String type) {
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getCategoriesByType(@PathVariable SellerType type) {
         List<CategoryResponse> categories = categoryService.getCategoriesByType(type);
         return ResponseEntity.ok(ApiResponse.success(categories));
     }

@@ -48,8 +48,8 @@ public class CategoryService {
                 .collect(Collectors.toList());
     }
 
-    public List<CategoryResponse> getCategoriesByType(String type) {
-        return categoryRepository.findByType(com.kilivana.backend.common.enums.SellerType.valueOf(type))
+    public List<CategoryResponse> getCategoriesByType(SellerType type) {
+        return categoryRepository.findByType(type)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
