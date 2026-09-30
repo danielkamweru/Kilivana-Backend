@@ -21,6 +21,13 @@ public class OpenApiConfig {
     @Value("${app.public-base-url:}")
     private String publicBaseUrl;
 
+    /**
+     * Swagger renders tags in alphabetical order, configured via
+     * {@code springdoc.swagger-ui.tags-sorter=alpha}. Tag names are chosen so that
+     * alphabetical order groups the documentation the way the API is organised:
+     * Administration first, then E-Commerce, then Logistics.
+     */
+
     @Bean
     public OpenAPI kilivanaOpenAPI() {
         Contact contact = new Contact();
@@ -31,12 +38,14 @@ public class OpenApiConfig {
                 .title("Kilivana Backend API")
                 .version("1.0.0")
                 .description("""
-                        Kilivana marketplace backend covering administration, role profiles, \
-                        e-commerce and logistics.
+                        Kilivana marketplace backend covering administration, e-commerce and logistics.
+
+                        Endpoints are grouped Administration, E-Commerce, then Logistics.
 
                         **Authentication** — call `POST /api/v1/auth/login` and use the returned \
                         `accessToken` in the Authorize dialog as a raw token (the `Bearer` prefix is \
-                        added for you). Endpoints marked public do not require a token.
+                        added for you). Endpoints grouped under Authentication and Health & System \
+                        are public and need no token.
 
                         Tokens are stateless JWTs. Access tokens expire; use \
                         `POST /api/v1/auth/refresh` with the refresh token to obtain a new pair.

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Cart & Checkout", description = "Buyer cart operations exposed under the compatibility route prefix")
+@Tag(name = "E-Commerce · Cart & Checkout", description = "Buyer cart items and checkout")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

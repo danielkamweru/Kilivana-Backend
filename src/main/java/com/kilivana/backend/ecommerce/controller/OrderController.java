@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Orders", description = "Order placement, status transitions and timeline")
+@Tag(name = "E-Commerce · Orders", description = "Order placement, status transitions, timeline and disputes")
 @RestController
 @RequestMapping({"/api/v1/ecommerce/orders", "/api/v1/orders"})
 @RequiredArgsConstructor

@@ -22,7 +22,7 @@ import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Products", description = "Product catalogue, pricing and product imagery")
+@Tag(name = "E-Commerce · Products", description = "Product catalogue, pricing and product imagery")
 @RestController
 @RequestMapping({"/api/v1/ecommerce/products", "/api/v1/products"})
 @RequiredArgsConstructor

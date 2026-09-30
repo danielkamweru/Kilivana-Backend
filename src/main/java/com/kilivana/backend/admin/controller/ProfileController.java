@@ -17,7 +17,7 @@ import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Role Profiles", description = "Farmer, buyer, supplier, driver and inspector profile management")
+@Tag(name = "Administration · Role Profiles", description = "Farmer, buyer, supplier, driver and inspector profile management")
 @RestController
 @RequestMapping("/api/v1/profiles")
 @RequiredArgsConstructor

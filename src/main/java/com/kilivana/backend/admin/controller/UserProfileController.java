@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Users & Accounts", description = "Self-service user registration and profile maintenance")
+@Tag(name = "Administration · Users & Addresses", description = "Account self-service and address book management")
 @RestController
 @RequestMapping({"/api/v1/users", "/api/users"})
 @RequiredArgsConstructor

@@ -15,7 +15,7 @@ import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Notifications", description = "In-app notification delivery and read-state tracking")
+@Tag(name = "Administration · Notifications", description = "In-app notification delivery and read-state tracking")
 @RestController
 @RequestMapping({"/api/v1/admin/notifications", "/api/v1/notifications"})
 @RequiredArgsConstructor

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Administration", description = "Audit trail queries for tracked entity changes")
+@Tag(name = "Administration", description = "User management, audit trail and administration reporting")
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")
 @RequiredArgsConstructor

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Administration", description = "User administration, role assignment and account status control")
+@Tag(name = "Administration", description = "User management, audit trail and administration reporting")
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor

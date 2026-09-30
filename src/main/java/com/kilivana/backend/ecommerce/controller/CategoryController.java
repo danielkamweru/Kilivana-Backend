@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Catalog", description = "Product category management")
+@Tag(name = "E-Commerce · Catalog", description = "Product category management")
 @RestController
 @RequestMapping({"/api/v1/ecommerce/categories", "/api/v1/categories"})
 @RequiredArgsConstructor

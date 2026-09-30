@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Administration", description = "Administrative dashboard, reports and cross-domain operations")
+@Tag(name = "Administration", description = "User management, audit trail and administration reporting")
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor

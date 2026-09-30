@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "Logistics", description = "Delivery tracking events and history")
+@Tag(name = "Logistics · Tracking", description = "Delivery tracking events and history")
 @RestController
 @RequestMapping("/api/v1/logistics/tracking-events")
 @RequiredArgsConstructor
