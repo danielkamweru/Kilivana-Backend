@@ -97,19 +97,14 @@ class ProfileControllerTest {
     @Test
     void profileTypes_shouldExposeCreateEndpoints() throws Exception {
         BuyerProfileRequest buyer = BuyerProfileRequest.builder().contactDetails("buyer@example.com").build();
-        DriverProfileRequest driver = DriverProfileRequest.builder()
-                .licenseNumber("DL-1").vehicleType("Truck").vehicleNumber("KDA 123A").availabilityStatus("AVAILABLE").build();
         InspectorProfileRequest inspector = InspectorProfileRequest.builder().assignedArea("Nakuru").status("ACTIVE").build();
         SupplierProfileRequest supplier = SupplierProfileRequest.builder().businessName("Fresh Foods").location("Nairobi").build();
 
         when(profileService.createBuyerProfile(11L, 11L, buyer)).thenReturn(BuyerProfileResponse.builder().userId(11L).build());
-        when(profileService.createDriverProfile(12L, 12L, driver)).thenReturn(DriverProfileResponse.builder().userId(12L).build());
         when(profileService.createInspectorProfile(13L, 13L, inspector)).thenReturn(InspectorProfileResponse.builder().userId(13L).build());
         when(profileService.createSupplierProfile(14L, 14L, supplier)).thenReturn(SupplierProfileResponse.builder().userId(14L).build());
 
         mockMvc.perform(post("/api/v1/profiles/buyers/11").with(asUser(jwtService, 11L, UserRole.BUYER)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(buyer)))
-                .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/v1/profiles/drivers/12").with(asUser(jwtService, 12L, UserRole.DRIVER)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(driver)))
                 .andExpect(status().isCreated());
         mockMvc.perform(post("/api/v1/profiles/inspectors/13").with(asUser(jwtService, 13L, UserRole.INSPECTOR)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(inspector)))
                 .andExpect(status().isCreated());
@@ -240,51 +235,75 @@ class ProfileControllerTest {
     }
 
     @Test
-    void uploadDriverImage_shouldReturnImages() throws Exception {
+    void uploadInspectorImage_shouldReturnImages() throws Exception {
         MockMultipartFile image = new MockMultipartFile(
-                "image", "driver.png", MediaType.IMAGE_PNG_VALUE, "fake-data".getBytes());
+                "image", "badge.png", MediaType.IMAGE_PNG_VALUE, "fake-data".getBytes());
 
         List<ImageResponse> images = List.of(ImageResponse.builder()
-                .id(1L)
-                .url("https://res.cloudinary.com/demo/image/upload/driver.png")
-                .publicId("driver/10/driver")
+                .id(5L)
+                .url("https://res.cloudinary.com/demo/image/upload/badge.png")
+                .publicId("inspector/7/badge")
                 .isPrimary(true)
                 .sortOrder(0)
                 .build());
 
-        when(profileService.uploadDriverProfileImage(10L, 10L, image, null))
-                .thenReturn(images);
+        when(profileService.uploadInspectorProfileImage(7L, 7L, image, null)).thenReturn(images);
 
-        mockMvc.perform(multipart("/api/v1/profiles/drivers/10/images")
+        mockMvc.perform(multipart("/api/v1/profiles/inspectors/7/images")
                         .file(image)
-                        .with(asFarmer(jwtService, 10L))
+                        .with(asInspector(jwtService, 7L))
                         .contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true));
     }
 
     @Test
-    void getDriverImages_shouldReturnImages() throws Exception {
+    void inspectorImageEndpoints_shouldIdentifyTheCallerFromTheToken() throws Exception {
+        // The acting user must come from the token, so the service can reject an
+        // inspector reaching into another inspector's credentials.
         List<ImageResponse> images = List.of(ImageResponse.builder()
-                .id(1L).url("https://res.cloudinary.com/demo/image/upload/driver.png")
-                .publicId("driver").isPrimary(true).sortOrder(0).build());
+                .id(5L).url("https://res.cloudinary.com/demo/image/upload/badge.png")
+                .publicId("badge").isPrimary(true).sortOrder(0).build());
 
-        when(profileService.getDriverProfileImages(10L, 10L)).thenReturn(images);
+        when(profileService.getInspectorProfileImages(7L, 9L)).thenReturn(images);
 
-        mockMvc.perform(get("/api/v1/profiles/drivers/10/images")
-                        .with(asFarmer(jwtService, 10L)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(1));
+        mockMvc.perform(get("/api/v1/profiles/inspectors/9/images")
+                        .with(asInspector(jwtService, 7L)))
+                .andExpect(status().isOk());
     }
 
     @Test
-    void deleteDriverImage_shouldReturnSuccess() throws Exception {
-        doNothing().when(profileService).deleteDriverProfileImage(10L, 10L, 1L);
+    void setPrimaryInspectorImage_shouldReturnSuccess() throws Exception {
+        doNothing().when(profileService).setPrimaryInspectorProfileImage(7L, 7L, 5L);
 
-        mockMvc.perform(delete("/api/v1/profiles/drivers/10/images/1")
-                        .with(asFarmer(jwtService, 10L)))
+        mockMvc.perform(put("/api/v1/profiles/inspectors/7/images/5/primary")
+                        .with(asInspector(jwtService, 7L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void deleteInspectorImage_shouldReturnSuccess() throws Exception {
+        doNothing().when(profileService).deleteInspectorProfileImage(7L, 7L, 5L);
+
+        mockMvc.perform(delete("/api/v1/profiles/inspectors/7/images/5")
+                        .with(asInspector(jwtService, 7L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void inspectorImageEndpoints_shouldRejectAnUnauthorizedCaller() throws Exception {
+        when(profileService.getInspectorProfileImages(4L, 7L))
+                .thenThrow(new ForbiddenException("You do not have permission to access this resource"));
+        doThrow(new ForbiddenException("You do not have permission to access this resource"))
+                .when(profileService).deleteInspectorProfileImage(4L, 7L, 5L);
+
+        // A buyer must not be able to read or delete an inspector's credentials.
+        mockMvc.perform(get("/api/v1/profiles/inspectors/7/images").with(asBuyer(jwtService, 4L)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/profiles/inspectors/7/images/5").with(asBuyer(jwtService, 4L)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
