@@ -72,11 +72,14 @@ public class AuthService {
     }
 
     private AuthTokenResponse buildTokenResponse(User user) {
+        long expiration = jwtProperties.getAccessTokenExpiration();
         return AuthTokenResponse.builder()
                 .accessToken(jwtService.generateAccessToken(user))
                 .refreshToken(jwtService.generateRefreshToken(user))
                 .tokenType("Bearer")
-                .expiresIn(jwtProperties.getAccessTokenExpiration() / 1000)
+                // null means the token carries no expiry and stays valid until the
+                // signing secret changes.
+                .expiresIn(expiration > 0 ? expiration / 1000 : null)
                 .user(mapToResponse(user))
                 .build();
     }

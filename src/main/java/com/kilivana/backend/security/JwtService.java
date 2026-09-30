@@ -3,6 +3,7 @@ package com.kilivana.backend.security;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.common.enums.UserRole;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.io.Decoders;
@@ -83,9 +84,14 @@ public class JwtService {
         return generateToken(user, TYPE_REFRESH, jwtProperties.getRefreshTokenExpiration());
     }
 
+    /** True when tokens are issued without an {@code exp} claim and therefore never expire. */
+    public boolean isAccessTokenNonExpiring() {
+        return jwtProperties.getAccessTokenExpiration() <= 0;
+    }
+
     private String generateToken(User user, String type, long expirationMillis) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + expirationMillis);
+        boolean neverExpires = expirationMillis <= 0;
 
         Map<String, Object> claims = new HashMap<>();
         claims.put(CLAIM_USER_ID, user.getId());
@@ -93,12 +99,20 @@ public class JwtService {
         claims.put(CLAIM_EMAIL, user.getEmail());
         claims.put(CLAIM_TYPE, type);
 
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .id(UUID.randomUUID().toString())
                 .subject(user.getId().toString())
                 .claims(claims)
-                .issuedAt(now)
-                .expiration(expiry)
+                .issuedAt(now);
+
+        if (neverExpires) {
+            log.warn("Issuing a {} token with no expiry. It stays valid until the JWT "
+                    + "signing secret changes.", type);
+        } else {
+            builder.expiration(new Date(now.getTime() + expirationMillis));
+        }
+
+        return builder
                 .signWith(signingKey())
                 .compact();
     }

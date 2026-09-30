@@ -47,8 +47,11 @@ public class OpenApiConfig {
                         added for you). Endpoints grouped under Authentication and Health & System \
                         are public and need no token.
 
-                        Tokens are stateless JWTs. Access tokens expire; use \
-                        `POST /api/v1/auth/refresh` with the refresh token to obtain a new pair.
+                        Tokens are stateless JWTs. Development configuration issues tokens \
+                        with no expiry so they stay valid until the signing secret changes. \
+                        Set JWT_EXPIRATION to a duration in milliseconds to make them expire, \
+                        and use `POST /api/v1/auth/refresh` with the refresh token to obtain a \
+                        new pair.
                         """)
                 .contact(contact);
 
