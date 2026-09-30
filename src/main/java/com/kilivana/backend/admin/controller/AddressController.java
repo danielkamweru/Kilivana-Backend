@@ -12,7 +12,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Users & Accounts", description = "Address book management for buyers and sellers")
 @RestController
 @RequestMapping({"/api/v1/users", "/api/v1"})
 @RequiredArgsConstructor
@@ -26,7 +29,7 @@ public class AddressController {
     }
 
     @GetMapping("/addresses")
-    public ResponseEntity<ApiResponse<List<AddressResponse>>> getOwnAddresses(@RequestHeader("X-User-Id") Long userId) {
+    public ResponseEntity<ApiResponse<List<AddressResponse>>> getOwnAddresses(@AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(ApiResponse.success(addressService.getAddressesByUser(userId)));
     }
 
@@ -38,7 +41,7 @@ public class AddressController {
 
     @PostMapping("/addresses")
     public ResponseEntity<ApiResponse<AddressResponse>> createOwnAddress(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AddressRequest request) {
         AddressResponse response = addressService.createAddress(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
@@ -51,7 +54,7 @@ public class AddressController {
 
     @PutMapping("/addresses/{addressId}")
     public ResponseEntity<ApiResponse<AddressResponse>> updateOwnAddress(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long addressId,
             @Valid @RequestBody AddressRequest request) {
         return ResponseEntity.ok(ApiResponse.success(addressService.updateAddress(userId, addressId, request)));
@@ -65,7 +68,7 @@ public class AddressController {
 
     @DeleteMapping("/addresses/{addressId}")
     public ResponseEntity<ApiResponse<Void>> deleteOwnAddress(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long addressId) {
         addressService.deleteAddress(userId, addressId);
         return ResponseEntity.ok(ApiResponse.successMessage("Address deleted successfully"));

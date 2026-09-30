@@ -12,7 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Cart & Checkout", description = "Buyer cart operations exposed under the compatibility route prefix")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -22,13 +25,13 @@ public class CartCompatibilityController {
     private final CartItemRepository cartItemRepository;
 
     @GetMapping("/cart")
-    public ResponseEntity<ApiResponse<CartResponse>> getCart(@RequestHeader("X-User-Id") Long buyerId) {
+    public ResponseEntity<ApiResponse<CartResponse>> getCart(@AuthenticationPrincipal Long buyerId) {
         return ResponseEntity.ok(ApiResponse.success(toResponse(cartService.getCartByBuyer(buyerId))));
     }
 
     @PostMapping("/cart/items")
     public ResponseEntity<ApiResponse<CartResponse>> addItem(
-            @RequestHeader("X-User-Id") Long buyerId,
+            @AuthenticationPrincipal Long buyerId,
             @RequestBody CartItemRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(toResponse(cartService.addItemToCart(buyerId, request.getProductId(), request.getQuantity()))));
@@ -52,12 +55,12 @@ public class CartCompatibilityController {
     }
 
     @PostMapping("/checkout/validate")
-    public ResponseEntity<ApiResponse<CartResponse>> validateCheckout(@RequestHeader("X-User-Id") Long buyerId) {
+    public ResponseEntity<ApiResponse<CartResponse>> validateCheckout(@AuthenticationPrincipal Long buyerId) {
         return ResponseEntity.ok(ApiResponse.success(toResponse(cartService.getCartByBuyer(buyerId))));
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<ApiResponse<Void>> checkout(@RequestHeader("X-User-Id") Long buyerId) {
+    public ResponseEntity<ApiResponse<Void>> checkout(@AuthenticationPrincipal Long buyerId) {
         Cart cart = cartService.getCartByBuyer(buyerId);
         cartService.checkout(cart.getId());
         return ResponseEntity.ok(ApiResponse.successMessage("Checkout successful"));

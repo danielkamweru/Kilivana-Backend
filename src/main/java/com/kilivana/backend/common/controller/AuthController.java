@@ -12,7 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import com.kilivana.backend.security.CurrentUser;
 
+@Tag(name = "Authentication", description = "Registration, login, token refresh and account recovery")
 @RestController
 @RequestMapping({"/api/v1/auth", "/api/auth"})
 @RequiredArgsConstructor
@@ -56,10 +60,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser(@RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        if (userId == null) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("User id header is required"));
-        }
-        return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUser(userId)));
+    @Operation(
+            summary = "Get the authenticated user",
+            description = "Returns the profile of the user identified by the bearer token."
+    )
+    public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
+        return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUser(CurrentUser.id())));
     }
 }

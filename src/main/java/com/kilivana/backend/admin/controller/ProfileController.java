@@ -14,7 +14,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Role Profiles", description = "Farmer, buyer, supplier, driver and inspector profile management")
 @RestController
 @RequestMapping("/api/v1/profiles")
 @RequiredArgsConstructor
@@ -129,7 +132,7 @@ public class ProfileController {
 
     @PostMapping(value = "/farmers/{userId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<List<ImageResponse>>> uploadFarmerImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @RequestPart("image") MultipartFile image,
             @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
@@ -139,7 +142,7 @@ public class ProfileController {
 
     @GetMapping("/farmers/{userId}/images")
     public ResponseEntity<ApiResponse<List<ImageResponse>>> getFarmerImages(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId) {
         List<ImageResponse> images = profileService.getFarmerProfileImages(authenticatedUserId, userId);
         return ResponseEntity.ok(ApiResponse.success(images));
@@ -147,7 +150,7 @@ public class ProfileController {
 
     @PutMapping("/farmers/{userId}/images/{imageId}/primary")
     public ResponseEntity<ApiResponse<Void>> setPrimaryFarmerImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @PathVariable Long imageId) {
         profileService.setPrimaryFarmerProfileImage(authenticatedUserId, userId, imageId);
@@ -156,7 +159,7 @@ public class ProfileController {
 
     @DeleteMapping("/farmers/{userId}/images/{imageId}")
     public ResponseEntity<ApiResponse<Void>> deleteFarmerImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @PathVariable Long imageId) throws IOException {
         profileService.deleteFarmerProfileImage(authenticatedUserId, userId, imageId);
@@ -165,7 +168,7 @@ public class ProfileController {
 
     @PostMapping(value = "/suppliers/{userId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<List<ImageResponse>>> uploadSupplierImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @RequestPart("image") MultipartFile image,
             @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
@@ -175,7 +178,7 @@ public class ProfileController {
 
     @GetMapping("/suppliers/{userId}/images")
     public ResponseEntity<ApiResponse<List<ImageResponse>>> getSupplierImages(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId) {
         List<ImageResponse> images = profileService.getSupplierProfileImages(authenticatedUserId, userId);
         return ResponseEntity.ok(ApiResponse.success(images));
@@ -183,7 +186,7 @@ public class ProfileController {
 
     @DeleteMapping("/suppliers/{userId}/images/{imageId}")
     public ResponseEntity<ApiResponse<Void>> deleteSupplierImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @PathVariable Long imageId) throws IOException {
         profileService.deleteSupplierProfileImage(authenticatedUserId, userId, imageId);
@@ -192,7 +195,7 @@ public class ProfileController {
 
     @PostMapping(value = "/drivers/{userId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<List<ImageResponse>>> uploadDriverImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @RequestPart("image") MultipartFile image,
             @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
@@ -202,7 +205,7 @@ public class ProfileController {
 
     @GetMapping("/drivers/{userId}/images")
     public ResponseEntity<ApiResponse<List<ImageResponse>>> getDriverImages(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId) {
         List<ImageResponse> images = profileService.getDriverProfileImages(authenticatedUserId, userId);
         return ResponseEntity.ok(ApiResponse.success(images));
@@ -210,7 +213,7 @@ public class ProfileController {
 
     @DeleteMapping("/drivers/{userId}/images/{imageId}")
     public ResponseEntity<ApiResponse<Void>> deleteDriverImage(
-            @RequestHeader("X-User-Id") Long authenticatedUserId,
+            @AuthenticationPrincipal Long authenticatedUserId,
             @PathVariable Long userId,
             @PathVariable Long imageId) throws IOException {
         profileService.deleteDriverProfileImage(authenticatedUserId, userId, imageId);

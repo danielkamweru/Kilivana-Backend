@@ -19,7 +19,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Products", description = "Product catalogue, pricing and product imagery")
 @RestController
 @RequestMapping({"/api/v1/ecommerce/products", "/api/v1/products"})
 @RequiredArgsConstructor
@@ -29,7 +32,7 @@ public class ProductController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestPart("product") ProductRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
         ProductResponse product;
@@ -43,7 +46,7 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> createProductJson(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestBody ProductRequest request) {
         ProductResponse product = productService.createProduct(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
@@ -79,7 +82,7 @@ public class ProductController {
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @RequestPart("product") ProductRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
@@ -95,7 +98,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProductJson(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @RequestBody ProductRequest request) {
         productService.ensureProductOwnership(id, userId);
@@ -105,7 +108,7 @@ public class ProductController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProductStatus(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @RequestParam ProductStatus status) {
         productService.ensureProductOwnership(id, userId);
@@ -115,7 +118,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id) throws IOException {
         productService.ensureProductOwnership(id, userId);
         productService.deleteProduct(id);
@@ -124,7 +127,7 @@ public class ProductController {
 
     @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductImageResponse>> uploadProductImage(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @RequestPart("image") MultipartFile image,
             @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
@@ -142,7 +145,7 @@ public class ProductController {
 
     @PutMapping(value = "/{productId}/images/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductImageResponse>> updateProductImage(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long productId,
             @PathVariable Long imageId,
             @RequestPart("image") MultipartFile image,
@@ -155,7 +158,7 @@ public class ProductController {
 
     @PutMapping("/{productId}/images/{imageId}/primary")
     public ResponseEntity<ApiResponse<Void>> setPrimaryImage(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long productId,
             @PathVariable Long imageId) {
         productService.ensureProductOwnership(productId, userId);
@@ -165,7 +168,7 @@ public class ProductController {
 
     @PutMapping("/{productId}/images/reorder")
     public ResponseEntity<ApiResponse<Void>> reorderImages(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long productId,
             @RequestBody List<Long> imageIdsInOrder) {
         productService.ensureProductOwnership(productId, userId);
@@ -175,7 +178,7 @@ public class ProductController {
 
     @DeleteMapping("/{productId}/images/{imageId}")
     public ResponseEntity<ApiResponse<Void>> deleteProductImage(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long productId,
             @PathVariable Long imageId) throws IOException {
         productService.ensureProductOwnership(productId, userId);

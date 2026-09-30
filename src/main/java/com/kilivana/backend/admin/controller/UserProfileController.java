@@ -10,7 +10,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
+@Tag(name = "Users & Accounts", description = "Self-service user registration and profile maintenance")
 @RestController
 @RequestMapping({"/api/v1/users", "/api/users"})
 @RequiredArgsConstructor
@@ -32,7 +35,7 @@ public class UserProfileController {
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> updateOwnProfile(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody UserProfileUpdateRequest request) {
         UserRegistrationRequest serviceRequest = UserRegistrationRequest.builder()
                 .name(request.getName())
