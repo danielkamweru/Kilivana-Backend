@@ -18,12 +18,18 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
     List<AuditLog> findByEntityTypeAndEntityId(String entityType, Long entityId);
     
+    /**
+     * Optional-filter search. The parameters in each {@code IS NULL} branch are cast
+     * explicitly: without a cast PostgreSQL cannot infer the type of a parameter that
+     * only appears in a null check, and rejects the statement with
+     * "could not determine data type of parameter".
+     */
     @Query("SELECT a FROM AuditLog a WHERE " +
-           "(:actorId IS NULL OR a.actorId = :actorId) AND " +
-           "(:entityType IS NULL OR a.entityType = :entityType) AND " +
-           "(:action IS NULL OR a.action = :action) AND " +
-           "(:startDate IS NULL OR a.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR a.createdAt <= :endDate) " +
+           "(CAST(:actorId AS Long) IS NULL OR a.actorId = :actorId) AND " +
+           "(CAST(:entityType AS String) IS NULL OR a.entityType = :entityType) AND " +
+           "(CAST(:action AS String) IS NULL OR a.action = :action) AND " +
+           "(CAST(:startDate AS java.time.LocalDateTime) IS NULL OR a.createdAt >= :startDate) AND " +
+           "(CAST(:endDate AS java.time.LocalDateTime) IS NULL OR a.createdAt <= :endDate) " +
            "ORDER BY a.createdAt DESC")
     Page<AuditLog> searchAuditLogs(@Param("actorId") Long actorId,
                                    @Param("entityType") String entityType,

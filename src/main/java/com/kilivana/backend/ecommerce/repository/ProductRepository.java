@@ -26,12 +26,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.status = :status ORDER BY p.createdAt DESC")
     Page<Product> findByStatusWithPagination(@Param("status") ProductStatus status, Pageable pageable);
     
+    /**
+     * Optional-filter search. The {@code IS NULL} branch parameters are cast
+     * explicitly: an uncast parameter used only in a null check has no type
+     * PostgreSQL can infer, and the statement is rejected at execution time.
+     */
     @Query(value = "SELECT * FROM products p WHERE " +
-           "(:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
-           "(:categoryId IS NULL OR p.category_id = :categoryId) AND " +
-           "(:sellerType IS NULL OR p.seller_type = :sellerType) AND " +
+           "(CAST(:name AS VARCHAR) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+           "(CAST(:categoryId AS BIGINT) IS NULL OR p.category_id = :categoryId) AND " +
+           "(CAST(:sellerType AS VARCHAR) IS NULL OR p.seller_type = :sellerType) AND " +
            "p.status = 'ACTIVE'", nativeQuery = true)
-    Page<Product> searchProducts(@Param("name") String name, 
+    Page<Product> searchProducts(@Param("name") String name,
                                  @Param("categoryId") Long categoryId,
                                  @Param("sellerType") String sellerType,
                                  Pageable pageable);
