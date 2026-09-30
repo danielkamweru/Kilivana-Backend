@@ -1,11 +1,13 @@
 package com.kilivana.backend.admin.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kilivana.backend.admin.dto.*;
 import com.kilivana.backend.admin.service.ProfileService;
 import com.kilivana.backend.common.dto.ImageResponse;
+import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.config.SecurityConfig;
+import com.kilivana.backend.security.JwtService;
+import com.kilivana.backend.support.JwtTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -18,6 +20,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.kilivana.backend.support.JwtTestSupport.asBuyer;
+import static com.kilivana.backend.support.JwtTestSupport.asDriver;
+import static com.kilivana.backend.support.JwtTestSupport.asFarmer;
+import static com.kilivana.backend.support.JwtTestSupport.asInspector;
+import static com.kilivana.backend.support.JwtTestSupport.asSupplier;
+import static com.kilivana.backend.support.JwtTestSupport.asUser;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -37,6 +45,9 @@ class ProfileControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JwtService jwtService;
 
     @MockBean
     private ProfileService profileService;
@@ -60,18 +71,22 @@ class ProfileControllerTest {
         doNothing().when(profileService).deleteFarmerProfile(10L);
 
         mockMvc.perform(post("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 10L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.userId").value(10));
-        mockMvc.perform(get("/api/v1/profiles/farmers/10"))
+        mockMvc.perform(get("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.farmName").value("Green Acres"));
         mockMvc.perform(put("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 10L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
-        mockMvc.perform(delete("/api/v1/profiles/farmers/10"))
+        mockMvc.perform(delete("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk());
     }
 
@@ -88,13 +103,13 @@ class ProfileControllerTest {
         when(profileService.createInspectorProfile(13L, inspector)).thenReturn(InspectorProfileResponse.builder().userId(13L).build());
         when(profileService.createSupplierProfile(14L, supplier)).thenReturn(SupplierProfileResponse.builder().userId(14L).build());
 
-        mockMvc.perform(post("/api/v1/profiles/buyers/11").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(buyer)))
+        mockMvc.perform(post("/api/v1/profiles/buyers/11").with(asUser(jwtService, 11L, UserRole.BUYER)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(buyer)))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/v1/profiles/drivers/12").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(driver)))
+        mockMvc.perform(post("/api/v1/profiles/drivers/12").with(asUser(jwtService, 12L, UserRole.DRIVER)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(driver)))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/v1/profiles/inspectors/13").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(inspector)))
+        mockMvc.perform(post("/api/v1/profiles/inspectors/13").with(asUser(jwtService, 13L, UserRole.INSPECTOR)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(inspector)))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/api/v1/profiles/suppliers/14").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(supplier)))
+        mockMvc.perform(post("/api/v1/profiles/suppliers/14").with(asUser(jwtService, 14L, UserRole.SUPPLIER)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(supplier)))
                 .andExpect(status().isCreated());
     }
 
@@ -103,6 +118,7 @@ class ProfileControllerTest {
         FarmerProfileRequest request = FarmerProfileRequest.builder().location("Nakuru").build();
 
         mockMvc.perform(post("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 10L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -127,7 +143,7 @@ class ProfileControllerTest {
 
         mockMvc.perform(multipart("/api/v1/profiles/farmers/10/images")
                         .file(image)
-                        .header("X-User-Id", "10")
+                        .with(asFarmer(jwtService, 10L))
                         .contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
@@ -145,7 +161,7 @@ class ProfileControllerTest {
         when(profileService.getFarmerProfileImages(10L, 10L)).thenReturn(images);
 
         mockMvc.perform(get("/api/v1/profiles/farmers/10/images")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].isPrimary").value(true));
@@ -156,7 +172,7 @@ class ProfileControllerTest {
         doNothing().when(profileService).deleteFarmerProfileImage(10L, 10L, 1L);
 
         mockMvc.perform(delete("/api/v1/profiles/farmers/10/images/1")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
@@ -166,7 +182,7 @@ class ProfileControllerTest {
         doNothing().when(profileService).setPrimaryFarmerProfileImage(10L, 10L, 1L);
 
         mockMvc.perform(put("/api/v1/profiles/farmers/10/images/1/primary")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
@@ -189,7 +205,7 @@ class ProfileControllerTest {
 
         mockMvc.perform(multipart("/api/v1/profiles/suppliers/10/images")
                         .file(image)
-                        .header("X-User-Id", "10")
+                        .with(asFarmer(jwtService, 10L))
                         .contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true));
@@ -204,7 +220,7 @@ class ProfileControllerTest {
         when(profileService.getSupplierProfileImages(10L, 10L)).thenReturn(images);
 
         mockMvc.perform(get("/api/v1/profiles/suppliers/10/images")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
     }
@@ -214,7 +230,7 @@ class ProfileControllerTest {
         doNothing().when(profileService).deleteSupplierProfileImage(10L, 10L, 1L);
 
         mockMvc.perform(delete("/api/v1/profiles/suppliers/10/images/1")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
@@ -237,7 +253,7 @@ class ProfileControllerTest {
 
         mockMvc.perform(multipart("/api/v1/profiles/drivers/10/images")
                         .file(image)
-                        .header("X-User-Id", "10")
+                        .with(asFarmer(jwtService, 10L))
                         .contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true));
@@ -252,7 +268,7 @@ class ProfileControllerTest {
         when(profileService.getDriverProfileImages(10L, 10L)).thenReturn(images);
 
         mockMvc.perform(get("/api/v1/profiles/drivers/10/images")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1));
     }
@@ -262,8 +278,38 @@ class ProfileControllerTest {
         doNothing().when(profileService).deleteDriverProfileImage(10L, 10L, 1L);
 
         mockMvc.perform(delete("/api/v1/profiles/drivers/10/images/1")
-                        .header("X-User-Id", "10"))
+                        .with(asFarmer(jwtService, 10L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void imageEndpoints_shouldRejectAnonymousRequests() throws Exception {
+        mockMvc.perform(get("/api/v1/profiles/farmers/10/images"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/profiles/farmers/10"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void imageEndpoints_shouldRejectMalformedToken() throws Exception {
+        mockMvc.perform(get("/api/v1/profiles/farmers/10/images")
+                        .header("Authorization", "Bearer not-a-valid-jwt"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void imageEndpoints_shouldIdentifyTheCallerFromTheToken() throws Exception {
+        // The acting user must come from the token, not from a client-supplied id.
+        List<ImageResponse> images = List.of(ImageResponse.builder()
+                .id(1L).url("https://res.cloudinary.com/demo/image/upload/x.png")
+                .publicId("x").isPrimary(true).sortOrder(0).build());
+
+        when(profileService.getFarmerProfileImages(10L, 42L)).thenReturn(images);
+
+        mockMvc.perform(get("/api/v1/profiles/farmers/10/images")
+                        .with(asFarmer(jwtService, 42L)))
+                .andExpect(status().isOk());
     }
 }
