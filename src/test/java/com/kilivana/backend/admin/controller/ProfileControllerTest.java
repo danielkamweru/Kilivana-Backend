@@ -5,6 +5,7 @@ import com.kilivana.backend.admin.dto.*;
 import com.kilivana.backend.admin.service.ProfileService;
 import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.config.SecurityConfig;
 import com.kilivana.backend.security.JwtService;
 import com.kilivana.backend.support.JwtTestSupport;
@@ -26,7 +27,10 @@ import static com.kilivana.backend.support.JwtTestSupport.asFarmer;
 import static com.kilivana.backend.support.JwtTestSupport.asInspector;
 import static com.kilivana.backend.support.JwtTestSupport.asSupplier;
 import static com.kilivana.backend.support.JwtTestSupport.asUser;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,10 +69,10 @@ class ProfileControllerTest {
                 .location("Nakuru")
                 .build();
 
-        when(profileService.createFarmerProfile(10L, request)).thenReturn(response);
-        when(profileService.getFarmerProfile(10L)).thenReturn(response);
-        when(profileService.updateFarmerProfile(10L, request)).thenReturn(response);
-        doNothing().when(profileService).deleteFarmerProfile(10L);
+        when(profileService.createFarmerProfile(10L, 10L, request)).thenReturn(response);
+        when(profileService.getFarmerProfile(10L, 10L)).thenReturn(response);
+        when(profileService.updateFarmerProfile(10L, 10L, request)).thenReturn(response);
+        doNothing().when(profileService).deleteFarmerProfile(10L, 10L);
 
         mockMvc.perform(post("/api/v1/profiles/farmers/10")
                         .with(asFarmer(jwtService, 10L))
@@ -98,10 +102,10 @@ class ProfileControllerTest {
         InspectorProfileRequest inspector = InspectorProfileRequest.builder().assignedArea("Nakuru").status("ACTIVE").build();
         SupplierProfileRequest supplier = SupplierProfileRequest.builder().businessName("Fresh Foods").location("Nairobi").build();
 
-        when(profileService.createBuyerProfile(11L, buyer)).thenReturn(BuyerProfileResponse.builder().userId(11L).build());
-        when(profileService.createDriverProfile(12L, driver)).thenReturn(DriverProfileResponse.builder().userId(12L).build());
-        when(profileService.createInspectorProfile(13L, inspector)).thenReturn(InspectorProfileResponse.builder().userId(13L).build());
-        when(profileService.createSupplierProfile(14L, supplier)).thenReturn(SupplierProfileResponse.builder().userId(14L).build());
+        when(profileService.createBuyerProfile(11L, 11L, buyer)).thenReturn(BuyerProfileResponse.builder().userId(11L).build());
+        when(profileService.createDriverProfile(12L, 12L, driver)).thenReturn(DriverProfileResponse.builder().userId(12L).build());
+        when(profileService.createInspectorProfile(13L, 13L, inspector)).thenReturn(InspectorProfileResponse.builder().userId(13L).build());
+        when(profileService.createSupplierProfile(14L, 14L, supplier)).thenReturn(SupplierProfileResponse.builder().userId(14L).build());
 
         mockMvc.perform(post("/api/v1/profiles/buyers/11").with(asUser(jwtService, 11L, UserRole.BUYER)).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(buyer)))
                 .andExpect(status().isCreated());
@@ -311,5 +315,57 @@ class ProfileControllerTest {
         mockMvc.perform(get("/api/v1/profiles/farmers/10/images")
                         .with(asFarmer(jwtService, 42L)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void profileCrud_shouldPassTheAuthenticatedCallerNotThePathUserId() throws Exception {
+        // A caller acting on someone else's profile must still be described by their
+        // own id, so the service can reject them instead of trusting the URL.
+        FarmerProfileRequest request = FarmerProfileRequest.builder()
+                .farmName("Green Acres")
+                .location("Nakuru")
+                .build();
+        FarmerProfileResponse response = FarmerProfileResponse.builder().id(1L).userId(10L).build();
+
+        when(profileService.getFarmerProfile(42L, 10L)).thenReturn(response);
+        when(profileService.updateFarmerProfile(eq(42L), eq(10L), any())).thenReturn(response);
+        doNothing().when(profileService).deleteFarmerProfile(42L, 10L);
+
+        mockMvc.perform(get("/api/v1/profiles/farmers/10").with(asFarmer(jwtService, 42L)))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 42L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/v1/profiles/farmers/10").with(asFarmer(jwtService, 42L)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void profileCrud_shouldNotRunForAnUnauthorizedCaller() throws Exception {
+        // The service refuses this call by throwing, which must surface as 403 and
+        // never as a success. Guards against the ownership check being removed.
+        FarmerProfileRequest request = FarmerProfileRequest.builder()
+                .farmName("Hijacked")
+                .location("Nowhere")
+                .build();
+
+        when(profileService.getFarmerProfile(42L, 10L))
+                .thenThrow(new ForbiddenException("You do not have permission to access this resource"));
+        when(profileService.updateFarmerProfile(eq(42L), eq(10L), any()))
+                .thenThrow(new ForbiddenException("You do not have permission to access this resource"));
+        doThrow(new ForbiddenException("You do not have permission to access this resource"))
+                .when(profileService).deleteFarmerProfile(42L, 10L);
+
+        mockMvc.perform(get("/api/v1/profiles/farmers/10").with(asFarmer(jwtService, 42L)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/v1/profiles/farmers/10")
+                        .with(asFarmer(jwtService, 42L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/profiles/farmers/10").with(asFarmer(jwtService, 42L)))
+                .andExpect(status().isForbidden());
     }
 }

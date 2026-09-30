@@ -2,9 +2,12 @@ package com.kilivana.backend.repository;
 
 import com.kilivana.backend.admin.entity.AuditLog;
 import com.kilivana.backend.admin.repository.AuditLogRepository;
+import com.kilivana.backend.common.enums.OrderStatus;
+import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -12,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +44,9 @@ class OptionalFilterQueryTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     private static final Pageable PAGE = PageRequest.of(0, 10);
 
@@ -72,8 +79,8 @@ class OptionalFilterQueryTest {
     void searchOrders_shouldAcceptFiltersOmitted() {
         assertThat(orderRepository.searchOrders(null, null, PAGE)).isNotNull();
         assertThat(orderRepository.searchOrders(1L, null, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(null, com.kilivana.backend.common.enums.OrderStatus.PENDING, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(1L, com.kilivana.backend.common.enums.OrderStatus.PENDING, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(null, OrderStatus.PENDING, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(1L, OrderStatus.PENDING, PAGE)).isNotNull();
     }
 
     @Test
@@ -86,19 +93,40 @@ class OptionalFilterQueryTest {
     }
 
     @Test
-    void auditLogEntityShouldBePersistable() {
+    void orderShouldPersistWithTimestampsPopulated() {
+        Order order = Order.builder()
+                .buyerId(1L)
+                .status(OrderStatus.PENDING)
+                .subtotal(new BigDecimal("100.00"))
+                .deliveryFee(new BigDecimal("10.00"))
+                .total(new BigDecimal("110.00"))
+                .paymentStatus(PaymentStatus.PENDING)
+                .addressId(1L)
+                .build();
+
+        Order saved = orderRepository.save(order);
+        entityManager.flush();
+        entityManager.clear();
+
+        Order reloaded = orderRepository.findById(saved.getId()).orElseThrow();
+        assertThat(reloaded.getCreatedAt()).isNotNull();
+        assertThat(reloaded.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void auditLogShouldPersistWithTimestampsPopulated() {
         AuditLog log = AuditLog.builder()
                 .actorId(1L)
                 .entityType("PRODUCT")
                 .entityId(1L)
                 .action("CREATE")
                 .build();
-        assertThat(log).isNotNull();
-    }
 
-    @Test
-    void orderEntityShouldBePersistable() {
-        Order order = Order.builder().buyerId(1L).build();
-        assertThat(order).isNotNull();
+        AuditLog saved = auditLogRepository.save(log);
+        entityManager.flush();
+        entityManager.clear();
+
+        AuditLog reloaded = auditLogRepository.findById(saved.getId()).orElseThrow();
+        assertThat(reloaded.getCreatedAt()).isNotNull();
     }
 }

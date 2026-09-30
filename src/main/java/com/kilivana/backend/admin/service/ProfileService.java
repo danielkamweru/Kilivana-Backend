@@ -7,6 +7,7 @@ import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.entity.BaseImageEntity;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,8 @@ public class ProfileService {
     private final CloudinaryService cloudinaryService;
 
     @Transactional(readOnly = true)
-    public FarmerProfileResponse getFarmerProfile(Long userId) {
+    public FarmerProfileResponse getFarmerProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.FARMER);
         FarmerProfile profile = farmerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId));
@@ -45,7 +47,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public FarmerProfileResponse createFarmerProfile(Long userId, FarmerProfileRequest request) {
+    public FarmerProfileResponse createFarmerProfile(Long authenticatedUserId, Long userId, FarmerProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.FARMER);
         if (farmerProfileRepository.existsByUserId(userId)) {
             throw new BadRequestException("Farmer profile already exists for user: " + userId);
@@ -62,7 +65,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public FarmerProfileResponse updateFarmerProfile(Long userId, FarmerProfileRequest request) {
+    public FarmerProfileResponse updateFarmerProfile(Long authenticatedUserId, Long userId, FarmerProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         FarmerProfile profile = farmerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId));
         ensureRole(userId, UserRole.FARMER);
@@ -75,21 +79,24 @@ public class ProfileService {
     }
 
     @Transactional
-    public void deleteFarmerProfile(Long userId) {
+    public void deleteFarmerProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         FarmerProfile profile = farmerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId));
         farmerProfileRepository.delete(profile);
     }
 
     @Transactional(readOnly = true)
-    public BuyerProfileResponse getBuyerProfile(Long userId) {
+    public BuyerProfileResponse getBuyerProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.BUYER);
         return BuyerProfileResponse.fromEntity(buyerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer profile", userId)));
     }
 
     @Transactional
-    public BuyerProfileResponse createBuyerProfile(Long userId, BuyerProfileRequest request) {
+    public BuyerProfileResponse createBuyerProfile(Long authenticatedUserId, Long userId, BuyerProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.BUYER);
         if (buyerProfileRepository.existsByUserId(userId)) {
             throw new BadRequestException("Buyer profile already exists for user: " + userId);
@@ -104,7 +111,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public BuyerProfileResponse updateBuyerProfile(Long userId, BuyerProfileRequest request) {
+    public BuyerProfileResponse updateBuyerProfile(Long authenticatedUserId, Long userId, BuyerProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         BuyerProfile profile = buyerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer profile", userId));
         ensureRole(userId, UserRole.BUYER);
@@ -115,14 +123,16 @@ public class ProfileService {
     }
 
     @Transactional
-    public void deleteBuyerProfile(Long userId) {
+    public void deleteBuyerProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         BuyerProfile profile = buyerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer profile", userId));
         buyerProfileRepository.delete(profile);
     }
 
     @Transactional(readOnly = true)
-    public DriverProfileResponse getDriverProfile(Long userId) {
+    public DriverProfileResponse getDriverProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.DRIVER);
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
@@ -131,7 +141,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public DriverProfileResponse createDriverProfile(Long userId, DriverProfileRequest request) {
+    public DriverProfileResponse createDriverProfile(Long authenticatedUserId, Long userId, DriverProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.DRIVER);
         if (driverProfileRepository.existsByUserId(userId)) {
             throw new BadRequestException("Driver profile already exists for user: " + userId);
@@ -149,7 +160,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public DriverProfileResponse updateDriverProfile(Long userId, DriverProfileRequest request) {
+    public DriverProfileResponse updateDriverProfile(Long authenticatedUserId, Long userId, DriverProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
         ensureRole(userId, UserRole.DRIVER);
@@ -163,7 +175,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public void deleteDriverProfile(Long userId) {
+    public void deleteDriverProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
         driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
@@ -174,14 +187,16 @@ public class ProfileService {
     }
 
     @Transactional(readOnly = true)
-    public InspectorProfileResponse getInspectorProfile(Long userId) {
+    public InspectorProfileResponse getInspectorProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.INSPECTOR);
         return InspectorProfileResponse.fromEntity(inspectorProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId)));
     }
 
     @Transactional
-    public InspectorProfileResponse createInspectorProfile(Long userId, InspectorProfileRequest request) {
+    public InspectorProfileResponse createInspectorProfile(Long authenticatedUserId, Long userId, InspectorProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.INSPECTOR);
         if (inspectorProfileRepository.existsByUserId(userId)) {
             throw new BadRequestException("Inspector profile already exists for user: " + userId);
@@ -197,7 +212,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public InspectorProfileResponse updateInspectorProfile(Long userId, InspectorProfileRequest request) {
+    public InspectorProfileResponse updateInspectorProfile(Long authenticatedUserId, Long userId, InspectorProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         InspectorProfile profile = inspectorProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
         ensureRole(userId, UserRole.INSPECTOR);
@@ -209,14 +225,16 @@ public class ProfileService {
     }
 
     @Transactional
-    public void deleteInspectorProfile(Long userId) {
+    public void deleteInspectorProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         InspectorProfile profile = inspectorProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
         inspectorProfileRepository.delete(profile);
     }
 
     @Transactional(readOnly = true)
-    public SupplierProfileResponse getSupplierProfile(Long userId) {
+    public SupplierProfileResponse getSupplierProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.SUPPLIER);
         SupplierProfile profile = supplierProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
@@ -225,7 +243,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public SupplierProfileResponse createSupplierProfile(Long userId, SupplierProfileRequest request) {
+    public SupplierProfileResponse createSupplierProfile(Long authenticatedUserId, Long userId, SupplierProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.SUPPLIER);
         if (supplierProfileRepository.existsByUserId(userId)) {
             throw new BadRequestException("Supplier profile already exists for user: " + userId);
@@ -242,7 +261,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public SupplierProfileResponse updateSupplierProfile(Long userId, SupplierProfileRequest request) {
+    public SupplierProfileResponse updateSupplierProfile(Long authenticatedUserId, Long userId, SupplierProfileRequest request) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         SupplierProfile profile = supplierProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
         ensureRole(userId, UserRole.SUPPLIER);
@@ -255,7 +275,8 @@ public class ProfileService {
     }
 
     @Transactional
-    public void deleteSupplierProfile(Long userId) {
+    public void deleteSupplierProfile(Long authenticatedUserId, Long userId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
         SupplierProfile profile = supplierProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
         supplierProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
@@ -463,9 +484,12 @@ public class ProfileService {
     }
 
     private void ensureOwnershipOrAdmin(Long authenticatedUserId, Long profileUserId) {
+        if (profileUserId.equals(authenticatedUserId)) {
+            return;
+        }
         UserRole role = userService.getUserById(authenticatedUserId).getRole();
-        if (role != UserRole.ADMIN && !authenticatedUserId.equals(profileUserId)) {
-            throw new BadRequestException("You do not have permission to access this resource");
+        if (role != UserRole.ADMIN) {
+            throw new ForbiddenException("You do not have permission to access this resource");
         }
     }
 }
