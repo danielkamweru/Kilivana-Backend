@@ -37,13 +37,16 @@ class AuthServiceEmailNormalizationTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private UserReferenceCodeGenerator referenceCodeGenerator;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         authService = new AuthService(userRepository, passwordEncoder, jwtService,
-                new JwtProperties());
+                new JwtProperties(), referenceCodeGenerator);
     }
 
     private static UserRegistrationRequest request(String email, String phone) {

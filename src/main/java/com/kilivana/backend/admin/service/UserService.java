@@ -23,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.kilivana.backend.common.service.UserReferenceCodeGenerator referenceCodeGenerator;
 
     @Transactional
     public UserResponse createUser(UserRegistrationRequest request) {
@@ -43,6 +44,7 @@ public class UserService {
                 .role(request.getRole())
                 .status(UserStatus.ACTIVE)
                 .verificationStatus(com.kilivana.backend.common.enums.VerificationStatus.NOT_REQUIRED)
+                .referenceCode(referenceCodeGenerator.nextCode(request.getRole()))
                 .build();
 
         User saved = userRepository.save(user);
