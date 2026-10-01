@@ -451,6 +451,17 @@ curl http://localhost:8080/actuator/health
 ## Useful Commands
 
 ```bash
+# Exercise every API group against a running backend and print a pass/fail table.
+# Bash and curl only. Retries dropped ngrok connections so tunnel flakiness is not
+# reported as a broken endpoint.
+./scripts/smoke-test.sh
+./scripts/smoke-test.sh https://either-juvenile-progeny.ngrok-free.dev
+```
+
+Test credentials for every role and a per-endpoint verified-status table live in
+[`docs/API_TEST_CREDENTIALS.md`](docs/API_TEST_CREDENTIALS.md).
+
+```bash
 mvn clean install
 mvn spring-boot:run
 mvn test
