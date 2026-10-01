@@ -15,4 +15,6 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
     List<Dispute> findByRaisedBy(Long raisedBy);
     
     List<Dispute> findByStatus(DisputeStatus status);
+
+    long countByStatusIn(List<DisputeStatus> statuses);
 }

@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -33,4 +35,36 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> searchOrders(@Param("buyerId") Long buyerId,
                              @Param("status") OrderStatus status,
                              Pageable pageable);
+
+    long countByStatus(OrderStatus status);
+
+    long countByStatusIn(List<OrderStatus> statuses);
+
+    /** Named queries cannot express {@code >=}, so the range is written out explicitly. */
+    @Query("SELECT COUNT(o) FROM Order o " +
+           "WHERE o.status IN :statuses AND o.createdAt >= :since")
+    long countByStatusInSince(@Param("statuses") List<OrderStatus> statuses,
+                              @Param("since") LocalDateTime since);
+
+    /**
+     * Per-day order count and revenue, grouped in the database so the dashboard does not
+     * have to pull every order in the window back to aggregate it.
+     */
+    @Query("SELECT FUNCTION('date', o.createdAt), COUNT(o), COALESCE(SUM(o.total), 0) " +
+           "FROM Order o WHERE o.status IN :statuses AND o.createdAt >= :since " +
+           "GROUP BY FUNCTION('date', o.createdAt) ORDER BY FUNCTION('date', o.createdAt)")
+    List<Object[]> dailyTotalsByStatusInSince(@Param("statuses") List<OrderStatus> statuses,
+                                              @Param("since") LocalDateTime since);
+
+    /**
+     * Completed revenue for the calendar month, used by the admin dashboard. Cancelled and
+     * failed orders are excluded so the figure matches what was actually settled.
+     */
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o " +
+           "WHERE o.status IN :statuses AND o.createdAt >= :since")
+    BigDecimal sumTotalByStatusInSince(@Param("statuses") List<OrderStatus> statuses,
+                                       @Param("since") LocalDateTime since);
+
+    @Query("SELECT COALESCE(AVG(o.total), 0) FROM Order o WHERE o.status IN :statuses")
+    BigDecimal averageTotalByStatusIn(@Param("statuses") List<OrderStatus> statuses);
 }

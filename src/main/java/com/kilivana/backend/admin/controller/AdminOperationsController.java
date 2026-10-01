@@ -1,21 +1,26 @@
 package com.kilivana.backend.admin.controller;
 
+import com.kilivana.backend.admin.dto.DashboardStatsResponse;
+import com.kilivana.backend.admin.service.DashboardService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.ProductStatus;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
 import com.kilivana.backend.ecommerce.dto.PaymentResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.repository.OrderRepository;
+import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.service.OrderService;
 import com.kilivana.backend.ecommerce.service.PaymentService;
 import com.kilivana.backend.ecommerce.service.ProductService;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
+import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,13 +36,25 @@ public class AdminOperationsController {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final LogisticsService logisticsService;
+    private final DashboardService dashboardService;
+    private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
+    private final LogisticsJobRepository logisticsJobRepository;
+
+    @GetMapping("/dashboard/stats")
+    @Operation(summary = "Dashboard totals, order trend and category breakdown")
+    public ResponseEntity<ApiResponse<DashboardStatsResponse>> dashboardStats() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getStats()));
+    }
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<Map<String, Long>>> dashboard() {
+        // Counted in the database. The previous version materialised every order and every
+        // payment to call size() on the result.
         Map<String, Long> metrics = new LinkedHashMap<>();
-        metrics.put("orders", orderService.searchOrders(null, null, Pageable.unpaged()).getTotalElements());
-        metrics.put("payments", (long) paymentService.getAllPayments().size());
-        metrics.put("logisticsJobs", (long) logisticsService.getAllJobs().size());
+        metrics.put("orders", orderRepository.count());
+        metrics.put("payments", paymentRepository.count());
+        metrics.put("logisticsJobs", logisticsJobRepository.count());
         return ResponseEntity.ok(ApiResponse.success(metrics));
     }
 

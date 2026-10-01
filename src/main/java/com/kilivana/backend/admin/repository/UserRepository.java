@@ -3,6 +3,7 @@ package com.kilivana.backend.admin.repository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
+import com.kilivana.backend.common.enums.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -27,4 +28,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     
     @Query("SELECT u FROM User u WHERE u.role = :role AND u.status = :status")
     List<User> findByRoleAndStatus(UserRole role, UserStatus status);
+
+    long countByRole(UserRole role);
+
+    long countByRoleAndVerificationStatus(UserRole role, VerificationStatus verificationStatus);
+
+    long countByVerificationStatus(VerificationStatus verificationStatus);
 }
