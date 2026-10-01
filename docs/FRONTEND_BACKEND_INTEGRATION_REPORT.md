@@ -163,7 +163,8 @@ another user's id returns 403.
 
 > Proof of delivery is **gated on the OTP**. Passing a wrong, missing or expired code is a
 > `400`. If the app posts proof without an `otp` param against a job that has one, it will be
-> rejected — this is the D3 fix, so it is expected to change that flow.
+> rejected — this is the D3 fix, so it is expected to change that flow. A second proof for the
+> same job is a `409`.
 
 ---
 
@@ -215,7 +216,7 @@ Admin routes require the `ADMIN` **or** `SUPER_ADMIN` role; any other token gets
 | Orders | `GET/POST /api/v1/admin/orders`, `/admin/orders/{id}/status`, disputes |
 | Payments | `GET /api/v1/admin/payments`, `/admin/payments/{id}/status`, refunds |
 | Inspections | `GET/POST /api/v1/admin/inspections`, `/admin/inspections/{id}/result`, `/status` |
-| Notifications | `GET/POST /api/v1/admin/notifications`, `/admin/notifications/user/{userId}`, `/read-all` |
+| Notifications | `GET /api/v1/admin/notifications` (optional `?unread=true`), `/admin/notifications/user/{userId}`, `/user/{userId}/unread`, `/read-all` |
 | Logistics | `GET /api/v1/logistics/jobs`, `/jobs/status/{status}`, `/jobs/{id}`, `PUT /jobs/{id}/assign`, `/cancel` |
 | Dashboard | `GET /api/v1/admin/dashboard/stats` (see §4.5), `GET /api/v1/admin/dashboard` |
 | Email | `POST /api/v1/admin/mail/test` (see §4.8) |
@@ -269,6 +270,14 @@ not arrive.
 
 Rejections are `400` with a clear message: `no delivery code to verify`, `The delivery code
 has expired`, `Incorrect delivery code`.
+
+**One proof per job.** A second proof of delivery for a job is `409 This delivery has already
+been confirmed`, enforced by a `deliveryOtpVerified` flag plus a unique index on
+`logistics_job_id`. The app can therefore treat a filed proof as final.
+
+`signatureUrl`, `photoUrl` and `otpReference` are all **optional** — they were `NOT NULL`
+before, which rejected every proof that omitted a signature and made the OTP flow impossible
+to complete. Send whatever you have; `recipientName` is the only field the driver must supply.
 
 ### 4.3 Job payload (was D4)
 
@@ -415,6 +424,12 @@ docker start kilivana-postgres        # host port 5433
 # one-time, on any database predating SUPER_ADMIN
 docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V2__add_super_admin_role.sql
+
+# one-time, for proof of delivery
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V3__proof_of_delivery_optional_fields.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V4__one_proof_of_delivery_per_job.sql
 
 # backend
 mvn spring-boot:run                   # http://localhost:8080

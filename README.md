@@ -88,7 +88,14 @@ enum need a manual script:
 ```bash
 docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V2__add_super_admin_role.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V3__proof_of_delivery_optional_fields.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V4__one_proof_of_delivery_per_job.sql
 ```
+
+`V4` deletes duplicate proof-of-delivery rows before adding its unique index, so read the
+comment at the top of that file before running it against anything other than development.
 
 ## Swagger Documentation
 
