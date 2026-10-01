@@ -14,12 +14,15 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     
-    Optional<User> findByEmail(String email);
-    
+    // Email lookups ignore case and surrounding spaces: addresses are stored lowercased, and
+    // a case-sensitive comparison used to let "Jane@x.com" and "jane@x.com" register as two
+    // accounts, so the second registration failed as a conflict and login failed as unknown.
+    Optional<User> findByEmailIgnoreCase(String email);
+
     Optional<User> findByPhone(String phone);
-    
-    boolean existsByEmail(String email);
-    
+
+    boolean existsByEmailIgnoreCase(String email);
+
     boolean existsByPhone(String phone);
     
     List<User> findByRole(UserRole role);

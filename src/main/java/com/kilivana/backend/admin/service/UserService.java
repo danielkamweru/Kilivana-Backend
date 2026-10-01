@@ -26,17 +26,19 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(UserRegistrationRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = normalizeEmail(request.getEmail());
+        String phone = normalizePhone(request.getPhone());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new BadRequestException("Email already exists");
         }
-        if (userRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhone(phone)) {
             throw new BadRequestException("Phone already exists");
         }
 
         User user = User.builder()
                 .name(request.getName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
+                .email(email)
+                .phone(phone)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .status(UserStatus.ACTIVE)
@@ -75,12 +77,13 @@ public class UserService {
     public UserResponse updateUser(Long id, UserRegistrationRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        String email = normalizeEmail(request.getEmail());
         user.setName(request.getName());
-        user.setPhone(request.getPhone());
-        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+        user.setPhone(normalizePhone(request.getPhone()));
+        if (!user.getEmail().equalsIgnoreCase(email) && userRepository.existsByEmailIgnoreCase(email)) {
             throw new BadRequestException("Email already exists");
         }
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         return mapToResponse(userRepository.save(user));
     }
 
@@ -101,11 +104,19 @@ public class UserService {
     }
 
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email).orElse(null);
+        return userRepository.findByEmailIgnoreCase(normalizeEmail(email)).orElse(null);
     }
 
     public User findByPhone(String phone) {
-        return userRepository.findByPhone(phone).orElse(null);
+        return userRepository.findByPhone(phone == null ? null : phone.trim()).orElse(null);
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    private static String normalizePhone(String phone) {
+        return phone == null ? null : phone.trim();
     }
 
     private UserResponse mapToResponse(User user) {

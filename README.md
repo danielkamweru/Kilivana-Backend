@@ -83,9 +83,22 @@ The backend will run on:
 
 ### Image uploads
 
-Every image endpoint (driver, farmer, supplier, inspector and product images) uploads to
-Cloudinary and needs three credentials. Without them uploads fail with
-`503 SERVICE_UNAVAILABLE` naming the missing variables, and a warning appears at startup.
+`STORAGE_PROVIDER` picks where image bytes go:
+
+| Value | Behaviour |
+| --- | --- |
+| `local` *(default)* | Writes to `app.storage.local.directory` (`./uploads`) and serves `{PUBLIC_BASE_URL}/uploads/...`. |
+| `database` | Stores the bytes as `bytea` in `stored_images` and serves `{PUBLIC_BASE_URL}/api/v1/images/{publicId}`. |
+| `cloudinary` | Uploads to Cloudinary, which needs the three credentials below. |
+
+With `cloudinary`, a missing or failing Cloudinary account no longer breaks uploads: the image is
+stored in PostgreSQL instead, using the `database` provider's storage. Set
+`STORAGE_FALLBACK_PROVIDER=none` to fail hard on Cloudinary errors and get
+`503 SERVICE_UNAVAILABLE` naming the missing variables.
+
+Both public image URLs are readable without a Bearer token, because they are embedded in `<img>`
+tags and mobile payloads that cannot send one: `GET /uploads/**` and `GET /api/v1/images/**`. Every
+other endpoint still requires authentication.
 
 ```bash
 CLOUDINARY_CLOUD_NAME=your_cloud \
@@ -93,11 +106,6 @@ CLOUDINARY_API_KEY=your_key \
 CLOUDINARY_API_SECRET=your_secret \
 mvn spring-boot:run
 ```
-
-With `STORAGE_PROVIDER=local` the files are written to `uploads/<folder>/<random-name>` and served
-from `{PUBLIC_BASE_URL}/uploads/...`. Those URLs are public: `GET /uploads/**` is permitted without
-a Bearer token, because image components cannot attach one, and the generated file names are
-unpredictable. Every other endpoint still requires authentication.
 
 ### Database migrations
 
@@ -112,10 +120,16 @@ docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V3__proof_of_delivery_optional_fields.sql
 docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V4__one_proof_of_delivery_per_job.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V6__unique_email_case_insensitive.sql
 ```
 
 `V4` deletes duplicate proof-of-delivery rows before adding its unique index, so read the
 comment at the top of that file before running it against anything other than development.
+
+`V6` lowercases stored email addresses and adds a unique index on `lower(email)`, because the
+application compares addresses case-insensitively while the generated constraint did not: it let
+`Jane@example.com` and `jane@example.com` register as two accounts.
 
 ## Swagger Documentation
 

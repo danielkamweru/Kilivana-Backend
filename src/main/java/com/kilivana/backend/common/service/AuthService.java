@@ -36,17 +36,19 @@ public class AuthService {
             throw new BadRequestException(
                     "Administrator accounts cannot be self-registered");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = normalizeEmail(request.getEmail());
+        String phone = normalizePhone(request.getPhone());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new ConflictException("Email already exists");
         }
-        if (userRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhone(phone)) {
             throw new ConflictException("Phone already exists");
         }
 
         User user = User.builder()
                 .name(request.getName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
+                .email(email)
+                .phone(phone)
                 .username(request.getUsername())
                 .region(request.getRegion())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -69,7 +71,7 @@ public class AuthService {
     }
 
     public AuthTokenResponse login(AuthLoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -107,29 +109,41 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+        String email = normalizeEmail(request.getEmail());
+        String phone = normalizePhone(request.getPhone());
+        if (!user.getEmail().equalsIgnoreCase(email) && userRepository.existsByEmailIgnoreCase(email)) {
             throw new BadRequestException("Email already exists");
         }
-        if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
+        if (!user.getPhone().equals(phone) && userRepository.existsByPhone(phone)) {
             throw new BadRequestException("Phone already exists");
         }
 
         user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setEmail(email);
+        user.setPhone(phone);
 
         return mapToResponse(userRepository.save(user));
     }
 
+    /** Addresses are stored lowercased and trimmed so one account is one address. */
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    private static String normalizePhone(String phone) {
+        return phone == null ? null : phone.trim();
+    }
+
     @Transactional
     public String forgotPassword(String email) {
-        userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User with email not found"));
+        userRepository.findByEmailIgnoreCase(normalizeEmail(email))
+                .orElseThrow(() -> new ResourceNotFoundException("User with email not found"));
         return "Password reset instructions have been sent if this account exists.";
     }
 
     @Transactional
     public String resetPassword(PasswordResetRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new ResourceNotFoundException("User", 0L));
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));

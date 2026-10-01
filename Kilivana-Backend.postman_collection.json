@@ -2608,6 +2608,36 @@
           }
         }
       ]
+    },
+    {
+      "name": "18. Image Storage",
+      "description": "StoredImageController. Image bytes live in PostgreSQL when app.storage.provider=database, or when the Cloudinary fallback kicked in. Reads are public because image URLs are embedded in <img> tags and mobile payloads that cannot send a bearer token.",
+      "item": [
+        {
+          "name": "Get Stored Image (public, no token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/images/1",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Returns the raw bytes for a stored image id with its original content type. Replace 1 with the publicId from an upload response."
+          }
+        },
+        {
+          "name": "Get Uploaded File (local provider, public, no token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Serves files written by the local storage provider from app.storage.local.directory."
+          }
+        }
+      ]
     }
   ],
   "variable": [

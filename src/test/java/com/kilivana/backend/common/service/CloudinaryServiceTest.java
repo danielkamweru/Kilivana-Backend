@@ -37,7 +37,7 @@ class CloudinaryServiceTest {
 
     @BeforeEach
     void setUp() {
-        configuredService = new CloudinaryService(cloudinary, "demo-cloud", "demo-key");
+        configuredService = new CloudinaryService(cloudinary, "demo-cloud", "demo-key", null, "none");
     }
 
     @Test
@@ -150,7 +150,7 @@ class CloudinaryServiceTest {
     void uploadImage_withoutCredentials_shouldNameTheMissingVariables() {
         // Regression: with no Cloudinary credentials the SDK threw "cloud_name is disabled"
         // from deep in its HTTP layer, which reached the client as an opaque 500.
-        CloudinaryService unconfigured = new CloudinaryService(cloudinary, "", "");
+        CloudinaryService unconfigured = new CloudinaryService(cloudinary, "", "", null, "none");
         MockMultipartFile file = new MockMultipartFile(
                 "image", "test.png", "image/png", "fake-image-data".getBytes());
 
@@ -159,5 +159,72 @@ class CloudinaryServiceTest {
         assertThatThrownBy(() -> unconfigured.uploadImage(file, "kilivana/drivers/1"))
                 .isInstanceOf(ServiceUnavailableException.class)
                 .hasMessageContaining("CLOUDINARY_CLOUD_NAME");
+    }
+
+    @Test
+    void uploadImage_withoutCredentials_shouldStoreInDatabaseWhenFallbackEnabled() throws IOException {
+        DatabaseImageStorage database = mock(DatabaseImageStorage.class);
+        CloudinaryService service = new CloudinaryService(cloudinary, "", "", database, "database");
+        MockMultipartFile file = new MockMultipartFile(
+                "image", "test.png", "image/png", "fake-image-data".getBytes());
+
+        Map<String, Object> stored = new HashMap<>();
+        stored.put("secure_url", "https://example.test/api/v1/images/7");
+        stored.put("public_id", "7");
+        when(database.uploadImage(file, "kilivana/drivers/1")).thenReturn(stored);
+
+        Map<String, Object> result = service.uploadImage(file, "kilivana/drivers/1");
+
+        assertEquals("https://example.test/api/v1/images/7", service.getSecureUrl(result));
+        assertEquals("database", result.get("storage_provider"));
+        assertThat(service.isConfigured()).isTrue();
+        verify(cloudinary, never()).uploader();
+    }
+
+    @Test
+    void uploadImage_whenCloudinaryFails_shouldStoreInDatabase() throws IOException {
+        DatabaseImageStorage database = mock(DatabaseImageStorage.class);
+        CloudinaryService service = new CloudinaryService(
+                cloudinary, "demo-cloud", "demo-key", database, "database");
+        MockMultipartFile file = new MockMultipartFile(
+                "image", "test.png", "image/png", "fake-image-data".getBytes());
+
+        when(cloudinary.uploader()).thenReturn(uploader);
+        when(uploader.upload(any(byte[].class), anyMap())).thenThrow(new IOException("Cloudinary down"));
+
+        Map<String, Object> stored = new HashMap<>();
+        stored.put("secure_url", "https://example.test/api/v1/images/9");
+        stored.put("public_id", "9");
+        when(database.uploadImage(file, "kilivana/products/1")).thenReturn(stored);
+
+        Map<String, Object> result = service.uploadImage(file, "kilivana/products/1");
+
+        assertEquals("https://example.test/api/v1/images/9", service.getSecureUrl(result));
+        assertEquals("database", result.get("storage_provider"));
+    }
+
+    @Test
+    void deleteImage_shouldRouteNumericIdsToDatabase() {
+        DatabaseImageStorage database = mock(DatabaseImageStorage.class);
+        CloudinaryService service = new CloudinaryService(
+                cloudinary, "demo-cloud", "demo-key", database, "database");
+
+        service.deleteImage("12");
+
+        verify(database).deleteImage("12");
+        verify(cloudinary, never()).uploader();
+    }
+
+    @Test
+    void deleteImage_shouldKeepCloudinaryIdsOnCloudinary() throws IOException {
+        DatabaseImageStorage database = mock(DatabaseImageStorage.class);
+        CloudinaryService service = new CloudinaryService(
+                cloudinary, "demo-cloud", "demo-key", database, "database");
+        when(cloudinary.uploader()).thenReturn(uploader);
+
+        service.deleteImage("kilivana/products/1/test");
+
+        verify(uploader).destroy(eq("kilivana/products/1/test"), anyMap());
+        verifyNoInteractions(database);
     }
 }

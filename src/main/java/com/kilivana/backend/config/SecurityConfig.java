@@ -40,6 +40,9 @@ public class SecurityConfig {
             // which cannot attach a bearer token. Filenames are random, so the files are
             // safe to read without a token.
             "GET", "/uploads/**",
+            // Same reason as /uploads/**: images kept in PostgreSQL are served from here and
+            // are referenced from <img> tags and mobile payloads that carry no bearer token.
+            "GET", "/api/v1/images/**",
             "POST", "/api/v1/auth/register",
             "POST", "/api/v1/auth/login",
             "POST", "/api/v1/auth/refresh",

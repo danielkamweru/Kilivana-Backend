@@ -71,7 +71,7 @@ public class DevelopmentDataSeeder {
         int repaired = 0;
 
         for (SeedUser seed : SEED_USERS) {
-            User existing = userRepository.findByEmail(seed.email()).orElse(null);
+            User existing = userRepository.findByEmailIgnoreCase(seed.email()).orElse(null);
 
             if (existing == null) {
                 userRepository.save(User.builder()

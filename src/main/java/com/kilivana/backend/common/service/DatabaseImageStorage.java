@@ -3,10 +3,8 @@ package com.kilivana.backend.common.service;
 import com.kilivana.backend.common.entity.StoredImage;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.repository.StoredImageRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,15 +17,15 @@ import java.util.Set;
 /**
  * Keeps image bytes in PostgreSQL rather than in an external provider.
  *
- * <p>Used when {@code app.storage.provider=database}. Chosen for deployments that must not
- * depend on a third-party account: the images survive a container restart because they live
- * in the same database as everything else. The trade-off is size — every read pulls the
- * bytes back through the application, and the table grows without bound. Keep it for small
- * images such as avatars, vehicle photos and licence scans.
+ * <p>Selected by {@code app.storage.provider=database}, and used as the fallback for a failing
+ * Cloudinary provider. Chosen for deployments that must not depend on a third-party account:
+ * the images survive a container restart because they live in the same database as everything
+ * else. The trade-off is size — every read pulls the bytes back through the application, and
+ * the table grows without bound. Keep it for small images such as avatars, vehicle photos and
+ * licence scans.
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "app.storage.provider", havingValue = "database")
 public class DatabaseImageStorage implements ImageStorage {
 
     private static final Set<String> ALLOWED_TYPES = Set.of(
@@ -65,6 +63,7 @@ public class DatabaseImageStorage implements ImageStorage {
         result.put("public_id", publicId);
         result.put("secure_url", urlFor(publicId));
         result.put("asset_id", null);
+        result.put("storage_provider", "database");
         return result;
     }
 
