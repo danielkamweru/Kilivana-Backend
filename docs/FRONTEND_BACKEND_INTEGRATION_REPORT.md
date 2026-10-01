@@ -263,13 +263,25 @@ replayed. Proof of delivery now *requires* it — `POST /api/v1/logistics/proof-
 and `POST /api/v1/logistics/jobs/{jobId}/proof-of-delivery` take an optional `?otp=` param,
 and if the job holds a code it must match or the request is rejected.
 
-Job reads expose `deliveryOtp` and `deliveryOtpExpiresAt`. **Do not treat this as a secret to
-hide from the driver app** — the driver enters the code the *customer* reads out. It is
-returned only so the backend can be tested and so a delivery can complete when the email did
-not arrive.
+Job reads expose `deliveryOtpExpiresAt` and `deliveryOtpVerified` but **never the code
+itself**. The driver app cannot display the code, and must not try to: the code is what the
+*customer* reads out to the driver at handover. If your screen currently expects a
+`deliveryOtp` field to render, delete that expectation.
 
-Rejections are `400` with a clear message: `no delivery code to verify`, `The delivery code
-has expired`, `Incorrect delivery code`.
+The code is emailed to the buyer and held nowhere else — it is stored as a BCrypt hash, so a
+database read cannot reveal a code that is still live.
+
+Rejections:
+
+| Status | Meaning |
+|---|---|
+| `400 Incorrect delivery code` | Wrong code; attempts incremented |
+| `400 The delivery code has expired` | Past the 24-hour window |
+| `400 This job has no delivery code to verify` | Legacy job created before OTP existed |
+| `429 Too many incorrect delivery codes…` | Locked after 5 wrong guesses; 15-minute cooldown |
+
+The lockout **locks** rather than regenerates the code, so a genuine driver cannot be denied
+by someone else burning the attempts. After the cooldown the same code still works.
 
 **One proof per job.** A second proof of delivery for a job is `409 This delivery has already
 been confirmed`, enforced by a `deliveryOtpVerified` flag plus a unique index on
@@ -412,6 +424,28 @@ delivery result.
 
 Delivery failures are logged, never thrown: an unreachable mail provider must not fail the
 operation that triggered the email. The only current sender is the delivery OTP.
+
+### 4.9 Image uploads require Cloudinary credentials
+
+`POST /api/v1/profiles/drivers/{userId}/images` (and every other image endpoint) depends on
+Cloudinary. With no credentials the SDK threw `cloud_name is disabled` from inside its HTTP
+layer, which reached clients as an opaque `500` — and over ngrok as an apparently dropped
+connection, which was mistaken for a multipart parsing fault.
+
+It is now a deliberate, self-explanatory failure:
+
+```json
+HTTP 503
+{
+  "success": false,
+  "message": "Image storage is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET, then restart.",
+  "error": { "code": "SERVICE_UNAVAILABLE", "details": "..." }
+}
+```
+
+A warning naming the same variables is logged at startup. **Until the credentials are
+supplied, no image upload in either app will succeed.** This is configuration, not code —
+nothing else in the upload path is broken.
 
 ---
 

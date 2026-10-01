@@ -79,6 +79,19 @@ The backend will run on:
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
 
+### Image uploads
+
+Every image endpoint (driver, farmer, supplier, inspector and product images) uploads to
+Cloudinary and needs three credentials. Without them uploads fail with
+`503 SERVICE_UNAVAILABLE` naming the missing variables, and a warning appears at startup.
+
+```bash
+CLOUDINARY_CLOUD_NAME=your_cloud \
+CLOUDINARY_API_KEY=your_key \
+CLOUDINARY_API_SECRET=your_secret \
+mvn spring-boot:run
+```
+
 ### Database migrations
 
 There is no migration tool; `spring.jpa.hibernate.ddl-auto=update` handles new columns. It does
