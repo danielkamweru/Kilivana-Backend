@@ -20,6 +20,9 @@ public class UserResponse {
     private String name;
     private String email;
     private String phone;
+    private String username;
+    private String referenceCode;
+    private String region;
     private UserRole role;
     private UserStatus status;
     private VerificationStatus verificationStatus;

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -36,6 +37,9 @@ public class SupplierProfile {
 
     @Column(columnDefinition = "TEXT")
     private String verificationInfo;
+
+    /** When the supplier's current contract lapses, if one is in force. */
+    private LocalDate contractEndDate;
 
     @Column(nullable = false, updatable = false)
     @CreationTimestamp

@@ -33,4 +33,8 @@ public class UserRegistrationRequest {
     
     @NotNull(message = "Role is required")
     private UserRole role;
+
+    private String username;
+
+    private String region;
 }

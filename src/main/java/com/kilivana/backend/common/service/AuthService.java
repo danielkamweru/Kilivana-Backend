@@ -32,7 +32,7 @@ public class AuthService {
 
     @Transactional
     public UserResponse register(UserRegistrationRequest request) {
-        if (request.getRole() == UserRole.ADMIN) {
+        if (request.getRole() != null && request.getRole().isStaff()) {
             throw new BadRequestException(
                     "Administrator accounts cannot be self-registered");
         }
@@ -47,13 +47,25 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
+                .username(request.getUsername())
+                .region(request.getRegion())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .status(UserStatus.ACTIVE)
                 .verificationStatus(VerificationStatus.NOT_REQUIRED)
+                .referenceCode(nextReferenceCode(request.getRole()))
                 .build();
 
         return mapToResponse(userRepository.save(user));
+    }
+
+    /**
+     * Codes are per-role sequences so {@code F-014} is always a farmer. Derived from the
+     * current count, which is adequate at this scale; a busy deployment should move this to
+     * a database sequence to avoid two registrations racing on the same number.
+     */
+    private String nextReferenceCode(UserRole role) {
+        return role.referenceCode(userRepository.countByRole(role) + 1);
     }
 
     public AuthTokenResponse login(AuthLoginRequest request) {
@@ -147,6 +159,9 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .username(user.getUsername())
+                .referenceCode(user.getReferenceCode())
+                .region(user.getRegion())
                 .role(user.getRole())
                 .status(user.getStatus())
                 .verificationStatus(user.getVerificationStatus())

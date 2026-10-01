@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -36,6 +37,16 @@ public class DriverProfile {
 
     @Column(columnDefinition = "TEXT")
     private String vehicleDetails;
+
+    private String vehicleMake;
+
+    /** Maximum payload the vehicle can carry, in kilograms. */
+    private Integer vehicleCapacityKg;
+
+    private LocalDate licenseExpiryDate;
+
+    private String idType;
+    private String idNumber;
 
     @Column(nullable = false)
     private String availabilityStatus;

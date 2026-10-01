@@ -34,6 +34,18 @@ public class User {
     @Column(nullable = false)
     private String phone;
 
+    @Column(unique = true)
+    private String username;
+
+    /**
+     * Human-facing identifier for support and reconciliation, e.g. {@code F-014}. Assigned at
+     * registration and never reused, unlike the numeric primary key.
+     */
+    @Column(unique = true, updatable = false)
+    private String referenceCode;
+
+    private String region;
+
     @Column(nullable = false)
     private String passwordHash;
 
