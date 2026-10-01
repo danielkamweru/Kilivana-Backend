@@ -90,6 +90,13 @@ public class LogisticsJobController {
         return updateJobStatus(id, status);
     }
 
+    @PostMapping("/{id}/otp/verify")
+    public ResponseEntity<ApiResponse<LogisticsJob>> verifyDeliveryOtp(@PathVariable Long id,
+            @RequestParam String otp) {
+        LogisticsJob job = logisticsService.verifyDeliveryOtp(id, otp);
+        return ResponseEntity.ok(ApiResponse.success(job));
+    }
+
     @PutMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<LogisticsJob>> cancelJob(@PathVariable Long id, @RequestBody String cancellationReason) {
         LogisticsJob job = logisticsService.cancelJob(id, cancellationReason);

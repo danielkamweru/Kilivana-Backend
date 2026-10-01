@@ -35,9 +35,10 @@ public class LogisticsCompatibilityController {
 
     @PostMapping("/{jobId}/proof-of-delivery")
     public ResponseEntity<ApiResponse<ProofOfDelivery>> submitProof(
-            @PathVariable Long jobId, @RequestBody ProofOfDelivery proof) {
+            @PathVariable Long jobId, @RequestBody ProofOfDelivery proof,
+            @RequestParam(required = false) String otp) {
         proof.setLogisticsJobId(jobId);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(logisticsService.createProofOfDelivery(proof)));
+                .body(ApiResponse.success(logisticsService.createProofOfDelivery(proof, otp)));
     }
 }

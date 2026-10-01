@@ -21,8 +21,9 @@ public class ProofOfDeliveryController {
     private final LogisticsService logisticsService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ProofOfDelivery>> createProofOfDelivery(@RequestBody ProofOfDelivery proof) {
-        ProofOfDelivery created = logisticsService.createProofOfDelivery(proof);
+    public ResponseEntity<ApiResponse<ProofOfDelivery>> createProofOfDelivery(@RequestBody ProofOfDelivery proof,
+            @RequestParam(required = false) String otp) {
+        ProofOfDelivery created = logisticsService.createProofOfDelivery(proof, otp);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
     }
 

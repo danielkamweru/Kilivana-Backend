@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,6 +32,35 @@ public class LogisticsJob {
 
     @Column(nullable = false)
     private String destinationAddress;
+
+    /**
+     * Addresses are free text, so the driver app cannot plot a route from them alone.
+     * These are optional: a job created without them still works, it just has no pin.
+     */
+    private Double pickupLatitude;
+    private Double pickupLongitude;
+    private Double destinationLatitude;
+    private Double destinationLongitude;
+
+    @Column(columnDefinition = "TEXT")
+    private String cargoDescription;
+
+    private Integer quantity;
+
+    private BigDecimal payoutAmount;
+
+    private LocalDateTime scheduledPickupAt;
+    private LocalDateTime scheduledDropoffAt;
+
+    private Double distanceKm;
+    private Integer estimatedMinutes;
+
+    /**
+     * Shared secret the customer reads out to the driver on handover. Generated when the
+     * job is created, cleared once a proof of delivery has consumed it.
+     */
+    private String deliveryOtp;
+    private LocalDateTime deliveryOtpExpiresAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
