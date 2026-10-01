@@ -97,6 +97,13 @@
             <version>1.39.0</version>
         </dependency>
 
+        <!-- SendGrid HTTP API for transactional email -->
+        <dependency>
+            <groupId>com.sendgrid</groupId>
+            <artifactId>sendgrid-java</artifactId>
+            <version>4.10.1</version>
+        </dependency>
+
         <!-- Apache Commons IO for file validation -->
         <dependency>
             <groupId>commons-io</groupId>
