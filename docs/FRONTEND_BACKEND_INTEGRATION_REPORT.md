@@ -122,9 +122,9 @@ These are already correct — do not change them:
 | # | App expects | Backend actually provides | Impact |
 |---|---|---|---|
 | D1 | `X-User-Id` header identifies the caller | `Authorization: Bearer` JWT | **401 on every call** |
-| D2 | Job has `pickupLat`, `pickupLon`, `dropoffLat`, `dropoffLon` | `LogisticsJob` has **no coordinates at all** — only `pickupAddress` / `destinationAddress` text | **Map and OSRM routing cannot work.** The app builds a route from coordinates; the backend never sends any. |
-| D3 | Job has `deliveryOtp` (comment says backend generates it and SMSes the buyer) | `LogisticsJob` has no OTP field. `ProofOfDelivery.otpReference` exists but is only written at proof time, so the driver has nothing to show the recipient | **Cannot confirm delivery** |
-| D4 | Job has `cargo`, `quantity`, `payoutKsh`, `customer`, `distanceKm`, `estimatedTime`, `pickupTime`, `dropoffTime` | None of these exist on `LogisticsJob`; it carries only `orderId` and the two address strings | Jobs list cannot be populated |
+| D2 | Job has `pickupLat`, `pickupLon`, `dropoffLat`, `dropoffLon` | **Fixed.** `pickupLatitude`/`pickupLongitude`/`destinationLatitude`/`destinationLongitude`, all nullable — see §4.1 | **Renamed, not identical.** Add a mapping layer; do not assume the app's names. |
+| D3 | Job has `deliveryOtp` (comment says backend generates it and SMSes the buyer) | **Fixed.** `deliveryOtp` + `deliveryOtpExpiresAt`, emailed to the buyer via SendGrid. Proof of delivery now requires it — see §4.2 | It arrives by **email**, not SMS. |
+| D4 | Job has `cargo`, `quantity`, `payoutKsh`, `customer`, `distanceKm`, `estimatedTime`, `pickupTime`, `dropoffTime` | **Mostly fixed** — see §4.3. `cargoDescription`, `quantity`, `payoutAmount`, `distanceKm`, `estimatedMinutes`, `scheduledPickupAt`, `scheduledDropoffAt` all exist | **`customer` does not exist.** Fetch the order separately or ask for it to be embedded. |
 | D5 | `JobStatus` of the app's own design | Backend `DeliveryStatus`: `PENDING_ASSIGNMENT, ASSIGNED, ACCEPTED, EN_ROUTE_TO_PICKUP, ARRIVED_AT_PICKUP, PICKED_UP, IN_TRANSIT, ARRIVED_AT_DESTINATION, DELIVERED, CANCELLED, FAILED` | Needs a mapping table |
 | D6 | Login screen validates `password.length >= 4` locally | Backend validates credentials | Cosmetic, but the local check is meaningless once real auth lands |
 | D7 | `AppNotification` has `timeLabel`, `isEarlier`, `type` | `NotificationResponse` has `id, userId, type, title, message, readAt, createdAt` | Derive `timeLabel` from `createdAt`; `isEarlier` is a local grouping concern |
@@ -152,13 +152,18 @@ another user's id returns 403.
 | `POST` | `/api/v1/logistics/jobs/{id}/accept` | **No body.** |
 | `PUT` | `/api/v1/logistics/jobs/{id}/status?status=ACCEPTED` | **Status is a query parameter, not a body.** |
 | `POST` | `/api/v1/logistics/jobs/{jobId}/tracking` | Tracking events for a job. |
-| `POST` | `/api/v1/logistics/jobs/{jobId}/proof-of-delivery` | Body = `ProofOfDelivery`: `logisticsJobId`, `recipientName`, `signatureUrl`, `photoUrl`, `otpReference`. |
+| `POST` | `/api/v1/logistics/jobs/{jobId}/proof-of-delivery` | Body = `ProofOfDelivery`: `logisticsJobId`, `recipientName`, `signatureUrl`, `photoUrl`, plus **`?otp=`** — required when the job holds a code. See §4.2. |
+| `POST` | `/api/v1/logistics/jobs/{id}/otp/verify?otp=123456` | Verifies and consumes the handover code. Optional if you pass `?otp=` straight to proof-of-delivery. |
 | `GET` | `/api/v1/logistics/proof-of-delivery/job/{jobId}` | |
 | `GET` | `/api/v1/logistics/tracking-events/job/{jobId}` | |
 | `GET` | `/api/v1/notifications/user/{userId}` | |
 
 > Note the status endpoint takes `?status=` in the query string. The driver app will send it
 > in a JSON body and get a 400.
+
+> Proof of delivery is **gated on the OTP**. Passing a wrong, missing or expired code is a
+> `400`. If the app posts proof without an `otp` param against a job that has one, it will be
+> rejected — this is the D3 fix, so it is expected to change that flow.
 
 ---
 
@@ -179,23 +184,23 @@ another user's id returns 403.
 | A2 | `ApiResponse<T> = { success, message?, data }` | `{ success, message, data, timestamp, error }` | Add `timestamp` and `error`; `message` is always present on the backend |
 | A3 | `ApiError { status, message, errors? }` | `error: { code, details }` inside the body, plus the HTTP status | Restructure to read `error.code` / `error.details` |
 | A4 | `id: string` on every model (`'1'`, `'ADM-001'`) | `Long` | Will not bind in TypeScript; use `number` |
-| A5 | `code: string` (`'B-001'`, `'F-001'`, `'S-001'`, `'DA-001'`) | No such field on any entity | Needs a backend field or a client-side display convention |
-| A6 | `role: 'admin' \| 'super-admin'` | `UserRole` = `FARMER, BUYER, SUPPLIER, INSPECTOR, DRIVER, ADMIN` | **There is no SUPER_ADMIN.** Either collapse to `ADMIN`, or a role is needed in the backend |
+| A5 | `code: string` (`'B-001'`, `'F-001'`, `'S-001'`, `'DA-001'`) | **Fixed.** `User.referenceCode`, e.g. `F-014`, assigned at registration — see §4.6 | Read `referenceCode`, not `code`. |
+| A6 | `role: 'admin' \| 'super-admin'` | **Fixed.** `SUPER_ADMIN` added; both staff roles get identical access — see §4.4 | Requires the one-time SQL migration. |
 | A7 | `fullName`, `initials` | `name`; no initials | Map `name`; derive initials client-side |
 | A8 | `status: 'verified' \| 'pending' \| 'suspended'` | `UserStatus` = `ACTIVE, INACTIVE, SUSPENDED` and separately `VerificationStatus` = `PENDING, VERIFIED, REJECTED` | The app collapses two backend concepts into one field — needs splitting |
 | A9 | `KycStatus` on driver, farmer, supplier models | No KYC/verification entity beyond `User.verificationStatus` | Needs a decision (see §4) |
-| A10 | `region`, `crops[]`, `farms`, `rating`, `revenue`, `ordersCount`, `totalSpend`, `disputesCount` | None of these are stored | Most aggregation fields do not exist server-side |
-| A11 | `DashboardStats` with `totalFarmers`, `monthlyRevenue`, `avgOrderValue`, `OrderTrendPoint`, `CropSlice`, `ActivityItem` | No statistics/analytics endpoint | Needs a new backend reporting endpoint |
+| A10 | `region`, `crops[]`, `farms`, `rating`, `revenue`, `ordersCount`, `totalSpend`, `disputesCount` | **Partly fixed.** `region` now exists; `rating`, `revenue`, `ordersCount`, `crops`, `farms` deliberately still absent — see §4.7 | Treat the aggregates as display-only until a rating data model exists. |
+| A11 | `DashboardStats` with `totalFarmers`, `monthlyRevenue`, `avgOrderValue`, `OrderTrendPoint`, `CropSlice`, `ActivityItem` | **Fixed.** `GET /api/v1/admin/dashboard/stats` — see §4.5 | Field is `averageOrderValue`, not `avgOrderValue`. There is no `ActivityItem`; `topCategories` replaces `CropSlice`. |
 | A12 | 12 of 19 models are **empty interfaces**: orders, products, disputes, logistics, farms-crops, inspectors, kyc, notifications, payments, reports, settings, users | Full APIs exist for all of these | The contracts have to be written before the screens can be wired |
-| A13 | `vehicle: { type, capacity, plateNumber, make }` | `DriverProfile` = `licenseNumber, vehicleType, vehicleNumber, vehicleDetails, availabilityStatus` | No capacity, make or plate field |
-| A14 | `licenceNumber`, `licenceExpiry`, `idType`, `idNumber` | `licenseNumber` only; no expiry, ID type or ID number | Needs backend fields |
-| A15 | `username` on driver/supplier models | `email` only; no username column | Needs a backend field or client-side removal |
-| A16 | `contractEnd` on supplier | No such field | Needs a backend field |
+| A13 | `vehicle: { type, capacity, plateNumber, make }` | **Fixed.** `vehicleType`, `vehicleCapacityKg`, `vehicleNumber` (plate), `vehicleMake` — see §4.7 | Note `vehicleCapacityKg` is an `Integer`, not a string. |
+| A14 | `licenceNumber`, `licenceExpiry`, `idType`, `idNumber` | **Fixed.** `licenseNumber`, `licenseExpiryDate`, `idType`, `idNumber` — see §4.7 | Spelling is `license`, not `licence`. Expiry is a `LocalDate`. |
+| A15 | `username` on driver/supplier models | **Fixed.** `User.username` — see §4.7 | Optional field; also on `User.region`. |
+| A16 | `contractEnd` on supplier | **Fixed.** `SupplierProfile.contractEndDate` — see §4.7 | |
 | A17 | Password reset expects a `forgot-password` flow that fails for unknown emails | `POST /api/v1/auth/forgot-password?email=...` | Use it, and always resolve (never reveal whether an email exists) |
 
 ### 3.3 Endpoints the admin app should consume
 
-Admin routes require the `ADMIN` role; a non-admin token gets **403**.
+Admin routes require the `ADMIN` **or** `SUPER_ADMIN` role; any other token gets **403**.
 
 | Area | Endpoints |
 |---|---|
@@ -212,44 +217,192 @@ Admin routes require the `ADMIN` role; a non-admin token gets **403**.
 | Inspections | `GET/POST /api/v1/admin/inspections`, `/admin/inspections/{id}/result`, `/status` |
 | Notifications | `GET/POST /api/v1/admin/notifications`, `/admin/notifications/user/{userId}`, `/read-all` |
 | Logistics | `GET /api/v1/logistics/jobs`, `/jobs/status/{status}`, `/jobs/{id}`, `PUT /jobs/{id}/assign`, `/cancel` |
+| Dashboard | `GET /api/v1/admin/dashboard/stats` (see §4.5), `GET /api/v1/admin/dashboard` |
+| Email | `POST /api/v1/admin/mail/test` (see §4.8) |
+
+Seeded staff accounts, password `Kilivana#2026`:
+`admin.test@kilivana.local` (`ADMIN`) and `superadmin.test@kilivana.local` (`SUPER_ADMIN`).
 
 As an admin, **every** profile is accessible, not just your own. A non-admin calling an
 admin route gets 403.
 
 ---
 
-## 4. Backend gaps — decisions needed before the apps can be finished
+## 4. Backend changes — now implemented
 
-These are the items where the frontend cannot be unblocked by frontend work alone.
+All seven items below were resolved on the backend. This section is the contract the apps
+should code against. Everything here is live and verified against a running backend.
 
-1. **Job coordinates (D2).** The driver app's map and routing are central to the product and
-   need pickup and drop-off latitude/longitude. `Address` already stores `latitude` and
-   `longitude`, but `LogisticsJob` stores addresses as free text and `createLogisticsJob`
-   takes strings, so there is nothing to derive coordinates from. This needs a decision:
-   link jobs to `Address` rows, or add coordinate columns to `LogisticsJob` and populate them
-   at creation.
+### 4.1 Job coordinates (was D2)
 
-2. **Delivery OTP (D3).** The app expects the backend to generate a delivery code and send it
-   to the buyer, so the driver can confirm hand-off. No OTP is generated anywhere today;
-   `ProofOfDelivery.otpReference` is only stored at proof time. Needs generating, storing and
-   a verification step.
+`LogisticsJob` gained four nullable columns. The map and OSRM routing can now plot a route
+instead of guessing from address text.
 
-3. **Job payload (D4).** `cargo`, `quantity`, `payout`, `customer` and timestamps are not on
-   `LogisticsJob`. Today a job references only `orderId`; the items live under the order.
-   Decide whether the job response should embed order/customer details, or whether the app
-   makes a second call to the order endpoint.
+| Field | Type | Notes |
+| --- | --- | --- |
+| `pickupLatitude` / `pickupLongitude` | `Double` | |
+| `destinationLatitude` / `destinationLongitude` | `Double` | |
 
-4. **SUPER_ADMIN (A6).** The admin app has `super-admin`; the backend has only `ADMIN`.
-   Either the app drops the concept or the backend gains a role.
+All four are optional. A job created without them still works, it just has no pin. Send them
+on `POST /api/v1/logistics/jobs`; they are echoed on every job read.
 
-5. **Statistics endpoint (A11).** The dashboard needs aggregation the backend does not expose.
+### 4.2 Delivery OTP (was D3)
 
-6. **Display codes (A5).** `code` fields like `B-001` appear on four admin models and have no
-   backend equivalent.
+A 6-digit numeric code is generated on job creation with `SecureRandom`, valid for 24 hours.
+The buyer is emailed it through SendGrid at the moment the job is created.
 
-7. **Denormalised profile fields (A10, A13, A14, A15, A16).** Region, rating, revenue, order
-   counts, vehicle make/capacity/plate, licence expiry, username, contract end. Each needs
-   either a new column or a decision to derive them.
+New endpoint:
+
+```
+POST /api/v1/logistics/jobs/{id}/otp/verify?otp=123456
+```
+
+The code is **single-use**: a successful verify clears it, so a captured code cannot be
+replayed. Proof of delivery now *requires* it — `POST /api/v1/logistics/proof-of-delivery`
+and `POST /api/v1/logistics/jobs/{jobId}/proof-of-delivery` take an optional `?otp=` param,
+and if the job holds a code it must match or the request is rejected.
+
+Job reads expose `deliveryOtp` and `deliveryOtpExpiresAt`. **Do not treat this as a secret to
+hide from the driver app** — the driver enters the code the *customer* reads out. It is
+returned only so the backend can be tested and so a delivery can complete when the email did
+not arrive.
+
+Rejections are `400` with a clear message: `no delivery code to verify`, `The delivery code
+has expired`, `Incorrect delivery code`.
+
+### 4.3 Job payload (was D4)
+
+Added to `LogisticsJob`, all nullable:
+
+| Field | Type | Maps to app's |
+| --- | --- | --- |
+| `cargoDescription` | `String` | `cargo` |
+| `quantity` | `Integer` | `quantity` |
+| `payoutAmount` | `BigDecimal` | `payoutKsh` |
+| `scheduledPickupAt` | `LocalDateTime` | `pickupTime` |
+| `scheduledDropoffAt` | `LocalDateTime` | `dropoffTime` |
+| `distanceKm` | `Double` | `distanceKm` |
+| `estimatedMinutes` | `Integer` | `estimatedTime` |
+
+Note the naming differences — the backend uses `scheduledPickupAt`/`scheduledDropoffAt` and
+`estimatedMinutes`, and money is `BigDecimal`, not a number.
+
+`customer` is **still not** on the job. It needs resolving through `orderId → Order → buyerId →
+User`, which is a second join per job in a list endpoint. That is a deliberate call for the
+frontend: either call `GET /api/v1/orders/{orderId}` for the customer, or ask for it to be
+embedded. Do not assume a `customer` field exists.
+
+### 4.4 SUPER_ADMIN (was A6)
+
+`SUPER_ADMIN` is now a real role and is granted full access to `/api/v1/admin/**`, the same as
+`ADMIN`. Role checks use a single `isStaff()` helper, so both roles behave identically in
+product-edit permission and cross-profile access.
+
+- Seeded account: `superadmin.test@kilivana.local`
+- Registration still refuses to self-register either staff role.
+- Reference-code prefix: `SA-` (`ADMIN` is `AD-`).
+
+> **Migration required.** `db/migrations/V2__add_super_admin_role.sql` must be run once
+> against every database that predates this change, or startup fails on the
+> `users_role_check` constraint. Fresh databases are fine.
+
+### 4.5 Dashboard statistics (was A11)
+
+```
+GET /api/v1/admin/dashboard/stats      # ADMIN or SUPER_ADMIN
+```
+
+```jsonc
+{
+  "totalFarmers": 128,
+  "totalBuyers": 76,
+  "activeOrders": 24,
+  "monthlyRevenue": 1450000.00,
+  "monthlyOrders": 41,
+  "pendingVerifications": 5,
+  "openDisputes": 2,
+  "averageOrderValue": 35200.00,
+  "updatedAt": "2026-10-01T09:40:52.445",
+  "orderTrend": [ { "date": "...", "orders": 6, "revenue": 45000.00 } ],  // 14 days
+  "topCategories": [ { "category": "Vegetables", "orders": 18 } ]        // up to 6
+}
+```
+
+Definitions chosen here, so the app does not have to guess:
+
+- `activeOrders` — `PENDING`, `CONFIRMED`, `PREPARING`, `READY_FOR_PICKUP`, `PICKED_UP`,
+  `IN_TRANSIT`. Excludes cancelled and failed.
+- `monthlyRevenue` / `monthlyOrders` / `averageOrderValue` — **settled orders only**
+  (`DELIVERED`, `COMPLETED`), so cancelled baskets never count as turnover.
+  `monthly*` are calendar-month to date; `averageOrderValue` is all-time settled.
+- `orderTrend` — dense: every one of the last 14 days appears exactly once, zero-filled, so a
+  chart needs no gap-filling.
+- `topCategories` — category name to order count from `OrderItem → Product → Category`.
+
+The older `GET /api/v1/admin/dashboard` still works and now counts in the database instead of
+loading every order and payment into memory.
+
+### 4.6 Display codes (was A5)
+
+`User.referenceCode` is a stable human-facing code assigned at registration, never reused,
+distinct from the numeric `id`. Returned by every user read.
+
+| Role | Prefix | Example |
+| --- | --- | --- |
+| `FARMER` | `F-` | `F-014` |
+| `BUYER` | `B-` | `B-001` |
+| `SUPPLIER` | `S-` | `S-003` |
+| `DRIVER` | `DA-` | `DA-007` |
+| `INSPECTOR` | `IN-` | `IN-002` |
+| `ADMIN` | `AD-` | `AD-001` |
+| `SUPER_ADMIN` | `SA-` | `SA-001` |
+
+Caveat worth knowing: the sequence is derived from the current role count, so two
+simultaneous registrations can collide. Fine at current volume; move to a database sequence
+before a launch spike.
+
+### 4.7 Profile fields (was A10, A13–A16)
+
+Added:
+
+| Entity | Fields |
+| --- | --- |
+| `User` | `username`, `region`, `referenceCode` |
+| `DriverProfile` | `vehicleMake`, `vehicleCapacityKg`, `licenseExpiryDate`, `idType`, `idNumber` |
+| `SupplierProfile` | `contractEndDate` |
+
+`registration` accepts `username` and `region`; both are also returned by login, `/auth/me`
+and admin user reads.
+
+**Still not added, and the app should not expect them:** `rating`, `revenue`, `ordersCount`,
+`farms count`, `crops`. These are aggregates — computed from ratings, orders and products
+rather than stored. None of that data is collected anywhere in the backend today. Adding the
+columns would mean inventing numbers. Treat these as frontend-side display concerns until a
+rating/settlement data model exists.
+
+### 4.8 SendGrid email
+
+Transactional mail is wired but **off by default**, so a missing key can never turn an
+unrelated business failure into a 500.
+
+| Env var | Default | Purpose |
+| --- | --- | --- |
+| `SENDGRID_ENABLED` | `false` | Master switch |
+| `SENDGRID_API_KEY` | *(empty)* | Read from the environment only, never from the repo |
+| `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified sender identity |
+| `SENDGRID_FROM_NAME` | `Kilivana` | |
+
+```
+POST /api/v1/admin/mail/test          # ADMIN or SUPER_ADMIN
+{ "to": "you@example.com", "subject": "Test" }
+```
+
+Returns `{configured, sent, from, to, subject}`. `sent: true` means SendGrid **accepted the
+request**, not that a mailbox received it — check the SendGrid Activity tab for the real
+delivery result.
+
+Delivery failures are logged, never thrown: an unreachable mail provider must not fail the
+operation that triggered the email. The only current sender is the delivery OTP.
 
 ---
 
@@ -258,6 +411,10 @@ These are the items where the frontend cannot be unblocked by frontend work alon
 ```
 # database
 docker start kilivana-postgres        # host port 5433
+
+# one-time, on any database predating SUPER_ADMIN
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V2__add_super_admin_role.sql
 
 # backend
 mvn spring-boot:run                   # http://localhost:8080
@@ -284,3 +441,7 @@ Security note: with `JWT_SECRET` unset the backend generates a random signing ke
 so every token is invalidated by a restart. Set `JWT_SECRET` to a stable value. Tokens also
 currently never expire (`JWT_EXPIRATION=0`); set it to a millisecond duration to restore
 expiry. Both warnings are logged at startup.
+
+Email note: `SENDGRID_API_KEY` must be supplied through the environment and must never be
+committed. Rotate the key if it is ever pasted into a chat, a log or a commit — that includes
+the keys used for local verification. `.gitignore` blocks `.env*` and `sendgrid-secrets.*`.

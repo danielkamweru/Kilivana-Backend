@@ -64,6 +64,32 @@ The backend will run on:
 - Local: http://localhost:8080
 - Health check: http://localhost:8080/actuator/health
 
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `JWT_SECRET` | *(generated per startup)* | HS512 signing key. **Set this in any shared environment** — if unset, every restart invalidates all issued tokens. |
+| `JWT_EXPIRATION` | `0` | Access-token lifetime in ms. `0` means no expiry. |
+| `JWT_REFRESH_EXPIRATION` | `0` | Refresh-token lifetime in ms. |
+| `PUBLIC_BASE_URL` | *(empty)* | Public tunnel URL, so `/api-docs` does not advertise `http://localhost:8080` over HTTPS. |
+| `DEV_SEED_ENABLED` | `true` | Seeds development accounts. Never enable in a deployment. |
+| `CLOUDINARY_*` | *(empty)* | Image upload provider. |
+| `SENDGRID_ENABLED` | `false` | Master switch for transactional email. |
+| `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
+| `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
+| `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
+
+### Database migrations
+
+There is no migration tool; `spring.jpa.hibernate.ddl-auto=update` handles new columns. It does
+**not** rewrite existing CHECK constraints when an enum grows, so schema changes that alter an
+enum need a manual script:
+
+```bash
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V2__add_super_admin_role.sql
+```
+
 ## Swagger Documentation
 
 Swagger UI is available at:
@@ -249,7 +275,54 @@ Supplier and driver endpoints follow the same pattern at `/suppliers/` and `/dri
 | Supplier | own products | own products | own products | own profile | own profile (ADMIN can view any) |
 | Admin | any | any | any | any | any |
 
-The backend identifies users via the `X-User-Id` request header. A user must either own the resource or have the ADMIN role to perform mutating operations.
+The backend identifies users from the JWT bearer token, not from a request header. A user must either own the resource or hold a staff role (`ADMIN` or `SUPER_ADMIN`) to perform mutating operations.
+
+## SendGrid Email
+
+Transactional email is delivered through the SendGrid HTTP API. It is **disabled by default**
+so a missing API key can never turn an unrelated business failure into a 500.
+
+```bash
+SENDGRID_ENABLED=true \
+SENDGRID_API_KEY=your_key \
+SENDGRID_FROM_EMAIL=no-reply@kilivana.com \
+mvn spring-boot:run
+```
+
+Verify the integration:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin.test@kilivana.local","password":"Kilivana#2026"}' \
+  | jq -r '.data.accessToken')
+
+curl -X POST http://localhost:8080/api/v1/admin/mail/test \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"to":"you@example.com","subject":"Test"}'
+```
+
+The response reports `configured` and `sent`. **`sent: true` means SendGrid accepted the
+request, not that a mailbox received it** — check the SendGrid Activity tab for the real
+delivery outcome.
+
+Current senders:
+
+| Trigger | Recipient | Content |
+|---|---|---|
+| A logistics job is created | The buyer on the job's order | The 6-digit delivery handover code |
+
+`SendGridMailService` exposes `send(to, subject, body)` for plain text and
+`sendHtml(to, subject, htmlBody)`. Both log delivery failures rather than throwing, so an
+unreachable mail provider cannot fail the operation that triggered the email.
+
+The sender address must match a **verified sender identity** in SendGrid, otherwise the API
+call succeeds and delivery is silently dropped or quarantined.
+
+> Rotate `SENDGRID_API_KEY` immediately if it is ever pasted into a chat, a log or a commit.
+> It is read from the environment only and is never stored in the repository; `.gitignore`
+> blocks `.env*` and `sendgrid-secrets.*`.
 
 ## Frontend Integration Contract
 
