@@ -6,6 +6,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,7 +15,8 @@ import java.util.Map;
 
 @Slf4j
 @Service
-public class CloudinaryService {
+@ConditionalOnProperty(name = "app.storage.provider", havingValue = "cloudinary")
+public class CloudinaryService implements ImageStorage {
 
     private final Cloudinary cloudinary;
     private final String cloudName;
@@ -28,11 +30,13 @@ public class CloudinaryService {
         this.apiKey = apiKey;
     }
 
+    @Override
     public boolean isConfigured() {
         return cloudName != null && !cloudName.isBlank()
                 && apiKey != null && !apiKey.isBlank();
     }
 
+    @Override
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
         // Without credentials the Cloudinary SDK throws "cloud_name is disabled" from deep
         // inside its HTTP layer, which surfaces as an opaque 500. Naming the missing
@@ -61,6 +65,7 @@ public class CloudinaryService {
         }
     }
 
+    @Override
     public void deleteImage(String publicId) {
         if (publicId != null && !publicId.isBlank()) {
             try {
@@ -71,6 +76,7 @@ public class CloudinaryService {
         }
     }
 
+    @Override
     public Map<String, Object> replaceImage(String oldPublicId, MultipartFile newFile, String folder) throws IOException {
         Map<String, Object> uploadResult = uploadImage(newFile, folder);
 
@@ -81,14 +87,17 @@ public class CloudinaryService {
         return uploadResult;
     }
 
+    @Override
     public String getSecureUrl(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("secure_url");
     }
 
+    @Override
     public String getPublicId(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("public_id");
     }
 
+    @Override
     public String getAssetId(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("asset_id");
     }
@@ -106,5 +115,10 @@ public class CloudinaryService {
         if (file.getSize() > 10 * 1024 * 1024) {
             throw new BadRequestException("Image file size must be less than 10MB");
         }
+    }
+
+    @Override
+    public String providerName() {
+        return "Cloudinary (" + cloudName + ")";
     }
 }

@@ -1,6 +1,6 @@
 package com.kilivana.backend.config;
 
-import com.kilivana.backend.common.service.CloudinaryService;
+import com.kilivana.backend.common.service.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class IntegrationReadinessLogger {
 
-    private final CloudinaryService cloudinaryService;
+    private final ImageStorage cloudinaryService;
 
     @EventListener(ApplicationReadyEvent.class)
     public void logConfigurationState() {

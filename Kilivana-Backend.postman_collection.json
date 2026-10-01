@@ -1,0 +1,2625 @@
+{
+  "info": {
+    "_postman_id": "c7f4e1a2-9d3b-4a6e-8c51-2f0b7d9e4a30",
+    "name": "Kilivana Backend API",
+    "description": "Every endpoint that currently exists in the Kilivana Spring Boot backend (verified against the running OpenAPI document at /api-docs).\n\n1. Import this file into Postman.\n2. Open \"1. Authentication\" and send \"Login (ADMIN)\" (or the role you need).\n3. Every other request already carries Authorization: Bearer <token> and full URLs, so just press Send.\n\nEach request description shows the path pattern (for example /api/v1/products/{id}) and the concrete id it currently uses, so you know what to replace.\n\nTo test through the ngrok tunnel, replace http://localhost:8080 with https://either-juvenile-progeny.ngrok-free.dev in the URLs.\n\nResponses use the envelope: { \"success\", \"message\", \"data\", \"timestamp\", \"error\" }.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "description": "AuthController - POST /api/v1/auth",
+      "item": [
+        {
+          "name": "Register (DRIVER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"faith.driver@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"DRIVER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/register",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Register (FARMER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Faith Farmer\",\n  \"email\": \"faith.farmer@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"FARMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/register",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Login (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (SUPER_ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (FARMER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"farmer.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (BUYER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"buyer.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (SUPPLIER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"supplier.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (INSPECTOR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"inspector.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (DRIVER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"driver.test@kilivana.local\",\n  \"password\": \"Kilivana#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/login",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/refresh",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const json = pm.response.json();\nconst data = json.data || {};\nif (data.accessToken) { pm.collectionVariables.set('accessToken', data.accessToken); }\nif (data.refreshToken) { pm.collectionVariables.set('refreshToken', data.refreshToken); }"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/auth/forgot-password?email=faith.driver@example.com",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"faith.driver@example.com\",\n  \"newPassword\": \"secret1234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/auth/reset-password",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users",
+      "description": "UserProfileController (/users) and UserController (/admin/users)",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Faith Buyer\",\n  \"email\": \"faith.buyer@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"BUYER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/users",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Get All Users (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/users?page=0&size=20"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/users/3"
+          }
+        },
+        {
+          "name": "Get Users by Role (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/users/role/FARMER"
+          }
+        },
+        {
+          "name": "Get Users by Status (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/users/status/ACTIVE"
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Farmer Test\",\n  \"email\": \"farmer.test@kilivana.local\",\n  \"phone\": \"0700000002\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/users/me"
+          }
+        },
+        {
+          "name": "Update User (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Farmer Test\",\n  \"email\": \"farmer.test@kilivana.local\",\n  \"phone\": \"0700000002\",\n  \"password\": \"Kilivana#2026\",\n  \"role\": \"FARMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/admin/users/3"
+          }
+        },
+        {
+          "name": "Set User Status (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/users/3/status?status=ACTIVE"
+          }
+        },
+        {
+          "name": "Suspend User (admin, PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/users/3/status?status=SUSPENDED"
+          }
+        },
+        {
+          "name": "Delete User (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/users/3"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Addresses",
+      "description": "AddressController - /api/v1/users/addresses and /api/v1/users/{userId}/addresses",
+      "item": [
+        {
+          "name": "Get My Addresses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/users/addresses"
+          }
+        },
+        {
+          "name": "Get Addresses by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/users/3/addresses"
+          }
+        },
+        {
+          "name": "Create Address (for me)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressText\": \"Kikuyu House, Kenyatta Avenue, Nairobi\",\n  \"latitude\": -1.2833,\n  \"longitude\": 36.8167,\n  \"label\": \"Home\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/users/addresses"
+          }
+        },
+        {
+          "name": "Create Address for User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressText\": \"Kikuyu House, Kenyatta Avenue, Nairobi\",\n  \"latitude\": -1.2833,\n  \"longitude\": 36.8167,\n  \"label\": \"Home\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/users/3/addresses"
+          }
+        },
+        {
+          "name": "Update Address",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressText\": \"Kikuyu House, Kenyatta Avenue, Nairobi\",\n  \"latitude\": -1.2833,\n  \"longitude\": 36.8167,\n  \"label\": \"Home\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/users/addresses/1"
+          }
+        },
+        {
+          "name": "Update Address for User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressText\": \"Kikuyu House, Kenyatta Avenue, Nairobi\",\n  \"latitude\": -1.2833,\n  \"longitude\": 36.8167,\n  \"label\": \"Home\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/users/3/addresses/1"
+          }
+        },
+        {
+          "name": "Delete Address",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/users/addresses/1"
+          }
+        },
+        {
+          "name": "Delete Address for User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/users/3/addresses/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Role Profiles (Farmer, Buyer, Inspector, Supplier)",
+      "description": "ProfileController - /api/v1/profiles",
+      "item": [
+        {
+          "name": "Get Farmer Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3"
+          }
+        },
+        {
+          "name": "Create Farmer Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmName\": \"Green Valley Farm\",\n  \"location\": \"Limuru, Kiambu\",\n  \"farmDetails\": \"Mixed horticulture farm growing tomatoes, onions and leafy greens.\",\n  \"verificationInfo\": \"Certificate of incorporation and land title available on request.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3"
+          }
+        },
+        {
+          "name": "Update Farmer Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmName\": \"Green Valley Farm\",\n  \"location\": \"Limuru, Kiambu\",\n  \"farmDetails\": \"Mixed horticulture farm growing tomatoes, onions and leafy greens.\",\n  \"verificationInfo\": \"Certificate of incorporation and land title available on request.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3"
+          }
+        },
+        {
+          "name": "Delete Farmer Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3"
+          }
+        },
+        {
+          "name": "Get Farmer Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3/images"
+          }
+        },
+        {
+          "name": "Upload Farmer Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose a PNG or JPG file when you send this request."
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3/images?isPrimary=true"
+          }
+        },
+        {
+          "name": "Set Primary Farmer Image",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3/images/1/primary"
+          }
+        },
+        {
+          "name": "Delete Farmer Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/farmers/3/images/1"
+          }
+        },
+        {
+          "name": "Get Buyer Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/buyers/3"
+          }
+        },
+        {
+          "name": "Create Buyer Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactDetails\": \"Call or WhatsApp on 0700000003\",\n  \"savedAddresses\": \"Nairobi and Nakuru delivery addresses.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/buyers/3"
+          }
+        },
+        {
+          "name": "Update Buyer Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactDetails\": \"Call or WhatsApp on 0700000003\",\n  \"savedAddresses\": \"Nairobi and Nakuru delivery addresses.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/buyers/3"
+          }
+        },
+        {
+          "name": "Delete Buyer Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/buyers/3"
+          }
+        },
+        {
+          "name": "Get Inspector Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3"
+          }
+        },
+        {
+          "name": "Create Inspector Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectorDetails\": \"Inspects produce quality before dispatch.\",\n  \"assignedArea\": \"Central and Eastern regions\",\n  \"status\": \"AVAILABLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3"
+          }
+        },
+        {
+          "name": "Update Inspector Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectorDetails\": \"Inspects produce quality before dispatch.\",\n  \"assignedArea\": \"Central and Eastern regions\",\n  \"status\": \"AVAILABLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3"
+          }
+        },
+        {
+          "name": "Delete Inspector Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3"
+          }
+        },
+        {
+          "name": "Get Inspector Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3/images"
+          }
+        },
+        {
+          "name": "Upload Inspector Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose a PNG or JPG file when you send this request."
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3/images?isPrimary=true"
+          }
+        },
+        {
+          "name": "Set Primary Inspector Image",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3/images/1/primary"
+          }
+        },
+        {
+          "name": "Delete Inspector Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/inspectors/3/images/1"
+          }
+        },
+        {
+          "name": "Get Supplier Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3"
+          }
+        },
+        {
+          "name": "Create Supplier Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Kilivana Fresh Supplies Ltd\",\n  \"businessDetails\": \"Wholesale supplier of fresh produce and dairy.\",\n  \"location\": \"Nairobi Industrial Area\",\n  \"verificationInfo\": \"Business licence and tax certificate available on request.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3"
+          }
+        },
+        {
+          "name": "Update Supplier Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Kilivana Fresh Supplies Ltd\",\n  \"businessDetails\": \"Wholesale supplier of fresh produce and dairy.\",\n  \"location\": \"Nairobi Industrial Area\",\n  \"verificationInfo\": \"Business licence and tax certificate available on request.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3"
+          }
+        },
+        {
+          "name": "Delete Supplier Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3"
+          }
+        },
+        {
+          "name": "Get Supplier Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3/images"
+          }
+        },
+        {
+          "name": "Upload Supplier Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose a PNG or JPG file when you send this request."
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3/images?isPrimary=true"
+          }
+        },
+        {
+          "name": "Set Primary Supplier Image",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3/images/1/primary"
+          }
+        },
+        {
+          "name": "Delete Supplier Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/suppliers/3/images/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Driver Profiles",
+      "description": "DriverProfileController (logistics module) - /api/v1/profiles/drivers",
+      "item": [
+        {
+          "name": "Get Driver Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6"
+          }
+        },
+        {
+          "name": "Create Driver Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"licenseNumber\": \"DL-2026-0091\",\n  \"vehicleType\": \"PICKUP\",\n  \"vehicleNumber\": \"KDE 412R\",\n  \"vehicleDetails\": \"White Toyota Hilux with open bed.\",\n  \"availabilityStatus\": \"AVAILABLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6"
+          }
+        },
+        {
+          "name": "Update Driver Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"licenseNumber\": \"DL-2026-0091\",\n  \"vehicleType\": \"PICKUP\",\n  \"vehicleNumber\": \"KDE 412R\",\n  \"vehicleDetails\": \"White Toyota Hilux with open bed.\",\n  \"availabilityStatus\": \"AVAILABLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6"
+          }
+        },
+        {
+          "name": "Delete Driver Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6"
+          }
+        },
+        {
+          "name": "Get Driver Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6/images"
+          }
+        },
+        {
+          "name": "Upload Driver Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose a PNG or JPG file when you send this request."
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6/images?isPrimary=true"
+          }
+        },
+        {
+          "name": "Delete Driver Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/profiles/drivers/6/images/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Categories",
+      "description": "CategoryController - /api/v1/categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/categories"
+          }
+        },
+        {
+          "name": "Get Active Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/categories/active"
+          }
+        },
+        {
+          "name": "Get Categories by Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/categories/type/FARMER"
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/categories/16"
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fresh Produce\",\n  \"type\": \"FARMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/categories"
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fresh Produce\",\n  \"type\": \"FARMER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/categories/16"
+          }
+        },
+        {
+          "name": "Set Category Active",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/categories/16/status?active=true"
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/categories/16"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Products",
+      "description": "ProductController - /api/v1/products (plus the /sellers compatibility route)",
+      "item": [
+        {
+          "name": "Search Products (list all)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/search?name=&categoryId=&sellerType=&page=0&size=20"
+          }
+        },
+        {
+          "name": "Get Products by Seller",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/seller/3"
+          }
+        },
+        {
+          "name": "Get Products by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/category/16"
+          }
+        },
+        {
+          "name": "Get Seller Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/sellers/3/products"
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/21"
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sellerId\": 3,\n  \"sellerType\": \"FARMER\",\n  \"categoryId\": 16,\n  \"name\": \"Fresh Tomatoes\",\n  \"description\": \"Locally grown tomatoes harvested this week.\",\n  \"unit\": \"kg\",\n  \"price\": 450,\n  \"stockQty\": 200,\n  \"minimumOrderQty\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/products"
+          }
+        },
+        {
+          "name": "Create Product (with images)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "product",
+                  "type": "text",
+                  "value": "{\n  \"sellerId\": 3,\n  \"sellerType\": \"FARMER\",\n  \"categoryId\": 16,\n  \"name\": \"Fresh Tomatoes\",\n  \"description\": \"Locally grown tomatoes harvested this week.\",\n  \"unit\": \"kg\",\n  \"price\": 450,\n  \"stockQty\": 200,\n  \"minimumOrderQty\": 5\n}",
+                  "contentType": "application/json",
+                  "description": "ProductRequest JSON sent as the \"product\" part."
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": [],
+                  "description": "Optional product photos.",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/products"
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sellerId\": 3,\n  \"sellerType\": \"FARMER\",\n  \"categoryId\": 16,\n  \"name\": \"Fresh Tomatoes (price updated)\",\n  \"description\": \"Locally grown tomatoes harvested this week.\",\n  \"unit\": \"kg\",\n  \"price\": 475,\n  \"stockQty\": 180,\n  \"minimumOrderQty\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/products/21"
+          }
+        },
+        {
+          "name": "Update Product (with images)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "product",
+                  "type": "text",
+                  "value": "{\n  \"sellerId\": 3,\n  \"sellerType\": \"FARMER\",\n  \"categoryId\": 16,\n  \"name\": \"Fresh Tomatoes (price updated)\",\n  \"description\": \"Locally grown tomatoes harvested this week.\",\n  \"unit\": \"kg\",\n  \"price\": 475,\n  \"stockQty\": 180,\n  \"minimumOrderQty\": 5\n}",
+                  "contentType": "application/json",
+                  "description": "ProductRequest JSON sent as the \"product\" part."
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": [],
+                  "description": "Optional product photos.",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/products/21"
+          }
+        },
+        {
+          "name": "Set Product Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/21/status?status=ACTIVE"
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/21"
+          }
+        },
+        {
+          "name": "Get Product Images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/21/images"
+          }
+        },
+        {
+          "name": "Upload Product Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose a PNG or JPG file when you send this request."
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/products/21/images?sortOrder=0&isPrimary=true"
+          }
+        },
+        {
+          "name": "Replace Product Image",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Choose a PNG or JPG file when you send this request."
+                }
+              ]
+            },
+            "url": "http://localhost:8080/api/v1/products/21/images/1?sortOrder=0&isPrimary=true"
+          }
+        },
+        {
+          "name": "Set Primary Product Image",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/21/images/1/primary"
+          }
+        },
+        {
+          "name": "Reorder Product Images",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  1,\n  2\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/products/21/images/reorder"
+          }
+        },
+        {
+          "name": "Delete Product Image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/products/21/images/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Orders",
+      "description": "OrderController - /api/v1/orders",
+      "item": [
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders?page=0&size=20"
+          }
+        },
+        {
+          "name": "Search Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/search?buyerId=&status=&page=0&size=20"
+          }
+        },
+        {
+          "name": "Get Orders by Buyer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/buyer/4"
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1"
+          }
+        },
+        {
+          "name": "Get Order Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1/timeline"
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerId\": 4,\n  \"subtotal\": 2250,\n  \"deliveryFee\": 500,\n  \"total\": 2750,\n  \"addressId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/orders"
+          }
+        },
+        {
+          "name": "Set Order Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1/status?status=CONFIRMED"
+          }
+        },
+        {
+          "name": "Set Order Status (POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1/status?status=CONFIRMED"
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1/cancel"
+          }
+        },
+        {
+          "name": "Confirm Order Receipt",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1/confirm-receipt"
+          }
+        },
+        {
+          "name": "Delete Order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/orders/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Payments",
+      "description": "PaymentController - /api/v1/payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": 1,\n  \"provider\": \"M-PESA\",\n  \"reference\": \"MPESA-Q7X4K12098\",\n  \"amount\": 2750\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/payments"
+          }
+        },
+        {
+          "name": "Initiate Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": 1,\n  \"provider\": \"M-PESA\",\n  \"reference\": \"MPESA-Q7X4K12098\",\n  \"amount\": 2750\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/payments/initiate"
+          }
+        },
+        {
+          "name": "Payment Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": 1,\n  \"provider\": \"M-PESA\",\n  \"reference\": \"MPESA-Q7X4K12098\",\n  \"amount\": 2750\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/payments/webhook"
+          }
+        },
+        {
+          "name": "Get Payments by Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/payments/order/1"
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/payments/1"
+          }
+        },
+        {
+          "name": "Set Payment Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/payments/1/status?status=COMPLETED"
+          }
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/payments/1/refund"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Disputes",
+      "description": "DisputeController - /api/v1/ecommerce/disputes",
+      "item": [
+        {
+          "name": "Create Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": 1,\n  \"raisedBy\": 4,\n  \"reason\": \"Damaged goods on arrival\",\n  \"description\": \"Two crates of tomatoes arrived crushed at the pickup point.\",\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/ecommerce/disputes"
+          }
+        },
+        {
+          "name": "Get Disputes by Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/disputes/order/1"
+          }
+        },
+        {
+          "name": "Get Disputes by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/disputes/user/4"
+          }
+        },
+        {
+          "name": "Get Dispute by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/disputes/1"
+          }
+        },
+        {
+          "name": "Set Dispute Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/disputes/1/status?status=IN_PROGRESS"
+          }
+        },
+        {
+          "name": "Resolve Dispute",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "\"Refund issued to the buyer for the damaged crates.\"",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/ecommerce/disputes/1/resolution"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Cart & Checkout",
+      "description": "CartController (/api/v1/ecommerce/carts) and CartCompatibilityController (/api/v1/cart, /api/v1/checkout)",
+      "item": [
+        {
+          "name": "Get My Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/cart"
+          }
+        },
+        {
+          "name": "Add Item to My Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 21,\n  \"quantity\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/cart/items"
+          }
+        },
+        {
+          "name": "Update My Cart Item Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/cart/items/1?quantity=10"
+          }
+        },
+        {
+          "name": "Remove My Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/cart/items/1"
+          }
+        },
+        {
+          "name": "Validate Checkout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/checkout/validate"
+          }
+        },
+        {
+          "name": "Checkout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/checkout"
+          }
+        },
+        {
+          "name": "Get Buyer Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/carts/buyer/4"
+          }
+        },
+        {
+          "name": "Add Item to Buyer Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 21,\n  \"quantity\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/ecommerce/carts/buyer/4/items"
+          }
+        },
+        {
+          "name": "Update Cart Item Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/carts/46/items/21?quantity=10"
+          }
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/carts/46/items/21"
+          }
+        },
+        {
+          "name": "Checkout Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/carts/46/checkout"
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/ecommerce/carts/46"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Logistics",
+      "description": "LogisticsJobController, LogisticsCompatibilityController, TrackingEventController, ProofOfDeliveryController",
+      "item": [
+        {
+          "name": "Get All Delivery Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs"
+          }
+        },
+        {
+          "name": "Get Jobs by Driver",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/driver/6"
+          }
+        },
+        {
+          "name": "Get Jobs by Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/order/1"
+          }
+        },
+        {
+          "name": "Get Jobs by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/status/PENDING_ASSIGNMENT"
+          }
+        },
+        {
+          "name": "Get Delivery Job by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13"
+          }
+        },
+        {
+          "name": "Create Delivery Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": 1,\n  \"pickupAddress\": \"Green Valley Farm, Limuru\",\n  \"destinationAddress\": \"Kikuyu House, Kenyatta Avenue, Nairobi\",\n  \"pickupLatitude\": -1.1034,\n  \"pickupLongitude\": 36.6429,\n  \"destinationLatitude\": -1.2517,\n  \"destinationLongitude\": 36.7024,\n  \"cargoDescription\": \"10 crates of fresh tomatoes\",\n  \"quantity\": 10,\n  \"payoutAmount\": 3500,\n  \"scheduledPickupAt\": \"2026-10-02T08:00:00\",\n  \"scheduledDropoffAt\": \"2026-10-02T14:00:00\",\n  \"distanceKm\": 32.5,\n  \"estimatedMinutes\": 90,\n  \"status\": \"PENDING_ASSIGNMENT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/logistics/jobs"
+          }
+        },
+        {
+          "name": "Assign Driver to Job",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/assign?driverId=6"
+          }
+        },
+        {
+          "name": "Assign Driver to Job (POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/assign?driverId=6"
+          }
+        },
+        {
+          "name": "Accept Job",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/accept?driverId=6"
+          }
+        },
+        {
+          "name": "Accept Job (POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/accept?driverId=6"
+          }
+        },
+        {
+          "name": "Set Job Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/status?status=EN_ROUTE_TO_PICKUP"
+          }
+        },
+        {
+          "name": "Set Job Status (POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/status?status=EN_ROUTE_TO_PICKUP"
+          }
+        },
+        {
+          "name": "Record Driver Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logisticsJobId\": 13,\n  \"status\": \"EN_ROUTE_TO_PICKUP\",\n  \"latitude\": -1.1034,\n  \"longitude\": 36.6429,\n  \"note\": \"Driver departed and is on the way to the farm.\",\n  \"driverId\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/location"
+          }
+        },
+        {
+          "name": "Get Job Tracking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/tracking"
+          }
+        },
+        {
+          "name": "Submit Proof of Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logisticsJobId\": 13,\n  \"recipientName\": \"Faith Buyer\",\n  \"signatureUrl\": \"https://example.com/signature.png\",\n  \"photoUrl\": \"https://example.com/delivery-photo.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/proof-of-delivery?otp=123456"
+          }
+        },
+        {
+          "name": "Verify Delivery OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/otp/verify?otp=123456"
+          }
+        },
+        {
+          "name": "Cancel Delivery Job",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "\"Buyer cancelled the order before dispatch.\"",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13/cancel"
+          }
+        },
+        {
+          "name": "Delete Delivery Job",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/jobs/13"
+          }
+        },
+        {
+          "name": "Create Tracking Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logisticsJobId\": 13,\n  \"status\": \"EN_ROUTE_TO_PICKUP\",\n  \"latitude\": -1.1034,\n  \"longitude\": 36.6429,\n  \"note\": \"Driver departed and is on the way to the farm.\",\n  \"driverId\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/logistics/tracking-events"
+          }
+        },
+        {
+          "name": "Get Tracking Events by Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/tracking-events/job/13"
+          }
+        },
+        {
+          "name": "Get Tracking Events by Driver",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/tracking-events/driver/6"
+          }
+        },
+        {
+          "name": "Get Tracking Event by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/tracking-events/1"
+          }
+        },
+        {
+          "name": "Create Proof of Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logisticsJobId\": 13,\n  \"recipientName\": \"Faith Buyer\",\n  \"signatureUrl\": \"https://example.com/signature.png\",\n  \"photoUrl\": \"https://example.com/delivery-photo.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery?otp=123456"
+          }
+        },
+        {
+          "name": "Get Proof of Delivery by Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/job/13"
+          }
+        },
+        {
+          "name": "Get Proof of Delivery by Driver",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/driver/6"
+          }
+        },
+        {
+          "name": "Get Proof of Delivery by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/1"
+          }
+        },
+        {
+          "name": "Delete Proof of Delivery",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Notifications",
+      "description": "NotificationController - /api/v1/notifications (same routes also exist under /api/v1/admin/notifications)",
+      "item": [
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 4,\n  \"type\": \"ORDER\",\n  \"title\": \"Order confirmed\",\n  \"message\": \"Your order has been confirmed and is being prepared.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/notifications"
+          }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications?unread=false"
+          }
+        },
+        {
+          "name": "Get Notifications for User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/user/4"
+          }
+        },
+        {
+          "name": "Get Unread Notifications for User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/user/4/unread"
+          }
+        },
+        {
+          "name": "Get Notification by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/1"
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/1/read"
+          }
+        },
+        {
+          "name": "Mark Notification as Read (POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/1/read"
+          }
+        },
+        {
+          "name": "Mark User Notifications as Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/user/4/read-all"
+          }
+        },
+        {
+          "name": "Mark User Notifications as Read (POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/user/4/read-all"
+          }
+        },
+        {
+          "name": "Mark All My Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/read-all"
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/notifications/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Inspections",
+      "description": "InspectionController - /api/v1/inspections (same routes also exist under /api/v1/admin/inspections)",
+      "item": [
+        {
+          "name": "Get All Inspections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections?page=0&size=20"
+          }
+        },
+        {
+          "name": "Get Inspections by Inspector",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections/inspector/7"
+          }
+        },
+        {
+          "name": "Get Inspections by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections/status/ASSIGNED"
+          }
+        },
+        {
+          "name": "Get Inspections by Target",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections/target/PRODUCT/21"
+          }
+        },
+        {
+          "name": "Get Inspection by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections/1"
+          }
+        },
+        {
+          "name": "Create Inspection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 21,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Quality and packaging check passed.\",\n  \"evidenceUrls\": \"https://example.com/inspection-photo.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/inspections"
+          }
+        },
+        {
+          "name": "Set Inspection Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections/1/status?status=COMPLETED"
+          }
+        },
+        {
+          "name": "Set Inspection Result",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 21,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Quality and packaging check passed.\",\n  \"evidenceUrls\": \"https://example.com/inspection-photo.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/inspections/1/result?result=APPROVED"
+          }
+        },
+        {
+          "name": "Set Inspection Result (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 21,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Quality and packaging check passed.\",\n  \"evidenceUrls\": \"https://example.com/inspection-photo.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/inspections/1/result?result=APPROVED"
+          }
+        },
+        {
+          "name": "Submit Inspection Evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 21,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Quality and packaging check passed.\",\n  \"evidenceUrls\": \"https://example.com/evidence-2.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/inspections/1/evidence"
+          }
+        },
+        {
+          "name": "Delete Inspection",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/inspections/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Admin - Dashboard & Operations",
+      "description": "AdminOperationsController and MailAdminController - /api/v1/admin",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/dashboard/stats"
+          }
+        },
+        {
+          "name": "Get Dashboard Counts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/dashboard"
+          }
+        },
+        {
+          "name": "Get Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/reports"
+          }
+        },
+        {
+          "name": "Get All Orders (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/orders?page=0&size=20"
+          }
+        },
+        {
+          "name": "Get All Payments (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/payments"
+          }
+        },
+        {
+          "name": "Get All Logistics Jobs (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/logistics/jobs"
+          }
+        },
+        {
+          "name": "Approve or Reject Product",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/products/21/status?status=ACTIVE"
+          }
+        },
+        {
+          "name": "Send Test Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"faith.driver@example.com\",\n  \"subject\": \"Kilivana test email\",\n  \"body\": \"This is a test message from the Kilivana backend.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:8080/api/v1/admin/mail/test"
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Admin - Audit Logs",
+      "description": "AuditLogController - /api/v1/admin/audit-logs",
+      "item": [
+        {
+          "name": "Get All Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/audit-logs?actorId=&entityType=&action=&startDate=&endDate=&page=0&size=20"
+          }
+        },
+        {
+          "name": "Get Audit Logs by Actor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/audit-logs/actor/8"
+          }
+        },
+        {
+          "name": "Get Audit Logs by Entity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/audit-logs/entity/PRODUCT/21"
+          }
+        },
+        {
+          "name": "Get Audit Log by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/api/v1/admin/audit-logs/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "17. System",
+      "description": "HealthController",
+      "item": [
+        {
+          "name": "Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Favicon",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "http://localhost:8080/favicon.ico",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

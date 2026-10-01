@@ -7,7 +7,7 @@ import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.entity.ProductImage;
 import com.kilivana.backend.ecommerce.repository.ProductImageRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
-import com.kilivana.backend.common.service.CloudinaryService;
+import com.kilivana.backend.common.service.ImageStorage;
 import com.kilivana.backend.common.enums.ProductStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
@@ -33,7 +33,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
-    private final CloudinaryService cloudinaryService;
+    private final ImageStorage cloudinaryService;
     private final UserService userService;
 
     @Transactional

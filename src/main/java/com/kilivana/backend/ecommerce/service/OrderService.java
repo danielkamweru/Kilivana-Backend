@@ -1,6 +1,7 @@
 package com.kilivana.backend.ecommerce.service;
 
 import com.kilivana.backend.common.enums.OrderStatus;
+import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
@@ -51,6 +52,7 @@ public class OrderService {
         Order order = Order.builder()
                 .buyerId(buyerId)
                 .status(OrderStatus.PENDING)
+            .paymentStatus(PaymentStatus.PENDING)
                 .subtotal(subtotal)
                 .deliveryFee(deliveryFee)
                 .total(total)

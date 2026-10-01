@@ -78,6 +78,8 @@ The backend will run on:
 | `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:8080,https://*.ngrok-free.dev,https://*.ngrok.app` | Comma-separated browser origins. Add the frontend origin when it runs on another port. |
+| `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs, e.g. `https://either-juvenile-progeny.ngrok-free.dev`. Required when the app is reached through a tunnel, because Android blocks plain `http://` image URLs. |
 
 ### Image uploads
 
@@ -91,6 +93,11 @@ CLOUDINARY_API_KEY=your_key \
 CLOUDINARY_API_SECRET=your_secret \
 mvn spring-boot:run
 ```
+
+With `STORAGE_PROVIDER=local` the files are written to `uploads/<folder>/<random-name>` and served
+from `{PUBLIC_BASE_URL}/uploads/...`. Those URLs are public: `GET /uploads/**` is permitted without
+a Bearer token, because image components cannot attach one, and the generated file names are
+unpredictable. Every other endpoint still requires authentication.
 
 ### Database migrations
 

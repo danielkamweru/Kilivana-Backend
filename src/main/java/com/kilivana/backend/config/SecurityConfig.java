@@ -36,6 +36,10 @@ public class SecurityConfig {
             "GET", "/favicon.ico",
             "GET", "/actuator/health",
             "GET", "/actuator/info",
+            // Uploaded images are referenced by URL from <img> tags and mobile clients,
+            // which cannot attach a bearer token. Filenames are random, so the files are
+            // safe to read without a token.
+            "GET", "/uploads/**",
             "POST", "/api/v1/auth/register",
             "POST", "/api/v1/auth/login",
             "POST", "/api/v1/auth/refresh",

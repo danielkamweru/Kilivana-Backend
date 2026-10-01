@@ -35,3 +35,6 @@ Thumbs.db
 
 # Spring Boot
 spring-boot-*.log
+
+# Locally stored uploaded images
+/uploads/

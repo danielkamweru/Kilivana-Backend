@@ -9,7 +9,7 @@ import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
-import com.kilivana.backend.common.service.CloudinaryService;
+import com.kilivana.backend.common.service.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +35,7 @@ public class ProfileService {
     private final SupplierProfileImageRepository supplierProfileImageRepository;
     private final DriverProfileImageRepository driverProfileImageRepository;
     private final InspectorProfileImageRepository inspectorProfileImageRepository;
-    private final CloudinaryService cloudinaryService;
+    private final ImageStorage cloudinaryService;
 
     @Transactional(readOnly = true)
     public FarmerProfileResponse getFarmerProfile(Long authenticatedUserId, Long userId) {
