@@ -118,6 +118,28 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), error));
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleServiceUnavailable(ServiceUnavailableException ex) {
+        ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
+                .code("SERVICE_UNAVAILABLE")
+                .details(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error(ex.getMessage(), error));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTooManyRequests(TooManyRequestsException ex) {
+        ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
+                .code("TOO_MANY_REQUESTS")
+                .details(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error(ex.getMessage(), error));
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()

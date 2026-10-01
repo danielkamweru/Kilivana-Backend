@@ -3,10 +3,10 @@ package com.kilivana.backend.common.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.Uploader;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,8 +33,12 @@ class CloudinaryServiceTest {
     @Mock
     private Uploader uploader;
 
-    @InjectMocks
-    private CloudinaryService cloudinaryService;
+    private CloudinaryService configuredService;
+
+    @BeforeEach
+    void setUp() {
+        configuredService = new CloudinaryService(cloudinary, "demo-cloud", "demo-key");
+    }
 
     @Test
     void uploadImage_shouldReturnUploadResult() throws IOException {
@@ -47,12 +53,12 @@ class CloudinaryServiceTest {
         when(cloudinary.uploader()).thenReturn(uploader);
         when(uploader.upload(any(byte[].class), anyMap())).thenReturn(uploadResult);
 
-        Map<String, Object> result = cloudinaryService.uploadImage(file, "kilivana/products/1");
+        Map<String, Object> result = configuredService.uploadImage(file, "kilivana/products/1");
 
         assertEquals("https://res.cloudinary.com/demo/image/upload/test.png",
-                cloudinaryService.getSecureUrl(result));
-        assertEquals("kilivana/products/1/test", cloudinaryService.getPublicId(result));
-        assertEquals("asset123", cloudinaryService.getAssetId(result));
+                configuredService.getSecureUrl(result));
+        assertEquals("kilivana/products/1/test", configuredService.getPublicId(result));
+        assertEquals("asset123", configuredService.getAssetId(result));
 
         verify(uploader).upload(any(byte[].class), anyMap());
     }
@@ -63,7 +69,7 @@ class CloudinaryServiceTest {
                 "image", "", "image/png", new byte[0]);
 
         assertThrows(BadRequestException.class, () ->
-                cloudinaryService.uploadImage(file, "kilivana/products/1"));
+                configuredService.uploadImage(file, "kilivana/products/1"));
     }
 
     @Test
@@ -72,7 +78,7 @@ class CloudinaryServiceTest {
                 "image", "test.txt", "text/plain", "not-an-image".getBytes());
 
         assertThrows(BadRequestException.class, () ->
-                cloudinaryService.uploadImage(file, "kilivana/products/1"));
+                configuredService.uploadImage(file, "kilivana/products/1"));
     }
 
     @Test
@@ -82,7 +88,7 @@ class CloudinaryServiceTest {
                 "image", "large.png", "image/png", largeContent);
 
         assertThrows(BadRequestException.class, () ->
-                cloudinaryService.uploadImage(file, "kilivana/products/1"));
+                configuredService.uploadImage(file, "kilivana/products/1"));
     }
 
     @Test
@@ -90,14 +96,14 @@ class CloudinaryServiceTest {
         when(cloudinary.uploader()).thenReturn(uploader);
         when(uploader.destroy(any(String.class), anyMap())).thenReturn(new HashMap<>());
 
-        cloudinaryService.deleteImage("kilivana/products/1/test");
+        configuredService.deleteImage("kilivana/products/1/test");
 
         verify(uploader).destroy(eq("kilivana/products/1/test"), anyMap());
     }
 
     @Test
     void deleteImage_nullPublicId_shouldDoNothing() throws IOException {
-        cloudinaryService.deleteImage(null);
+        configuredService.deleteImage(null);
 
         verifyNoInteractions(cloudinary);
     }
@@ -116,10 +122,10 @@ class CloudinaryServiceTest {
         when(uploader.upload(any(byte[].class), anyMap())).thenReturn(uploadResult);
         when(uploader.destroy(any(String.class), anyMap())).thenReturn(new HashMap<>());
 
-        Map<String, Object> result = cloudinaryService.replaceImage(
+        Map<String, Object> result = configuredService.replaceImage(
                 "old-public-id", newFile, "kilivana/products/1");
 
-        assertEquals("kilivana/products/1/new", cloudinaryService.getPublicId(result));
+        assertEquals("kilivana/products/1/new", configuredService.getPublicId(result));
         verify(uploader).upload(any(byte[].class), anyMap());
         verify(uploader).destroy(eq("old-public-id"), anyMap());
     }
@@ -134,9 +140,24 @@ class CloudinaryServiceTest {
                 .thenThrow(new IOException("Cloudinary down"));
 
         assertThrows(IOException.class, () ->
-                cloudinaryService.replaceImage("old-public-id", newFile, "kilivana/products/1"));
+                configuredService.replaceImage("old-public-id", newFile, "kilivana/products/1"));
 
         verify(uploader).upload(any(byte[].class), anyMap());
         verify(uploader, never()).destroy(any(String.class), anyMap());
+    }
+
+    @Test
+    void uploadImage_withoutCredentials_shouldNameTheMissingVariables() {
+        // Regression: with no Cloudinary credentials the SDK threw "cloud_name is disabled"
+        // from deep in its HTTP layer, which reached the client as an opaque 500.
+        CloudinaryService unconfigured = new CloudinaryService(cloudinary, "", "");
+        MockMultipartFile file = new MockMultipartFile(
+                "image", "test.png", "image/png", "fake-image-data".getBytes());
+
+        assertThat(unconfigured.isConfigured()).isFalse();
+
+        assertThatThrownBy(() -> unconfigured.uploadImage(file, "kilivana/drivers/1"))
+                .isInstanceOf(ServiceUnavailableException.class)
+                .hasMessageContaining("CLOUDINARY_CLOUD_NAME");
     }
 }

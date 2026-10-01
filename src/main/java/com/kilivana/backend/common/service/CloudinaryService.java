@@ -3,6 +3,7 @@ package com.kilivana.backend.common.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -16,12 +17,32 @@ import java.util.Map;
 public class CloudinaryService {
 
     private final Cloudinary cloudinary;
+    private final String cloudName;
+    private final String apiKey;
 
-    public CloudinaryService(Cloudinary cloudinary) {
+    public CloudinaryService(Cloudinary cloudinary,
+            @Value("${cloudinary.cloud-name:}") String cloudName,
+            @Value("${cloudinary.api-key:}") String apiKey) {
         this.cloudinary = cloudinary;
+        this.cloudName = cloudName;
+        this.apiKey = apiKey;
+    }
+
+    public boolean isConfigured() {
+        return cloudName != null && !cloudName.isBlank()
+                && apiKey != null && !apiKey.isBlank();
     }
 
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
+        // Without credentials the Cloudinary SDK throws "cloud_name is disabled" from deep
+        // inside its HTTP layer, which surfaces as an opaque 500. Naming the missing
+        // environment variables turns a mystery into an actionable message.
+        if (!isConfigured()) {
+            throw new ServiceUnavailableException(
+                    "Image storage is not configured. Set CLOUDINARY_CLOUD_NAME, "
+                            + "CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET, then restart.");
+        }
+
         validateImageFile(file);
 
         Map<String, Object> uploadParams = ObjectUtils.asMap(
