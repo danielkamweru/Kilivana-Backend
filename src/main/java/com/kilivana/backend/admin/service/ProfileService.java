@@ -585,7 +585,7 @@ public class ProfileService {
             return;
         }
         UserRole role = userService.getUserById(authenticatedUserId).getRole();
-        if (role != UserRole.ADMIN) {
+        if (!role.isStaff()) {
             throw new ForbiddenException("You do not have permission to access this resource");
         }
     }

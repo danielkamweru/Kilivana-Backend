@@ -36,6 +36,7 @@ public class DevelopmentDataSeeder {
 
     private static final List<SeedUser> SEED_USERS = List.of(
             new SeedUser("admin.test@kilivana.local", "Admin Test", "0700000001", UserRole.ADMIN),
+            new SeedUser("superadmin.test@kilivana.local", "Super Admin Test", "0700000007", UserRole.SUPER_ADMIN),
             new SeedUser("farmer.test@kilivana.local", "Farmer Test", "0700000002", UserRole.FARMER),
             new SeedUser("buyer.test@kilivana.local", "Buyer Test", "0700000003", UserRole.BUYER),
             new SeedUser("supplier.test@kilivana.local", "Supplier Test", "0700000004", UserRole.SUPPLIER),

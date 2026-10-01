@@ -67,7 +67,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
         UserResponse user = userService.getUserById(userId);
-        if (!product.getSellerId().equals(userId) && user.getRole() != UserRole.ADMIN) {
+        if (!product.getSellerId().equals(userId) && !user.getRole().isStaff()) {
             throw new BadRequestException("You do not have permission to modify this product");
         }
     }
