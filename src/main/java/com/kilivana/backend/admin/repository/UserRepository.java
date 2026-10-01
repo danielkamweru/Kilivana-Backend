@@ -34,6 +34,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByRole(UserRole role);
 
+    /** Existing per-role codes such as {@code F-014}, used to hand out the next one. */
+    @Query("SELECT u.referenceCode FROM User u WHERE u.role = :role AND u.referenceCode IS NOT NULL")
+    List<String> findReferenceCodesByRole(UserRole role);
+
     long countByRoleAndVerificationStatus(UserRole role, VerificationStatus verificationStatus);
 
     long countByVerificationStatus(VerificationStatus verificationStatus);

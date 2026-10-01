@@ -78,7 +78,7 @@ The backend will run on:
 | `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:8080,https://*.ngrok-free.dev,https://*.ngrok.app` | Comma-separated browser origins. Add the frontend origin when it runs on another port. |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins, wildcard patterns allowed. The default allows any origin so any dev server, LAN address or reassigned ngrok tunnel works; narrow it to a fixed list for a deployment. |
 | `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs, e.g. `https://either-juvenile-progeny.ngrok-free.dev`. Required when the app is reached through a tunnel, because Android blocks plain `http://` image URLs. |
 
 ### Image uploads
