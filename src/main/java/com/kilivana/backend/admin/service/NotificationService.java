@@ -42,6 +42,16 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Every user's notifications, newest first, for the admin feed. Sorted in the database
+     * rather than in memory so the ordering does not depend on insertion order.
+     */
+    public List<NotificationResponse> getAllNotifications() {
+        return notificationRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(NotificationResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public NotificationResponse markAsRead(Long id) {
         Notification notification = notificationRepository.findById(id)

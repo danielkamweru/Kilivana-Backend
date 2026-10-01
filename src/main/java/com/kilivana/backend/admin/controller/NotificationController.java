@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "Administration · Notifications", description = "In-app notification delivery and read-state tracking")
@@ -33,6 +34,20 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<NotificationResponse>> getNotificationById(@PathVariable Long id) {
         NotificationResponse notification = notificationService.getNotificationById(id);
         return ResponseEntity.ok(ApiResponse.success(notification));
+    }
+
+    @GetMapping
+    @Operation(summary = "List notifications for every user")
+    public ResponseEntity<ApiResponse<List<NotificationResponse>>> getAllNotifications(
+            @RequestParam(required = false) Boolean unread) {
+        // An admin screen needs one feed across users; without this the only option was to
+        // loop over every user id. Optional unread filter mirrors /user/{userId}/unread.
+        List<NotificationResponse> notifications = unread == null
+                ? notificationService.getAllNotifications()
+                : notificationService.getAllNotifications().stream()
+                        .filter(n -> n.getReadAt() == null)
+                        .toList();
+        return ResponseEntity.ok(ApiResponse.success(notifications));
     }
 
     @GetMapping("/user/{userId}")
