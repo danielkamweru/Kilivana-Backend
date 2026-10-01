@@ -22,11 +22,14 @@ public class DeliveryOtpNotifier {
 
     /**
      * Sends the code to the buyer named on the job's order. A missing order, buyer or
-     * address is logged rather than thrown: the code is also returned by the API, so a
-     * failed notification must not block the job from being created.
+     * address is logged rather than thrown: the code is also emailed and held nowhere else,
+     * so a failed notification must not block the job from being created.
+     *
+     * The plaintext code is passed in rather than read from the job, because the job only
+     * ever stores a hash of it.
      */
-    public void sendOtpToBuyer(LogisticsJob job) {
-        if (job == null || job.getDeliveryOtp() == null) {
+    public void sendOtpToBuyer(LogisticsJob job, String otp) {
+        if (job == null || otp == null) {
             return;
         }
 
@@ -36,9 +39,9 @@ public class DeliveryOtpNotifier {
                 .ifPresentOrElse(
                         buyer -> mailService.send(buyer.getEmail(),
                                 "Your Kilivana delivery code",
-                                buildBody(job, job.getDeliveryOtp(), buyer.getName())),
-                        () -> log.warn("No buyer email available for job {}; delivery code {} not sent",
-                                job.getId(), job.getDeliveryOtp()));
+                                buildBody(job, otp, buyer.getName())),
+                        () -> log.warn("No buyer email available for job {}; delivery code not sent",
+                                job.getId()));
     }
 
     private String buildBody(LogisticsJob job, String otp, String buyerName) {

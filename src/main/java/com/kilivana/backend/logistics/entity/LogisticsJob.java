@@ -56,18 +56,28 @@ public class LogisticsJob {
     private Integer estimatedMinutes;
 
     /**
-     * Shared secret the customer reads out to the driver on handover. Generated when the
-     * job is created, cleared once a proof of delivery has consumed it.
+     * BCrypt hash of the shared secret the customer reads out to the driver at handover.
+     * The code itself is never stored: it is emailed to the buyer and held nowhere else,
+     * so a database read cannot reveal a code that is still live. Cleared once consumed.
      */
-    private String deliveryOtp;
+    private String deliveryOtpHash;
     private LocalDateTime deliveryOtpExpiresAt;
 
     /**
      * Records that a code was presented and accepted. Without this, "the code was consumed"
-     * and "this job never had a code" look identical once deliveryOtp is cleared, and a
+     * and "this job never had a code" look identical once the hash is cleared, and a
      * second proof of delivery could be filed for a job already delivered.
      */
     private Boolean deliveryOtpVerified;
+
+    /**
+     * A six-digit code has only a million possible values, so unlimited guessing is a real
+     * threat. Attempts are counted and the code is locked for a cooling-off period once the
+     * limit is passed; locking rather than regenerating keeps a legitimate driver from
+     * invalidating the code a customer is reading out.
+     */
+    private Integer deliveryOtpAttempts;
+    private LocalDateTime deliveryOtpLockedUntil;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

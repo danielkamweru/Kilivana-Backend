@@ -4,6 +4,7 @@ import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.entity.TrackingEvent;
@@ -12,6 +13,7 @@ import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,23 +31,28 @@ public class LogisticsService {
     private final TrackingEventRepository trackingEventRepository;
     private final ProofOfDeliveryRepository proofOfDeliveryRepository;
     private final DeliveryOtpNotifier deliveryOtpNotifier;
+    private final PasswordEncoder passwordEncoder;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
     private static final int OTP_VALIDITY_HOURS = 24;
+    private static final int OTP_MAX_ATTEMPTS = 5;
+    private static final int OTP_LOCKOUT_MINUTES = 15;
 
     @Transactional
     public LogisticsJob createLogisticsJob(Long orderId, String pickupAddress, String destinationAddress) {
+        String otp = generateOtp();
         LogisticsJob job = LogisticsJob.builder()
                 .orderId(orderId)
                 .pickupAddress(pickupAddress)
                 .destinationAddress(destinationAddress)
                 .status(DeliveryStatus.PENDING_ASSIGNMENT)
-                .deliveryOtp(generateOtp())
+                .deliveryOtpHash(passwordEncoder.encode(otp))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(OTP_VALIDITY_HOURS))
+                .deliveryOtpAttempts(0)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(job);
-        deliveryOtpNotifier.sendOtpToBuyer(saved);
+        deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
         return saved;
     }
 
@@ -55,6 +62,7 @@ public class LogisticsService {
         // "id" would otherwise make save() merge into that existing row and overwrite a
         // job it does not own. Identity, driver assignment, timestamps and the delivery
         // OTP are ours; everything else is client-supplied and copied across.
+        String otp = generateOtp();
         LogisticsJob toSave = LogisticsJob.builder()
                 .orderId(job.getOrderId())
                 .pickupAddress(job.getPickupAddress())
@@ -72,11 +80,12 @@ public class LogisticsService {
                 .estimatedMinutes(job.getEstimatedMinutes())
                 .status(job.getStatus() == null ? DeliveryStatus.PENDING_ASSIGNMENT : job.getStatus())
                 .driverId(null)
-                .deliveryOtp(generateOtp())
+                .deliveryOtpHash(passwordEncoder.encode(otp))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(OTP_VALIDITY_HOURS))
+                .deliveryOtpAttempts(0)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(toSave);
-        deliveryOtpNotifier.sendOtpToBuyer(saved);
+        deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
         return saved;
     }
 
@@ -90,23 +99,45 @@ public class LogisticsService {
 
     /**
      * Confirms the customer-supplied handover code before a driver can close out a job.
-     * A job that was created before the OTP existed has none to check, so that case is
-     * rejected rather than silently treated as verified.
+     *
+     * A six-digit code has only a million possible values, so guessing is the main threat
+     * here. The code is stored as a BCrypt hash, never in plaintext, and repeated wrong
+     * guesses lock it for a cooling-off period. The code is locked rather than regenerated
+     * so that a genuine driver cannot be defeated by someone else burning the attempts.
+     *
+     * The noRollbackFor is load-bearing. A wrong code increments the counter and then
+     * throws, and a plain @Transactional would roll that increment back - leaving the
+     * counter permanently at zero and the lockout unreachable.
      */
-    @Transactional
+    @Transactional(noRollbackFor = { BadRequestException.class, TooManyRequestsException.class })
     public LogisticsJob verifyDeliveryOtp(Long jobId, String otp) {
         LogisticsJob job = getJobById(jobId);
-        if (job.getDeliveryOtp() == null) {
+        if (job.getDeliveryOtpHash() == null) {
             throw new BadRequestException("This job has no delivery code to verify");
+        }
+        if (job.getDeliveryOtpLockedUntil() != null
+                && job.getDeliveryOtpLockedUntil().isAfter(LocalDateTime.now())) {
+            throw new TooManyRequestsException("Too many incorrect delivery codes. Try again later.");
         }
         if (job.getDeliveryOtpExpiresAt() != null
                 && job.getDeliveryOtpExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("The delivery code has expired");
         }
-        if (!job.getDeliveryOtp().equals(otp == null ? null : otp.trim())) {
+        if (!passwordEncoder.matches(otp == null ? "" : otp.trim(), job.getDeliveryOtpHash())) {
+            int attempts = job.getDeliveryOtpAttempts() == null ? 1 : job.getDeliveryOtpAttempts() + 1;
+            job.setDeliveryOtpAttempts(attempts);
+            if (attempts >= OTP_MAX_ATTEMPTS) {
+                job.setDeliveryOtpLockedUntil(LocalDateTime.now().plusMinutes(OTP_LOCKOUT_MINUTES));
+                job.setDeliveryOtpAttempts(0);
+                logisticsJobRepository.save(job);
+                throw new TooManyRequestsException(
+                        "Too many incorrect delivery codes. The code is locked for "
+                                + OTP_LOCKOUT_MINUTES + " minutes.");
+            }
+            logisticsJobRepository.save(job);
             throw new BadRequestException("Incorrect delivery code");
         }
-        job.setDeliveryOtp(null);
+        job.setDeliveryOtpHash(null);
         job.setDeliveryOtpExpiresAt(null);
         job.setDeliveryOtpVerified(true);
         return logisticsJobRepository.save(job);
@@ -221,7 +252,7 @@ public class LogisticsService {
         if (Boolean.TRUE.equals(job.getDeliveryOtpVerified())) {
             throw new ConflictException("This delivery has already been confirmed");
         }
-        if (job.getDeliveryOtp() != null) {
+        if (job.getDeliveryOtpHash() != null) {
             verifyDeliveryOtp(job.getId(), otp);
         } else if (proofOfDeliveryRepository.existsByLogisticsJobId(job.getId())) {
             // A job created before OTP verification existed has no code to check, so the

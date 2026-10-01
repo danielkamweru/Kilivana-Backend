@@ -3,6 +3,7 @@ package com.kilivana.backend.logistics.service;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
+import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
@@ -15,7 +16,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.Spy;
 import org.mockito.quality.Strictness;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -41,10 +45,18 @@ class LogisticsServiceTest {
     @Mock
     private DeliveryOtpNotifier deliveryOtpNotifier;
 
+    /**
+     * A real encoder, spied rather than stubbed: the point of these tests is that the
+     * stored value is a genuine one-way hash, which a mocked encoder would not prove.
+     */
+    @Spy
+    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
     @InjectMocks
     private LogisticsService logisticsService;
 
     private static final String JOB_OTP = "424242";
+    private static final int OTP_MAX_ATTEMPTS = 5;
 
     private LogisticsJobRepository noopJobRepo() {
         when(logisticsJobRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -65,7 +77,7 @@ class LogisticsServiceTest {
                 .destinationAddress("Destination")
                 .status(DeliveryStatus.IN_TRANSIT)
                 .driverId(5L)
-                .deliveryOtp(JOB_OTP)
+                .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(1))
                 .build();
         when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
@@ -132,7 +144,8 @@ class LogisticsServiceTest {
 
         LogisticsJob saved = logisticsService.createJob(submitted);
 
-        assertThat(saved.getDeliveryOtp()).isNotNull().hasSize(6);
+        assertThat(saved.getDeliveryOtpHash()).isNotNull();
+        assertThat(passwordEncoder.matches("^\\d{6}$", saved.getDeliveryOtpHash())).isFalse();
         assertThat(saved.getDeliveryOtpExpiresAt()).isAfter(LocalDateTime.now());
     }
 
@@ -140,14 +153,19 @@ class LogisticsServiceTest {
     void createJob_shouldIgnoreAClientSuppliedOtp() {
         noopJobRepo();
 
+        // The entity no longer has a plaintext field, so a client cannot influence the
+        // stored code at all - there is nothing for it to bind to.
         LogisticsJob submitted = LogisticsJob.builder()
                 .orderId(1L)
                 .pickupAddress("Pickup")
                 .destinationAddress("Destination")
-                .deliveryOtp("000000")
                 .build();
 
-        assertThat(logisticsService.createJob(submitted).getDeliveryOtp()).isNotEqualTo("000000");
+        String hash = logisticsService.createJob(submitted).getDeliveryOtpHash();
+
+        assertThat(hash).isNotNull();
+        assertThat(hash).isNotEqualTo("000000");
+        assertThat(passwordEncoder.matches(JOB_OTP, hash)).isFalse();
     }
 
     @Test
@@ -157,7 +175,7 @@ class LogisticsServiceTest {
                 .id(1L)
                 .orderId(1L)
                 .status(DeliveryStatus.IN_TRANSIT)
-                .deliveryOtp(JOB_OTP)
+                .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(1))
                 .build();
         when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
@@ -165,7 +183,7 @@ class LogisticsServiceTest {
         LogisticsJob verified = logisticsService.verifyDeliveryOtp(1L, JOB_OTP);
 
         // Single-use: a captured code cannot be replayed to file a second delivery.
-        assertThat(verified.getDeliveryOtp()).isNull();
+        assertThat(verified.getDeliveryOtpHash()).isNull();
     }
 
     @Test
@@ -175,7 +193,7 @@ class LogisticsServiceTest {
                 .id(1L)
                 .orderId(1L)
                 .status(DeliveryStatus.IN_TRANSIT)
-                .deliveryOtp(JOB_OTP)
+                .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
                 .deliveryOtpExpiresAt(LocalDateTime.now().minusMinutes(1))
                 .build();
         when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
@@ -192,7 +210,7 @@ class LogisticsServiceTest {
                 .id(1L)
                 .orderId(1L)
                 .status(DeliveryStatus.IN_TRANSIT)
-                .deliveryOtp(JOB_OTP)
+                .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(1))
                 .build();
         when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
@@ -200,7 +218,7 @@ class LogisticsServiceTest {
         assertThatThrownBy(() -> logisticsService.verifyDeliveryOtp(1L, "111111"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Incorrect delivery code");
-        assertThat(job.getDeliveryOtp()).isEqualTo(JOB_OTP);
+        assertThat(job.getDeliveryOtpHash()).isNotNull();
     }
 
     @Test
@@ -254,6 +272,46 @@ class LogisticsServiceTest {
         assertThatThrownBy(() -> logisticsService.createProofOfDelivery(submitted, null))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already been confirmed");
+    }
+
+    @Test
+    void verifyDeliveryOtp_shouldLockTheCodeAfterRepeatedFailures() {
+        noopJobRepo();
+        LogisticsJob job = LogisticsJob.builder()
+                .id(1L)
+                .orderId(1L)
+                .status(DeliveryStatus.IN_TRANSIT)
+                .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
+                .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(1))
+                .deliveryOtpAttempts(OTP_MAX_ATTEMPTS - 1)
+                .build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
+
+        assertThatThrownBy(() -> logisticsService.verifyDeliveryOtp(1L, "111111"))
+                .isInstanceOf(TooManyRequestsException.class)
+                .hasMessageContaining("locked for");
+
+        // Locking rather than regenerating: a customer is reading the real code out to the
+        // driver, so burning it would fail the legitimate attempt too.
+        assertThat(job.getDeliveryOtpLockedUntil()).isAfter(LocalDateTime.now());
+        assertThat(job.getDeliveryOtpHash()).isNotNull();
+    }
+
+    @Test
+    void verifyDeliveryOtp_shouldRefuseWhileTheCodeIsLocked() {
+        noopJobRepo();
+        LogisticsJob job = LogisticsJob.builder()
+                .id(1L)
+                .orderId(1L)
+                .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
+                .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(1))
+                .deliveryOtpLockedUntil(LocalDateTime.now().plusMinutes(10))
+                .build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
+
+        // Even the correct code is refused while the lock stands.
+        assertThatThrownBy(() -> logisticsService.verifyDeliveryOtp(1L, JOB_OTP))
+                .isInstanceOf(TooManyRequestsException.class);
     }
 
     @Test
