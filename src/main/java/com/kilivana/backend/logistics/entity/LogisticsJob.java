@@ -62,6 +62,13 @@ public class LogisticsJob {
     private String deliveryOtp;
     private LocalDateTime deliveryOtpExpiresAt;
 
+    /**
+     * Records that a code was presented and accepted. Without this, "the code was consumed"
+     * and "this job never had a code" look identical once deliveryOtp is cleared, and a
+     * second proof of delivery could be filed for a job already delivered.
+     */
+    private Boolean deliveryOtpVerified;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DeliveryStatus status;

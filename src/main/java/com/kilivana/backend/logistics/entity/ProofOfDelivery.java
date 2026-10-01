@@ -27,13 +27,16 @@ public class ProofOfDelivery {
     @Column(nullable = false)
     private String recipientName;
 
-    @Column(nullable = false)
+    /**
+     * Optional. The delivery OTP is the authoritative confirmation of hand-over, so a driver
+     * who cannot capture a signature must still be able to file a proof. These were all
+     * NOT NULL, which rejected every proof that omitted a signature and made the OTP flow
+     * impossible to complete.
+     */
     private String signatureUrl;
 
-    @Column(nullable = false)
     private String photoUrl;
 
-    @Column(nullable = false)
     private String otpReference;
 
     @Column(nullable = false, updatable = false)

@@ -2,6 +2,7 @@ package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
@@ -107,6 +108,7 @@ public class LogisticsService {
         }
         job.setDeliveryOtp(null);
         job.setDeliveryOtpExpiresAt(null);
+        job.setDeliveryOtpVerified(true);
         return logisticsJobRepository.save(job);
     }
 
@@ -215,8 +217,17 @@ public class LogisticsService {
         // caller cannot assert a delivery that never took place.
         LogisticsJob job = logisticsJobRepository.findById(proof.getLogisticsJobId())
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", proof.getLogisticsJobId()));
+
+        if (Boolean.TRUE.equals(job.getDeliveryOtpVerified())) {
+            throw new ConflictException("This delivery has already been confirmed");
+        }
         if (job.getDeliveryOtp() != null) {
             verifyDeliveryOtp(job.getId(), otp);
+        } else if (proofOfDeliveryRepository.existsByLogisticsJobId(job.getId())) {
+            // A job created before OTP verification existed has no code to check, so the
+            // flag cannot distinguish first from repeat delivery. Fall back to the stored
+            // proof rather than allowing unlimited deliveries for the same job.
+            throw new ConflictException("This delivery has already been confirmed");
         }
 
         // Rebuild rather than save the submitted instance. Accepting a client-supplied

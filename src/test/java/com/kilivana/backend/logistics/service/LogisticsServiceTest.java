@@ -2,6 +2,7 @@ package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
@@ -211,6 +212,48 @@ class LogisticsServiceTest {
         assertThatThrownBy(() -> logisticsService.verifyDeliveryOtp(1L, "123456"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("no delivery code");
+    }
+
+    @Test
+    void createProofOfDelivery_shouldRejectASecondProofForTheSameJob() {
+        // Regression: once the OTP is consumed the job looks exactly like one that never
+        // had a code, so a repeat delivery was being accepted.
+        noopJobRepo();
+        LogisticsJob job = LogisticsJob.builder()
+                .id(1L)
+                .orderId(1L)
+                .status(DeliveryStatus.DELIVERED)
+                .deliveryOtpVerified(true)
+                .build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
+
+        ProofOfDelivery submitted = ProofOfDelivery.builder()
+                .logisticsJobId(1L)
+                .recipientName("Impostor")
+                .build();
+
+        assertThatThrownBy(() -> logisticsService.createProofOfDelivery(submitted, null))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("already been confirmed");
+    }
+
+    @Test
+    void createProofOfDelivery_shouldRejectASecondProofOnACodelessJob() {
+        // A job predating OTP verification has no code to check, so the existing-proof
+        // lookup is what stops a duplicate delivery.
+        noopJobRepo();
+        LogisticsJob job = LogisticsJob.builder().id(1L).orderId(1L).build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
+        when(proofOfDeliveryRepository.existsByLogisticsJobId(1L)).thenReturn(true);
+
+        ProofOfDelivery submitted = ProofOfDelivery.builder()
+                .logisticsJobId(1L)
+                .recipientName("Impostor")
+                .build();
+
+        assertThatThrownBy(() -> logisticsService.createProofOfDelivery(submitted, null))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("already been confirmed");
     }
 
     @Test

@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface ProofOfDeliveryRepository extends JpaRepository<ProofOfDelivery, Long> {
     
     Optional<ProofOfDelivery> findByLogisticsJobId(Long logisticsJobId);
+
+    boolean existsByLogisticsJobId(Long logisticsJobId);
 }
