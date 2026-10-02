@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * The admin panel writes a capacity as "5T" or "200kg" while logistics stores kilograms, so
- * every spelling that panel uses has to survive the round trip.
+ * The admin panel's driver form submits one flat object; these are the spellings it uses for the
+ * capacity.
  */
 class DriverCapacityFormatterTest {
 
@@ -17,13 +17,14 @@ class DriverCapacityFormatterTest {
         assertEquals(5000, DriverCapacityFormatter.toKilograms("5T"));
         assertEquals(5000, DriverCapacityFormatter.toKilograms("5t"));
         assertEquals(2000, DriverCapacityFormatter.toKilograms("2 tonnes"));
+        assertEquals(10000, DriverCapacityFormatter.toKilograms("10 T"));
     }
 
     @Test
     void parsesKilograms() {
         assertEquals(200, DriverCapacityFormatter.toKilograms("200kg"));
         assertEquals(200, DriverCapacityFormatter.toKilograms("200 KG"));
-        assertEquals(200, DriverCapacityFormatter.toKilograms("200"));
+        assertEquals(2000, DriverCapacityFormatter.toKilograms("2000"));
     }
 
     @Test
@@ -38,6 +39,7 @@ class DriverCapacityFormatterTest {
     @Test
     void rejectsAnUnreadableCapacity() {
         assertThrows(IllegalArgumentException.class, () -> DriverCapacityFormatter.toKilograms("large"));
+        assertThrows(IllegalArgumentException.class, () -> DriverCapacityFormatter.toKilograms("5 tonnes extra"));
     }
 
     @Test

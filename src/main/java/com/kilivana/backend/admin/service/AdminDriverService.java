@@ -2,6 +2,7 @@ package com.kilivana.backend.admin.service;
 
 import com.kilivana.backend.admin.dto.AdminDriverResponse;
 import com.kilivana.backend.admin.dto.DriverCapacityFormatter;
+import com.kilivana.backend.admin.dto.DriverRegistrationRequest;
 import com.kilivana.backend.admin.entity.DriverProfile;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.DriverProfileRepository;
@@ -9,9 +10,14 @@ import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DriverStatus;
 import com.kilivana.backend.common.enums.KycStatus;
 import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.enums.UserStatus;
+import com.kilivana.backend.common.enums.VerificationStatus;
+import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.common.service.UserReferenceCodeGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +39,74 @@ public class AdminDriverService {
     private final UserRepository userRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final LogisticsJobRepository logisticsJobRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final UserReferenceCodeGenerator referenceCodeGenerator;
+
+    /**
+     * Registers a driver: the login account and the profile in one call.
+     *
+     * <p>Both rows or neither. Creating the account first and the profile second left a window
+     * where a driver existed but had no licence, vehicle or plate, and the roster showed them as
+     * a driver with nothing recorded.
+     */
+    @Transactional
+    public AdminDriverResponse registerDriver(DriverRegistrationRequest request) {
+        String email = normalizeEmail(request.getEmail());
+        String phone = normalizePhone(request.getPhone());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new BadRequestException("Email already exists");
+        }
+        if (userRepository.existsByPhone(phone)) {
+            throw new BadRequestException("Phone already exists");
+        }
+        if (request.getUsername() != null && userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
+            throw new BadRequestException("Username already exists");
+        }
+
+        User user = userRepository.save(User.builder()
+                .name(request.getFullName().trim())
+                .email(email)
+                .phone(phone)
+                .username(request.getUsername() == null ? null : request.getUsername().trim())
+                .region(request.getRegion())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .role(UserRole.DRIVER)
+                .status(UserStatus.ACTIVE)
+                // KYC is a licence check recorded on the profile, not an email confirmation.
+                .verificationStatus(VerificationStatus.NOT_REQUIRED)
+                .referenceCode(referenceCodeGenerator.nextCode(UserRole.DRIVER))
+                .build());
+
+        DriverProfile profile = driverProfileRepository.save(DriverProfile.builder()
+                .userId(user.getId())
+                .address(request.getAddress())
+                .licenseNumber(request.getLicenceNumber())
+                .vehicleType(request.getVehicleType())
+                .vehicleNumber(request.getPlateNumber().trim().toUpperCase())
+                .vehicleMake(request.getVehicleMake())
+                .vehicleCapacityKg(DriverCapacityFormatter.toKilograms(request.getVehicleCapacity()))
+                .vehicleDetails(request.getVehicleMake() == null || request.getVehicleMake().isBlank()
+                        ? null
+                        : request.getVehicleMake() + " " + request.getVehicleCapacity())
+                .licenseExpiryDate(request.getLicenceExpiry())
+                .idType(request.getIdType())
+                .idNumber(request.getIdNumber())
+                .kycStatus(request.getKycStatus() == null ? KycStatus.PENDING : request.getKycStatus())
+                .availabilityStatus(request.getAvailabilityStatus() == null
+                        ? DriverStatus.OFFLINE
+                        : request.getAvailabilityStatus())
+                .build());
+
+        return toResponse(user, profile, Map.of(user.getId(), 0L));
+    }
+
+    private static String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private static String normalizePhone(String phone) {
+        return phone.trim();
+    }
 
     @Transactional(readOnly = true)
     public List<AdminDriverResponse> listDrivers() {

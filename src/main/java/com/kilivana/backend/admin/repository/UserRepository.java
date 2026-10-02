@@ -24,6 +24,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailIgnoreCase(String email);
 
     boolean existsByPhone(String phone);
+
+    /** Username is unique when present, so a duplicate has to be caught case-insensitively. */
+    boolean existsByUsernameIgnoreCase(String username);
+
+    Optional<User> findByUsernameIgnoreCase(String username);
     
     List<User> findByRole(UserRole role);
     

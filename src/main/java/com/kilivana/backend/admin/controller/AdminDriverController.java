@@ -1,15 +1,20 @@
 package com.kilivana.backend.admin.controller;
 
 import com.kilivana.backend.admin.dto.AdminDriverResponse;
+import com.kilivana.backend.admin.dto.DriverRegistrationRequest;
 import com.kilivana.backend.admin.service.AdminDriverService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,6 +32,16 @@ import java.util.List;
 public class AdminDriverController {
 
     private final AdminDriverService adminDriverService;
+
+    @Operation(summary = "Register a driver",
+            description = "Creates the driver account and profile together, from the single flat payload the "
+                    + "admin panel's driver form submits. A new driver starts offline.")
+    @PostMapping
+    public ResponseEntity<ApiResponse<AdminDriverResponse>> registerDriver(
+            @Valid @RequestBody DriverRegistrationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(adminDriverService.registerDriver(request)));
+    }
 
     @Operation(summary = "List drivers",
             description = "Every driver account with its profile, KYC state, vehicle and delivery count.")
