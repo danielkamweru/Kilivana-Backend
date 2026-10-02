@@ -5,7 +5,10 @@ import com.kilivana.backend.admin.dto.DriverProfileRequest;
 import com.kilivana.backend.admin.dto.DriverProfileResponse;
 import com.kilivana.backend.admin.service.ProfileService;
 import com.kilivana.backend.common.dto.ImageResponse;
+import com.kilivana.backend.common.enums.DriverStatus;
+import com.kilivana.backend.common.enums.KycStatus;
 import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.enums.VehicleType;
 import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.config.SecurityConfig;
 import com.kilivana.backend.security.JwtService;
@@ -61,12 +64,14 @@ class DriverProfileControllerTest {
     void createDriverProfile_shouldReturnCreated() throws Exception {
         DriverProfileRequest request = DriverProfileRequest.builder()
                 .licenseNumber("DL-1")
-                .vehicleType("Truck")
+                .vehicleType(VehicleType.TRUCK)
                 .vehicleNumber("KDA 123A")
-                .availabilityStatus("AVAILABLE")
+                // The capacity as an administrator writes it, not kilograms.
+                .vehicleCapacity("5T")
+                .availabilityStatus(DriverStatus.AVAILABLE)
                 .build();
 
-        when(profileService.createDriverProfile(12L, 12L, request))
+        when(profileService.createDriverProfile(eq(12L), eq(12L), any()))
                 .thenReturn(DriverProfileResponse.builder().userId(12L).build());
 
         mockMvc.perform(post("/api/v1/profiles/drivers/12")
@@ -148,9 +153,9 @@ class DriverProfileControllerTest {
 
         DriverProfileRequest request = DriverProfileRequest.builder()
                 .licenseNumber("STOLEN")
-                .vehicleType("Truck")
+                .vehicleType(VehicleType.TRUCK)
                 .vehicleNumber("KDA 123A")
-                .availabilityStatus("AVAILABLE")
+                .availabilityStatus(DriverStatus.AVAILABLE)
                 .build();
 
         mockMvc.perform(get("/api/v1/profiles/drivers/10").with(asBuyer(jwtService, 4L)))
@@ -164,6 +169,59 @@ class DriverProfileControllerTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete("/api/v1/profiles/drivers/10/images/1").with(asBuyer(jwtService, 4L)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createDriverProfile_shouldAcceptLowerCaseAndHyphenatedEnums() throws Exception {
+        // The admin panel sends "available" and "on-delivery"; both have to be understood or
+        // the client is pushed into inventing its own mapping, which is where a second spelling
+        // of the same state comes from.
+        String body = """
+                {
+                  "licenseNumber": "DL-9",
+                  "vehicleType": "van",
+                  "vehicleNumber": "KDA 999Z",
+                  "vehicleCapacity": "200kg",
+                  "kycStatus": "verified",
+                  "availabilityStatus": "on-delivery"
+                }
+                """;
+
+        when(profileService.createDriverProfile(eq(12L), eq(12L), any()))
+                .thenReturn(DriverProfileResponse.builder()
+                        .userId(12L)
+                        .vehicleType(VehicleType.VAN)
+                        .vehicleCapacityKg(200)
+                        .kycStatus(KycStatus.VERIFIED)
+                        .availabilityStatus(DriverStatus.ON_DELIVERY)
+                        .build());
+
+        mockMvc.perform(post("/api/v1/profiles/drivers/12")
+                        .with(asUser(jwtService, 12L, UserRole.DRIVER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.vehicleType").value("VAN"))
+                .andExpect(jsonPath("$.data.availabilityStatus").value("ON_DELIVERY"))
+                .andExpect(jsonPath("$.data.kycStatus").value("VERIFIED"));
+    }
+
+    @Test
+    void createDriverProfile_shouldRejectAnUnknownVehicleType() throws Exception {
+        String body = """
+                {
+                  "licenseNumber": "DL-9",
+                  "vehicleType": "Bicycle",
+                  "vehicleNumber": "KDA 999Z",
+                  "availabilityStatus": "available"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/profiles/drivers/12")
+                        .with(asUser(jwtService, 12L, UserRole.DRIVER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

@@ -1,5 +1,8 @@
 package com.kilivana.backend.admin.entity;
 
+import com.kilivana.backend.common.enums.DriverStatus;
+import com.kilivana.backend.common.enums.KycStatus;
+import com.kilivana.backend.common.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,11 +29,15 @@ public class DriverProfile {
     @Column(nullable = false, unique = true)
     private Long userId;
 
+    /** Where the driver lives and collects the vehicle. Recorded by an administrator. */
+    private String address;
+
     @Column(nullable = false)
     private String licenseNumber;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String vehicleType;
+    private VehicleType vehicleType;
 
     @Column(nullable = false)
     private String vehicleNumber;
@@ -48,8 +55,20 @@ public class DriverProfile {
     private String idType;
     private String idNumber;
 
+    /**
+     * Whether an administrator has checked the licence and national ID. Not the same as the
+     * user's email verification, which lives on the user row.
+     */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String availabilityStatus;
+    private KycStatus kycStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DriverStatus availabilityStatus;
+
+    /** Required when {@link #availabilityStatus} is {@link DriverStatus#SUSPENDED}. */
+    private String suspensionReason;
 
     @Column(nullable = false, updatable = false)
     @CreationTimestamp

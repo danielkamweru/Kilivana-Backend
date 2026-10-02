@@ -1,0 +1,45 @@
+package com.kilivana.backend.admin.controller;
+
+import com.kilivana.backend.admin.dto.AdminDriverResponse;
+import com.kilivana.backend.admin.service.AdminDriverService;
+import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * The driver roster as an administrator sees it: account, profile and delivery history in one
+ * read. A driver without a profile is still listed, with their profile fields null, because a
+ * registered driver who has not been onboarded yet is still a driver the panel has to show.
+ */
+@Tag(name = "Administration", description = "User management, audit trail and administration reporting")
+@RestController
+@RequestMapping("/api/v1/admin/drivers")
+@RequiredArgsConstructor
+public class AdminDriverController {
+
+    private final AdminDriverService adminDriverService;
+
+    @Operation(summary = "List drivers",
+            description = "Every driver account with its profile, KYC state, vehicle and delivery count.")
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AdminDriverResponse>>> listDrivers() {
+        return ResponseEntity.ok(ApiResponse.success(adminDriverService.listDrivers()));
+    }
+
+    @Operation(summary = "Get a driver",
+            description = "One driver by user id, in the same shape as the list.")
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<AdminDriverResponse>> getDriver(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(adminDriverService.findDriver(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver", userId))));
+    }
+}

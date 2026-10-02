@@ -28,7 +28,7 @@ import java.util.Set;
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "app.storage.provider", havingValue = "local", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.storage.provider", havingValue = "local")
 public class LocalImageStorage implements ImageStorage {
 
     private static final Set<String> ALLOWED_TYPES = Set.of(

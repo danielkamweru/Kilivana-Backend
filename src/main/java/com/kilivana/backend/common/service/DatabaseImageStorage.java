@@ -17,16 +17,18 @@ import java.util.Set;
 /**
  * Keeps image bytes in PostgreSQL rather than in an external provider.
  *
- * <p>Selected by {@code app.storage.provider=database}, and used as the fallback for a failing
- * Cloudinary provider. Chosen for deployments that must not depend on a third-party account:
- * the images survive a container restart because they live in the same database as everything
- * else. The trade-off is size — every read pulls the bytes back through the application, and
- * the table grows without bound. Keep it for small images such as avatars, vehicle photos and
+ * <p>Selected as the provider by {@code app.storage.provider=database} through
+ * {@link DatabaseImageStorageProvider}. Deliberately <em>not</em> itself an {@link ImageStorage}
+ * bean: it is also Cloudinary's fallback, so registering it as a provider left two candidates for
+ * every {@code ImageStorage} injection point and the application refused to start.
+ *
+ * <p>The trade-off is size — every read pulls the bytes back through the application, and the
+ * table grows without bound. Keep it for small images such as avatars, vehicle photos and
  * licence scans.
  */
 @Slf4j
 @Service
-public class DatabaseImageStorage implements ImageStorage {
+public class DatabaseImageStorage {
 
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg", "image/png", "image/gif", "image/webp");
@@ -41,7 +43,6 @@ public class DatabaseImageStorage implements ImageStorage {
         this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.replaceAll("/+$", "");
     }
 
-    @Override
     @Transactional
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
         validate(file);
@@ -67,7 +68,6 @@ public class DatabaseImageStorage implements ImageStorage {
         return result;
     }
 
-    @Override
     @Transactional
     public Map<String, Object> replaceImage(String oldPublicId, MultipartFile newFile, String folder)
             throws IOException {
@@ -76,7 +76,6 @@ public class DatabaseImageStorage implements ImageStorage {
         return result;
     }
 
-    @Override
     @Transactional
     public void deleteImage(String publicId) {
         if (publicId == null || publicId.isBlank()) {
@@ -90,27 +89,22 @@ public class DatabaseImageStorage implements ImageStorage {
         }
     }
 
-    @Override
     public String getSecureUrl(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("secure_url");
     }
 
-    @Override
     public String getPublicId(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("public_id");
     }
 
-    @Override
     public String getAssetId(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("asset_id");
     }
 
-    @Override
     public boolean isConfigured() {
         return true;
     }
 
-    @Override
     public String providerName() {
         return "PostgreSQL bytea";
     }

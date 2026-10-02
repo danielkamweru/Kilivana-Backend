@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "app.storage.provider", havingValue = "cloudinary", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.storage.provider", havingValue = "cloudinary")
 public class CloudinaryService implements ImageStorage {
 
     private final Cloudinary cloudinary;

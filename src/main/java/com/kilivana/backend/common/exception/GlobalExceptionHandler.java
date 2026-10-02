@@ -200,7 +200,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        // An unparseable enum value or a wrong scalar type arrives here wrapped in Jackson's
+        // exception, whose message names the field and what was expected. Reporting only
+        // "malformed" makes the caller guess which of their fields was wrong.
         String message = "Request body is missing or malformed";
+        Throwable cause = ex.getMostSpecificCause();
+        if (cause instanceof IllegalArgumentException && cause.getMessage() != null) {
+            message = cause.getMessage();
+        }
 
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
                 .code("MALFORMED_REQUEST_BODY")

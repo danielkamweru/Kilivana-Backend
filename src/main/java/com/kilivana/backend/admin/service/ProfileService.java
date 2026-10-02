@@ -1,10 +1,13 @@
 package com.kilivana.backend.admin.service;
 
+import com.kilivana.backend.admin.dto.DriverCapacityFormatter;
 import com.kilivana.backend.admin.dto.*;
 import com.kilivana.backend.admin.entity.*;
 import com.kilivana.backend.admin.repository.*;
 import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.entity.BaseImageEntity;
+import com.kilivana.backend.common.enums.DriverStatus;
+import com.kilivana.backend.common.enums.KycStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ForbiddenException;
@@ -150,13 +153,9 @@ public class ProfileService {
         }
         DriverProfile profile = DriverProfile.builder()
                 .userId(userId)
-                .licenseNumber(request.getLicenseNumber())
-                .vehicleType(request.getVehicleType())
-                .vehicleNumber(request.getVehicleNumber())
-                .vehicleDetails(request.getVehicleDetails())
-                .availabilityStatus(request.getAvailabilityStatus())
                 .updatedAt(LocalDateTime.now())
                 .build();
+        applyDriverRequest(profile, request);
         return DriverProfileResponse.fromEntity(driverProfileRepository.save(profile));
     }
 
@@ -166,13 +165,48 @@ public class ProfileService {
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
         ensureRole(userId, UserRole.DRIVER);
+        applyDriverRequest(profile, request);
+        profile.setUpdatedAt(LocalDateTime.now());
+        return DriverProfileResponse.fromEntity(driverProfileRepository.save(profile));
+    }
+
+    /**
+     * Copies a driver request onto the profile, resolving the two capacity forms and refusing a
+     * suspension with no reason.
+     *
+     * <p>Kept in one place because create and update had drifted into two copies of the same
+     * field list, which is how a field ends up settable on create and not on update.
+     */
+    private void applyDriverRequest(DriverProfile profile, DriverProfileRequest request) {
+        if (request.getAvailabilityStatus() == DriverStatus.SUSPENDED
+                && (request.getSuspensionReason() == null || request.getSuspensionReason().isBlank())) {
+            throw new BadRequestException("A suspension reason is required when a driver is suspended");
+        }
+        profile.setAddress(request.getAddress());
         profile.setLicenseNumber(request.getLicenseNumber());
         profile.setVehicleType(request.getVehicleType());
         profile.setVehicleNumber(request.getVehicleNumber());
         profile.setVehicleDetails(request.getVehicleDetails());
+        profile.setVehicleMake(request.getVehicleMake());
+        profile.setVehicleCapacityKg(driverCapacityKg(request));
+        profile.setLicenseExpiryDate(request.getLicenseExpiryDate());
+        profile.setIdType(request.getIdType());
+        profile.setIdNumber(request.getIdNumber());
+        profile.setKycStatus(request.getKycStatus() == null ? KycStatus.PENDING : request.getKycStatus());
         profile.setAvailabilityStatus(request.getAvailabilityStatus());
-        profile.setUpdatedAt(LocalDateTime.now());
-        return DriverProfileResponse.fromEntity(driverProfileRepository.save(profile));
+        profile.setSuspensionReason(request.getSuspensionReason());
+    }
+
+    /** The kilogram figure wins when both are sent; the text form is the fallback. */
+    private Integer driverCapacityKg(DriverProfileRequest request) {
+        if (request.getVehicleCapacityKg() != null) {
+            return request.getVehicleCapacityKg();
+        }
+        try {
+            return DriverCapacityFormatter.toKilograms(request.getVehicleCapacity());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException(ex.getMessage());
+        }
     }
 
     @Transactional

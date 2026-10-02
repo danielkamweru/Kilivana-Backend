@@ -12,9 +12,12 @@ import com.kilivana.backend.admin.repository.FarmerProfileRepository;
 import com.kilivana.backend.admin.repository.InspectorProfileRepository;
 import com.kilivana.backend.admin.repository.SupplierProfileRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.common.enums.DriverStatus;
+import com.kilivana.backend.common.enums.KycStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
+import com.kilivana.backend.common.enums.VehicleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -52,15 +55,21 @@ public class DevelopmentDataSeeder {
     private final InspectorProfileRepository inspectorProfileRepository;
 
     private static final List<SeedUser> SEED_USERS = List.of(
-            new SeedUser("admin.test@kilivana.local", "Admin Test", "0700000001", UserRole.ADMIN),
-            new SeedUser("superadmin.test@kilivana.local", "Super Admin Test", "0700000007", UserRole.SUPER_ADMIN),
-            new SeedUser("farmer.test@kilivana.local", "Farmer Test", "0700000002", UserRole.FARMER),
-            new SeedUser("buyer.test@kilivana.local", "Buyer Test", "0700000003", UserRole.BUYER),
-            new SeedUser("supplier.test@kilivana.local", "Supplier Test", "0700000004", UserRole.SUPPLIER),
-            new SeedUser("driver.test@kilivana.local", "Driver Test", "0700000005", UserRole.DRIVER),
-            new SeedUser("inspector.test@kilivana.local", "Inspector Test", "0700000006", UserRole.INSPECTOR));
+            new SeedUser("admin.test@kilivana.local", "Admin Test", "0700000001", UserRole.ADMIN, null),
+            new SeedUser("farmer.test@kilivana.local", "Farmer Test", "0700000002", UserRole.FARMER, null),
+            new SeedUser("buyer.test@kilivana.local", "Buyer Test", "0700000003", UserRole.BUYER, null),
+            new SeedUser("supplier.test@kilivana.local", "Supplier Test", "0700000004", UserRole.SUPPLIER, null),
+            new SeedUser("driver.test@kilivana.local", "Driver Test", "0700000005", UserRole.DRIVER, null),
+            new SeedUser("inspector.test@kilivana.local", "Inspector Test", "0700000006", UserRole.INSPECTOR, null),
+            // The admin panel hardcodes this address in its mock auth service, so a developer
+            // signing in to the panel needs the backend to accept the same pair. The password
+            // differs from the shared seed password, hence the override.
+            new SeedUser("admin@kilivana.com", "Kilivana Admin", "0700000088", UserRole.ADMIN, "Admin@123"));
 
-    private record SeedUser(String email, String name, String phone, UserRole role) {
+    /**
+     * @param password the shared seed password when null, otherwise this account's own password
+     */
+    private record SeedUser(String email, String name, String phone, UserRole role, String password) {
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -78,7 +87,8 @@ public class DevelopmentDataSeeder {
                         .name(seed.name())
                         .email(seed.email())
                         .phone(seed.phone())
-                        .passwordHash(passwordEncoder.encode(password))
+                        .passwordHash(passwordEncoder.encode(
+                                seed.password() == null ? password : seed.password()))
                         .role(seed.role())
                         .status(UserStatus.ACTIVE)
                         .verificationStatus(VerificationStatus.NOT_REQUIRED)
@@ -138,15 +148,17 @@ public class DevelopmentDataSeeder {
                 .findByUserId(user.getId())
                 .orElseGet(() -> driverProfileRepository.save(DriverProfile.builder()
                         .userId(user.getId())
+                        .address("Nairobi, Kenya")
                         .licenseNumber("KDL-DEV-0001")
-                        .vehicleType("Truck")
+                        .vehicleType(VehicleType.TRUCK)
                         .vehicleNumber("KDB 432A")
                         .vehicleMake("Isuzu")
                         .vehicleCapacityKg(1500)
                         .licenseExpiryDate(LocalDate.now().plusYears(2))
                         .idType("National ID")
                         .idNumber("29584712")
-                        .availabilityStatus("AVAILABLE")
+                        .kycStatus(KycStatus.VERIFIED)
+                        .availabilityStatus(DriverStatus.AVAILABLE)
                         .build())));
 
         firstUserWithRole(UserRole.INSPECTOR).ifPresent(user -> inspectorProfileRepository

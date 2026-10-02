@@ -7,6 +7,7 @@ import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.service.OrderService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.OrderStatus;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +27,7 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(@RequestBody OrderRequest request) {
+    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(@Valid @RequestBody OrderRequest request) {
         Order order = orderService.createOrder(request.getBuyerId(), request.getSubtotal(), request.getDeliveryFee(), request.getTotal(), request.getAddressId());
         OrderResponse response = new OrderResponse(order.getId(), order.getBuyerId(), order.getStatus(), order.getSubtotal(), order.getDeliveryFee(), order.getTotal(), order.getPaymentStatus(), order.getAddressId(), order.getCancellationReason(), order.getCreatedAt(), order.getUpdatedAt());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
