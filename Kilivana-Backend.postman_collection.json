@@ -1096,6 +1096,60 @@
       }
     },
     {
+      "name": "GET /api/v1/disputes/47",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/disputes/47",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/v1/disputes/order/52",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/disputes/order/52",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/v1/disputes/user/47",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/disputes/user/47",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "GET /api/v1/ecommerce/carts/buyer/48",
       "request": {
         "method": "GET",
@@ -1935,6 +1989,28 @@
       }
     },
     {
+      "name": "GET /api/v1/regions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/regions",
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "GET /api/v1/regions/currency",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/regions/currency",
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
       "name": "GET /api/v1/sellers/47/products",
       "request": {
         "method": "GET",
@@ -2593,6 +2669,38 @@
       }
     },
     {
+      "name": "POST /api/v1/disputes",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"orderId\": 52,\n  \"raisedBy\": 48,\n  \"reason\": \"Customer requested cancellation\",\n  \"description\": \"Sample description for this record\",\n  \"status\": \"open\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "http://localhost:8080/api/v1/disputes",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "POST /api/v1/ecommerce/carts/48/checkout",
       "request": {
         "method": "POST",
@@ -2654,7 +2762,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"orderId\": 52,\n  \"raisedBy\": 48,\n  \"reason\": \"Customer requested cancellation\",\n  \"description\": \"Sample description for this record\",\n  \"status\": \"ACTIVE\"\n}",
+          "raw": "{\n  \"orderId\": 52,\n  \"raisedBy\": 48,\n  \"reason\": \"Customer requested cancellation\",\n  \"description\": \"Sample description for this record\",\n  \"status\": \"open\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -3953,6 +4061,56 @@
       }
     },
     {
+      "name": "PUT /api/v1/disputes/47/resolution",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"outcome\": \"BUYER\",\n  \"resolution\": \"Refund issued in full\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "http://localhost:8080/api/v1/disputes/47/resolution",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT /api/v1/disputes/47/status",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/disputes/47/status",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "PUT /api/v1/ecommerce/carts/48/items/23",
       "request": {
         "method": "PUT",
@@ -3982,7 +4140,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "\"text\"",
+          "raw": "{\n  \"outcome\": \"BUYER\",\n  \"resolution\": \"Refund issued in full\"\n}",
           "options": {
             "raw": {
               "language": "json"
