@@ -13,6 +13,7 @@ import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.common.service.UserReferenceCodeGenerator;
@@ -106,6 +107,28 @@ public class AdminDriverService {
 
     private static String normalizePhone(String phone) {
         return phone.trim();
+    }
+
+    /**
+     * Deletes a driver: the profile first, then the account.
+     *
+     * <p>Ordered that way because the profile table has no foreign key, so deleting the account
+     * first would leave the profile pointing at nothing.
+     *
+     * @throws BadRequestException when the driver has delivery history
+     */
+    @Transactional
+    public void deleteDriver(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Driver", userId);
+        }
+        boolean hasHistory = !logisticsJobRepository.findByDriverId(userId).isEmpty();
+        if (hasHistory) {
+            throw new BadRequestException(
+                    "This driver has delivery history and cannot be deleted. Set the account to INACTIVE instead.");
+        }
+        driverProfileRepository.findByUserId(userId).ifPresent(driverProfileRepository::delete);
+        userRepository.deleteById(userId);
     }
 
     @Transactional(readOnly = true)

@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,6 +42,15 @@ public class AdminDriverController {
             @Valid @RequestBody DriverRegistrationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(adminDriverService.registerDriver(request)));
+    }
+
+    @Operation(summary = "Delete a driver",
+            description = "Removes the driver's profile and images, then the account. Refused while the driver "
+                    + "has delivery history, because that history is not disposable.")
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse<Void>> deleteDriver(@PathVariable Long userId) {
+        adminDriverService.deleteDriver(userId);
+        return ResponseEntity.ok(ApiResponse.successMessage("Driver deleted successfully"));
     }
 
     @Operation(summary = "List drivers",
