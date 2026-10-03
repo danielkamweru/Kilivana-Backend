@@ -45,6 +45,10 @@ public class SecurityConfig {
             "GET", "/api/v1/images/**",
             "POST", "/api/v1/auth/register",
             "POST", "/api/v1/auth/login",
+            // Reference data with nothing sensitive in it, but the registration screen
+            // needs the county list before the caller has a token.
+            "GET", "/api/v1/regions",
+            "GET", "/api/v1/regions/**",
             "POST", "/api/v1/auth/refresh",
             "POST", "/api/v1/auth/forgot-password",
             "POST", "/api/v1/auth/reset-password",

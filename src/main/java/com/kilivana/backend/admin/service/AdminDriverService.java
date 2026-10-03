@@ -16,6 +16,8 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.common.service.KenyaCounty;
+import com.kilivana.backend.common.service.KenyanIdType;
 import com.kilivana.backend.common.service.UserReferenceCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -64,12 +66,25 @@ public class AdminDriverService {
             throw new BadRequestException("Username already exists");
         }
 
+        // The panel offers a Kenyan county and a Kenyan identity document. Accepting the
+        // region as free text meant a driver could be filed under a county that does not
+        // exist here, which then never matches anything the reports group by.
+        String county = KenyaCounty.normalise(request.getRegion());
+        if (county == null) {
+            throw new BadRequestException("Region must be one of the 47 Kenyan counties");
+        }
+        String idType = KenyanIdType.normalise(request.getIdType());
+        if (idType == null) {
+            throw new BadRequestException("ID type must be one of: "
+                    + String.join(", ", KenyanIdType.all()));
+        }
+
         User user = userRepository.save(User.builder()
                 .name(request.getFullName().trim())
                 .email(email)
                 .phone(phone)
                 .username(request.getUsername() == null ? null : request.getUsername().trim())
-                .region(request.getRegion())
+                .region(county)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(UserRole.DRIVER)
                 .status(UserStatus.ACTIVE)
@@ -90,7 +105,7 @@ public class AdminDriverService {
                         ? null
                         : request.getVehicleMake() + " " + request.getVehicleCapacity())
                 .licenseExpiryDate(request.getLicenceExpiry())
-                .idType(request.getIdType())
+                .idType(idType)
                 .idNumber(request.getIdNumber())
                 .kycStatus(request.getKycStatus() == null ? KycStatus.PENDING : request.getKycStatus())
                 .availabilityStatus(request.getAvailabilityStatus() == null
