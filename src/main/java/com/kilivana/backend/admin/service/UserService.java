@@ -3,8 +3,10 @@ package com.kilivana.backend.admin.service;
 import com.kilivana.backend.admin.dto.UserRegistrationRequest;
 import com.kilivana.backend.admin.dto.UserResponse;
 import com.kilivana.backend.admin.entity.User;
+import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
@@ -24,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.kilivana.backend.common.service.UserReferenceCodeGenerator referenceCodeGenerator;
+    private final DriverProfileRepository driverProfileRepository;
 
     @Transactional
     public UserResponse createUser(UserRegistrationRequest request) {
@@ -40,6 +43,10 @@ public class UserService {
                 .name(request.getName())
                 .email(email)
                 .phone(phone)
+                // Both of these were accepted in the request and then dropped, so an account
+                // created from the admin panel arrived with no username or region to display.
+                .username(request.getUsername() == null ? null : request.getUsername().trim())
+                .region(request.getRegion())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .status(UserStatus.ACTIVE)
@@ -82,6 +89,18 @@ public class UserService {
         String email = normalizeEmail(request.getEmail());
         user.setName(request.getName());
         user.setPhone(normalizePhone(request.getPhone()));
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            String username = request.getUsername().trim();
+            boolean takenByAnother = userRepository.existsByUsernameIgnoreCase(username)
+                    && !username.equalsIgnoreCase(user.getUsername());
+            if (takenByAnother) {
+                throw new BadRequestException("Username already exists");
+            }
+            user.setUsername(username);
+        }
+        if (request.getRegion() != null) {
+            user.setRegion(request.getRegion());
+        }
         if (!user.getEmail().equalsIgnoreCase(email) && userRepository.existsByEmailIgnoreCase(email)) {
             throw new BadRequestException("Email already exists");
         }
@@ -99,10 +118,19 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User", id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+
+        // Profile tables carry no foreign key to users, so deleting the account left the profile
+        // behind pointing at a user that no longer exists: an invisible orphan that the roster
+        // never shows and nothing ever cleans up. Refusing is the honest answer — an account with
+        // a licence and a delivery history behind it is not disposable, and the administrator
+        // should deactivate it instead.
+        if (user.getRole() == UserRole.DRIVER && driverProfileRepository.existsByUserId(id)) {
+            throw new BadRequestException(
+                    "This driver has a profile. Delete the driver profile first, or set the account to INACTIVE.");
         }
-        userRepository.deleteById(id);
+        userRepository.delete(user);
     }
 
     public User findByEmail(String email) {
