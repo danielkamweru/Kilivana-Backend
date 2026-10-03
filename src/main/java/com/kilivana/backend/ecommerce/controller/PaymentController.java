@@ -56,8 +56,9 @@ public class PaymentController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<PaymentResponse>> updatePaymentStatus(@PathVariable Long id, @RequestParam PaymentStatus status) {
-        Payment payment = paymentService.updatePaymentStatus(id, status);
+    public ResponseEntity<ApiResponse<PaymentResponse>> updatePaymentStatus(
+            @PathVariable Long id, @RequestParam String status) {
+        Payment payment = paymentService.updatePaymentStatus(id, PaymentStatus.from(status));
         PaymentResponse response = paymentService.mapToResponse(payment);
         return ResponseEntity.ok(ApiResponse.success(response));
     }

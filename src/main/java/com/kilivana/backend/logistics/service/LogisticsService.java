@@ -1,10 +1,15 @@
 package com.kilivana.backend.logistics.service;
 
+import com.kilivana.backend.admin.entity.User;
+import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
+import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
+import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.entity.TrackingEvent;
@@ -17,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +39,8 @@ public class LogisticsService {
     private final ProofOfDeliveryRepository proofOfDeliveryRepository;
     private final DeliveryOtpNotifier deliveryOtpNotifier;
     private final PasswordEncoder passwordEncoder;
+    private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
@@ -39,13 +48,22 @@ public class LogisticsService {
     private static final int OTP_MAX_ATTEMPTS = 5;
     private static final int OTP_LOCKOUT_MINUTES = 15;
 
+    /**
+     * The platform keeps this share of what the buyer paid; the rest
+     * is released to the seller when the delivery completes.
+     */
+    public static final BigDecimal PLATFORM_FEE_RATE = new BigDecimal("0.03");
+
     @Transactional
     public LogisticsJob createLogisticsJob(Long orderId, String pickupAddress, String destinationAddress) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         String otp = generateOtp();
         LogisticsJob job = LogisticsJob.builder()
                 .orderId(orderId)
                 .pickupAddress(pickupAddress)
                 .destinationAddress(destinationAddress)
+                .payoutAmount(sellerPayout(order))
                 .status(DeliveryStatus.PENDING_ASSIGNMENT)
                 .deliveryOtpHash(passwordEncoder.encode(otp))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(OTP_VALIDITY_HOURS))
@@ -62,6 +80,8 @@ public class LogisticsService {
         // "id" would otherwise make save() merge into that existing row and overwrite a
         // job it does not own. Identity, driver assignment, timestamps and the delivery
         // OTP are ours; everything else is client-supplied and copied across.
+        Order order = orderRepository.findById(job.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", job.getOrderId()));
         String otp = generateOtp();
         LogisticsJob toSave = LogisticsJob.builder()
                 .orderId(job.getOrderId())
@@ -73,7 +93,12 @@ public class LogisticsService {
                 .destinationLongitude(job.getDestinationLongitude())
                 .cargoDescription(job.getCargoDescription())
                 .quantity(job.getQuantity())
-                .payoutAmount(job.getPayoutAmount())
+                // The release amount is derived from the order, never trusted from the
+                // caller: a client-supplied figure is only accepted when it agrees with
+                // what the order actually collected.
+                .payoutAmount(job.getPayoutAmount() == null
+                        ? sellerPayout(order)
+                        : checkPayout(job.getPayoutAmount(), order))
                 .scheduledPickupAt(job.getScheduledPickupAt())
                 .scheduledDropoffAt(job.getScheduledDropoffAt())
                 .distanceKm(job.getDistanceKm())
@@ -95,6 +120,30 @@ public class LogisticsService {
             otp.append(OTP_RANDOM.nextInt(10));
         }
         return otp.toString();
+    }
+
+    /**
+     * What is released to the seller when the delivery completes:
+     * what the buyer paid for the goods, less the platform's share.
+     */
+    private static BigDecimal sellerPayout(Order order) {
+        BigDecimal fee = order.getSubtotal().multiply(PLATFORM_FEE_RATE)
+                .setScale(2, RoundingMode.HALF_UP);
+        return order.getSubtotal().subtract(fee).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * A caller-supplied release figure is accepted only when it
+     * matches the order's own arithmetic, rounded to the cent.
+     */
+    private static BigDecimal checkPayout(BigDecimal claimed, Order order) {
+        BigDecimal expected = sellerPayout(order);
+        if (claimed.compareTo(BigDecimal.ZERO) < 0
+                || claimed.subtract(expected).abs().compareTo(new BigDecimal("0.01")) > 0) {
+            throw new BadRequestException("Payout must equal the order subtotal less the "
+                    + "platform fee (" + PLATFORM_FEE_RATE + "), which is " + expected);
+        }
+        return expected.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -170,6 +219,11 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
         if (job.getStatus() != DeliveryStatus.PENDING_ASSIGNMENT) {
             throw new BadRequestException("Job cannot be assigned in current status");
+        }
+        User driver = userRepository.findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver", driverId));
+        if (driver.getRole() != UserRole.DRIVER) {
+            throw new BadRequestException("User " + driverId + " is not a driver");
         }
         job.setDriverId(driverId);
         job.setStatus(DeliveryStatus.ASSIGNED);

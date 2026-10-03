@@ -1,15 +1,19 @@
 package com.kilivana.backend.logistics.service;
 
+import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
+import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,6 +25,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -45,6 +50,14 @@ class LogisticsServiceTest {
     @Mock
     private DeliveryOtpNotifier deliveryOtpNotifier;
 
+    /** A job is always created for an order that exists. */
+    @Mock
+    private OrderRepository orderRepository;
+
+    /** Only a driver account can be assigned to a job. */
+    @Mock
+    private UserRepository userRepository;
+
     /**
      * A real encoder, spied rather than stubbed: the point of these tests is that the
      * stored value is a genuine one-way hash, which a mocked encoder would not prove.
@@ -57,6 +70,16 @@ class LogisticsServiceTest {
 
     private static final String JOB_OTP = "424242";
     private static final int OTP_MAX_ATTEMPTS = 5;
+
+    @BeforeEach
+    void theJobsOrderExists() {
+        when(orderRepository.findById(any())).thenReturn(Optional.of(
+                Order.builder().id(1L)
+                        .subtotal(new BigDecimal("100.00"))
+                        .deliveryFee(new BigDecimal("25.00"))
+                        .total(new BigDecimal("125.00"))
+                        .build()));
+    }
 
     private LogisticsJobRepository noopJobRepo() {
         when(logisticsJobRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

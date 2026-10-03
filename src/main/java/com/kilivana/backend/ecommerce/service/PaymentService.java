@@ -1,7 +1,9 @@
 package com.kilivana.backend.ecommerce.service;
 
 import com.kilivana.backend.ecommerce.dto.PaymentResponse;
+import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Payment;
+import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.PaymentMethod;
@@ -22,13 +24,18 @@ import java.util.stream.Collectors;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
 
     @Transactional
     /**
      * @throws BadRequestException when the method is not one the panel can send, rather
      *     than storing a provider string nothing will ever read back
+     * @throws ResourceNotFoundException when the order the payment is
+     *     for does not exist
      */
     public Payment createPayment(Long orderId, String method, String reference, BigDecimal amount) {
+        orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         PaymentMethod paymentMethod = PaymentMethod.from(method);
         if (paymentMethod == null) {
             throw new BadRequestException("Unknown payment method '" + method
@@ -67,7 +74,14 @@ public class PaymentService {
         if (status == PaymentStatus.PAID && payment.getPaidAt() == null) {
             payment.setPaidAt(LocalDateTime.now());
         }
-        return paymentRepository.save(payment);
+        Payment saved = paymentRepository.save(payment);
+        // The order's payment status is a view of its payments, so it follows
+        // the payment rather than being set separately and drifting.
+        orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+            order.setPaymentStatus(status);
+            orderRepository.save(order);
+        });
+        return saved;
     }
 
     public PaymentResponse mapToResponse(Payment payment) {

@@ -52,8 +52,8 @@ public class LogisticsJobController {
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<ApiResponse<List<LogisticsJob>>> getJobsByStatus(@PathVariable DeliveryStatus status) {
-        List<LogisticsJob> jobs = logisticsService.getJobsByStatus(status);
+    public ResponseEntity<ApiResponse<List<LogisticsJob>>> getJobsByStatus(@PathVariable String status) {
+        List<LogisticsJob> jobs = logisticsService.getJobsByStatus(DeliveryStatus.from(status));
         return ResponseEntity.ok(ApiResponse.success(jobs));
     }
 
@@ -80,13 +80,13 @@ public class LogisticsJobController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<LogisticsJob>> updateJobStatus(@PathVariable Long id, @RequestParam DeliveryStatus status) {
-        LogisticsJob job = logisticsService.updateJobStatus(id, status);
+    public ResponseEntity<ApiResponse<LogisticsJob>> updateJobStatus(@PathVariable Long id, @RequestParam String status) {
+        LogisticsJob job = logisticsService.updateJobStatus(id, DeliveryStatus.from(status));
         return ResponseEntity.ok(ApiResponse.success(job));
     }
 
     @PostMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<LogisticsJob>> updateJobStatusPost(@PathVariable Long id, @RequestParam DeliveryStatus status) {
+    public ResponseEntity<ApiResponse<LogisticsJob>> updateJobStatusPost(@PathVariable Long id, @RequestParam String status) {
         return updateJobStatus(id, status);
     }
 
