@@ -96,6 +96,9 @@ class OptionalFilterQueryTest {
     void orderShouldPersistWithTimestampsPopulated() {
         Order order = Order.builder()
                 .buyerId(1L)
+                // The placement service assigns the reference; a row written
+                // outside it has to carry one, as the column is not null.
+                .code("ORD-TEST-001")
                 .status(OrderStatus.PLACED)
                 .subtotal(new BigDecimal("100.00"))
                 .deliveryFee(new BigDecimal("10.00"))

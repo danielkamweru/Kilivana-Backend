@@ -31,6 +31,14 @@ public class OrderItem {
     @Column(nullable = false)
     private Long sellerId;
 
+    /** Copied from the product at purchase, so the order keeps reading
+     *  correctly if the product is renamed or removed afterwards. */
+    @Column(nullable = false)
+    private String productName;
+
+    @Column(nullable = false)
+    private String unit;
+
     @Column(nullable = false)
     private Integer quantity;
 

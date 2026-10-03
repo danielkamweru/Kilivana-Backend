@@ -28,6 +28,10 @@ public class Order {
     @Column(nullable = false)
     private Long buyerId;
 
+    /** Panel-facing reference, e.g. {@code ORD-2851}. Assigned on creation. */
+    @Column(nullable = false, updatable = false, unique = true)
+    private String code;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;

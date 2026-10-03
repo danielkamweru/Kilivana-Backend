@@ -28,16 +28,16 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(@Valid @RequestBody OrderRequest request) {
-        Order order = orderService.createOrder(request.getBuyerId(), request.getSubtotal(), request.getDeliveryFee(), request.getTotal(), request.getAddressId());
-        OrderResponse response = new OrderResponse(order.getId(), order.getBuyerId(), order.getStatus(), order.getSubtotal(), order.getDeliveryFee(), order.getTotal(), order.getPaymentStatus(), order.getAddressId(), order.getCancellationReason(), order.getCreatedAt(), order.getUpdatedAt());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+        Order order = orderService.createOrder(request.getBuyerId(), request.getAddressId(),
+                request.getDeliveryFee(), request.getItems(),
+                request.getSubtotal(), request.getTotal());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(orderService.toResponse(order)));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(@PathVariable Long id) {
         Order order = orderService.getOrderById(id);
-        OrderResponse response = mapToResponse(order);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
     @GetMapping
@@ -46,14 +46,14 @@ public class OrderController {
             @RequestParam(required = false) String status,
             Pageable pageable) {
         Page<OrderResponse> orders = orderService.searchOrders(buyerId, status, pageable)
-                .map(this::mapToResponse);
+                .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
     @GetMapping("/buyer/{buyerId}")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrdersByBuyer(@PathVariable Long buyerId) {
         List<Order> orders = orderService.getOrdersByBuyer(buyerId);
-        return ResponseEntity.ok(ApiResponse.success(orders.stream().map(this::mapToResponse).toList()));
+        return ResponseEntity.ok(ApiResponse.success(orders.stream().map(orderService::toResponse).toList()));
     }
 
     @GetMapping("/search")
@@ -61,31 +61,33 @@ public class OrderController {
             @RequestParam(required = false) Long buyerId,
             @RequestParam(required = false) String status,
             Pageable pageable) {
-        Page<Order> orders = orderService.searchOrders(buyerId, status, pageable);
-        Page<OrderResponse> responses = orders.map(this::mapToResponse);
+        Page<OrderResponse> responses = orderService.searchOrders(buyerId, status, pageable)
+                .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
-        Order order = orderService.updateOrderStatus(id, status);
-        return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
+            @PathVariable Long id, @RequestParam String status) {
+        Order order = orderService.updateOrderStatus(id, OrderStatus.from(status));
+        return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(@PathVariable Long id) {
-        Order order = orderService.updateOrderStatus(id, OrderStatus.CANCELLED);
-        return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
+        Order order = orderService.cancelOrder(id);
+        return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
     @PostMapping("/{id}/confirm-receipt")
     public ResponseEntity<ApiResponse<OrderResponse>> confirmReceipt(@PathVariable Long id) {
-        Order order = orderService.updateOrderStatus(id, OrderStatus.COMPLETED);
-        return ResponseEntity.ok(ApiResponse.success(mapToResponse(order)));
+        Order order = orderService.confirmReceipt(id);
+        return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
     @PostMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<OrderResponse>> postOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
+    public ResponseEntity<ApiResponse<OrderResponse>> postOrderStatus(
+            @PathVariable Long id, @RequestParam String status) {
         return updateOrderStatus(id, status);
     }
 
@@ -98,9 +100,5 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Void>> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);
         return ResponseEntity.ok(ApiResponse.successMessage("Order deleted successfully"));
-    }
-
-    private OrderResponse mapToResponse(Order order) {
-        return new OrderResponse(order.getId(), order.getBuyerId(), order.getStatus(), order.getSubtotal(), order.getDeliveryFee(), order.getTotal(), order.getPaymentStatus(), order.getAddressId(), order.getCancellationReason(), order.getCreatedAt(), order.getUpdatedAt());
     }
 }

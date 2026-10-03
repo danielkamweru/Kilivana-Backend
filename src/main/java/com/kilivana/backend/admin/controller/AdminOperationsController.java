@@ -59,13 +59,16 @@ public class AdminOperationsController {
     }
 
     @PatchMapping("/products/{id}/status")
-    public ResponseEntity<ApiResponse<?>> updateProductStatus(@PathVariable Long id, @RequestParam ProductStatus status) {
-        return ResponseEntity.ok(ApiResponse.success(productService.updateProductStatus(id, status)));
+    public ResponseEntity<ApiResponse<?>> updateProductStatus(
+            @PathVariable Long id, @RequestParam String status) {
+        return ResponseEntity.ok(ApiResponse.success(
+                productService.updateProductStatus(id, ProductStatus.from(status))));
     }
 
     @GetMapping("/orders")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> orders(Pageable pageable) {
-        Page<OrderResponse> orders = orderService.searchOrders(null, null, pageable).map(this::mapOrder);
+        Page<OrderResponse> orders = orderService.searchOrders(null, null, pageable)
+                .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
@@ -89,11 +92,5 @@ public class AdminOperationsController {
         report.put("logisticsJobs", (long) logisticsService.getAllJobs().size());
         report.put("payments", (long) paymentService.getAllPayments().size());
         return ResponseEntity.ok(ApiResponse.success(report));
-    }
-
-    private OrderResponse mapOrder(Order order) {
-        return new OrderResponse(order.getId(), order.getBuyerId(), order.getStatus(), order.getSubtotal(),
-                order.getDeliveryFee(), order.getTotal(), order.getPaymentStatus(), order.getAddressId(),
-                order.getCancellationReason(), order.getCreatedAt(), order.getUpdatedAt());
     }
 }

@@ -31,7 +31,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsernameIgnoreCase(String username);
     
     List<User> findByRole(UserRole role);
-    
+
+    /** An order may only be placed by a buyer account. */
+    boolean existsByIdAndRole(Long id, UserRole role);
+
     List<User> findByStatus(UserStatus status);
     
     @Query("SELECT u FROM User u WHERE u.role = :role AND u.status = :status")
