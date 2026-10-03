@@ -23,68 +23,110 @@
   ],
   "item": [
     {
-      "name": "DELETE /api/v1/40/addresses/64",
+      "name": "DELETE /api/v1/addresses/3",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/40/addresses/64",
+        "url": "http://localhost:8080/api/v1/addresses/3",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/addresses/64",
+      "name": "DELETE /api/v1/admin/drivers/6",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/addresses/64",
+        "url": "http://localhost:8080/api/v1/admin/drivers/6",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/admin/inspections/16",
+      "name": "DELETE /api/v1/admin/inspections/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/inspections/16",
+        "url": "http://localhost:8080/api/v1/admin/inspections/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/admin/notifications/26",
+      "name": "DELETE /api/v1/admin/notifications/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/26",
+        "url": "http://localhost:8080/api/v1/admin/notifications/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/admin/users/40",
+      "name": "DELETE /api/v1/admin/users/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/users/40",
+        "url": "http://localhost:8080/api/v1/admin/users/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/cart/items/14",
+      "name": "DELETE /api/v1/cart/items/15",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/cart/items/14",
+        "url": "http://localhost:8080/api/v1/cart/items/15",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -95,84 +137,140 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/categories/16",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/ecommerce/carts/47",
+      "name": "DELETE /api/v1/ecommerce/carts/48",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/carts/47",
+        "url": "http://localhost:8080/api/v1/ecommerce/carts/48",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/ecommerce/carts/47/items/23",
+      "name": "DELETE /api/v1/ecommerce/carts/48/items/23",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/carts/47/items/23",
+        "url": "http://localhost:8080/api/v1/ecommerce/carts/48/items/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/inspections/16",
+      "name": "DELETE /api/v1/inspections/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/inspections/16",
+        "url": "http://localhost:8080/api/v1/inspections/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/logistics/jobs/13",
+      "name": "DELETE /api/v1/logistics/jobs/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/logistics/proof-of-delivery/21",
+      "name": "DELETE /api/v1/logistics/proof-of-delivery/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/21",
+        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/notifications/26",
+      "name": "DELETE /api/v1/notifications/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/26",
+        "url": "http://localhost:8080/api/v1/notifications/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/orders/52",
+      "name": "DELETE /api/v1/orders/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52",
+        "url": "http://localhost:8080/api/v1/orders/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -183,51 +281,86 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/products/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/products/23/images/13",
+      "name": "DELETE /api/v1/products/23/images/16",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/products/23/images/13",
+        "url": "http://localhost:8080/api/v1/products/23/images/16",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/profiles/buyers/4",
+      "name": "DELETE /api/v1/profiles/buyers/47",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/buyers/4",
+        "url": "http://localhost:8080/api/v1/profiles/buyers/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/profiles/drivers/37",
+      "name": "DELETE /api/v1/profiles/drivers/6",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37",
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/profiles/drivers/37/images/10",
+      "name": "DELETE /api/v1/profiles/drivers/6/images/1",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37/images/10",
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6/images/1",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -238,7 +371,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/farmers/3",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -249,7 +389,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/farmers/3/images/3",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -260,7 +407,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/inspectors/7",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -271,7 +425,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/inspectors/7/images/2",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -282,7 +443,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/suppliers/5",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -293,29 +461,50 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/suppliers/5/images/2",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/users/40/addresses/64",
+      "name": "DELETE /api/v1/users/47/addresses/3",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/users/40/addresses/64",
+        "url": "http://localhost:8080/api/v1/users/47/addresses/3",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "DELETE /api/v1/users/addresses/64",
+      "name": "DELETE /api/v1/users/addresses/3",
       "request": {
         "method": "DELETE",
         "header": [],
-        "url": "http://localhost:8080/api/v1/users/addresses/64",
+        "url": "http://localhost:8080/api/v1/users/addresses/3",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -331,46 +520,20 @@
       }
     },
     {
-      "name": "GET /api/auth/me",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/auth/me",
-        "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "GET /api/users/40",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/users/40",
-        "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "GET /api/v1/40/addresses",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/40/addresses",
-        "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
       "name": "GET /api/v1/addresses",
       "request": {
         "method": "GET",
         "header": [],
         "url": "http://localhost:8080/api/v1/addresses",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -381,40 +544,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/audit-logs",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/audit-logs/1",
+      "name": "GET /api/v1/admin/audit-logs/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/audit-logs/1",
+        "url": "http://localhost:8080/api/v1/admin/audit-logs/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/audit-logs/actor/40",
+      "name": "GET /api/v1/admin/audit-logs/actor/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/audit-logs/actor/40",
+        "url": "http://localhost:8080/api/v1/admin/audit-logs/actor/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/audit-logs/entity/PRODUCT/23",
+      "name": "GET /api/v1/admin/audit-logs/entity/47/23",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/audit-logs/entity/PRODUCT/23",
+        "url": "http://localhost:8080/api/v1/admin/audit-logs/entity/47/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -425,7 +616,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/dashboard",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -436,7 +634,50 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/dashboard/stats",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/v1/admin/drivers",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/admin/drivers",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/v1/admin/drivers/6",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/admin/drivers/6",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -447,51 +688,86 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/inspections",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/inspections/16",
+      "name": "GET /api/v1/admin/inspections/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/inspections/16",
+        "url": "http://localhost:8080/api/v1/admin/inspections/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/inspections/inspector/7",
+      "name": "GET /api/v1/admin/inspections/inspector/50",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/inspections/inspector/7",
+        "url": "http://localhost:8080/api/v1/admin/inspections/inspector/50",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/inspections/status/ASSIGNED",
+      "name": "GET /api/v1/admin/inspections/status/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/inspections/status/ASSIGNED",
+        "url": "http://localhost:8080/api/v1/admin/inspections/status/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/inspections/target/PRODUCT/23",
+      "name": "GET /api/v1/admin/inspections/target/47/23",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/inspections/target/PRODUCT/23",
+        "url": "http://localhost:8080/api/v1/admin/inspections/target/47/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -502,7 +778,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/logistics/jobs",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -513,40 +796,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/notifications",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/notifications/26",
+      "name": "GET /api/v1/admin/notifications/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/26",
+        "url": "http://localhost:8080/api/v1/admin/notifications/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/notifications/user/40",
+      "name": "GET /api/v1/admin/notifications/user/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/user/40",
+        "url": "http://localhost:8080/api/v1/admin/notifications/user/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/notifications/user/40/unread",
+      "name": "GET /api/v1/admin/notifications/user/47/unread",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/user/40/unread",
+        "url": "http://localhost:8080/api/v1/admin/notifications/user/47/unread",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -557,7 +868,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/orders",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -568,7 +886,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/payments",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -579,7 +904,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/reports",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -590,40 +922,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/users",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/users/40",
+      "name": "GET /api/v1/admin/users/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/users/40",
+        "url": "http://localhost:8080/api/v1/admin/users/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/users/role/FARMER",
+      "name": "GET /api/v1/admin/users/role/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/users/role/FARMER",
+        "url": "http://localhost:8080/api/v1/admin/users/role/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/admin/users/status/ACTIVE",
+      "name": "GET /api/v1/admin/users/status/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/users/status/ACTIVE",
+        "url": "http://localhost:8080/api/v1/admin/users/status/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -634,7 +994,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/auth/me",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -645,7 +1012,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/cart",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -656,7 +1030,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/categories",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -667,7 +1048,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/categories/16",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -678,40 +1066,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/categories/active",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/categories/type/FARMER",
+      "name": "GET /api/v1/categories/type/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/categories/type/FARMER",
+        "url": "http://localhost:8080/api/v1/categories/type/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/ecommerce/carts/buyer/4",
+      "name": "GET /api/v1/ecommerce/carts/buyer/48",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/carts/buyer/4",
+        "url": "http://localhost:8080/api/v1/ecommerce/carts/buyer/48",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/ecommerce/disputes/11",
+      "name": "GET /api/v1/ecommerce/disputes/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/disputes/11",
+        "url": "http://localhost:8080/api/v1/ecommerce/disputes/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -722,27 +1138,41 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/ecommerce/disputes/order/52",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/ecommerce/disputes/user/40",
+      "name": "GET /api/v1/ecommerce/disputes/user/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/disputes/user/40",
+        "url": "http://localhost:8080/api/v1/ecommerce/disputes/user/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/images/7",
+      "name": "GET /api/v1/images/58",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/images/7",
+        "url": "http://localhost:8080/api/v1/images/58",
         "auth": {
           "type": "noauth"
         }
@@ -755,51 +1185,86 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/inspections",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/inspections/16",
+      "name": "GET /api/v1/inspections/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/inspections/16",
+        "url": "http://localhost:8080/api/v1/inspections/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/inspections/inspector/7",
+      "name": "GET /api/v1/inspections/inspector/50",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/inspections/inspector/7",
+        "url": "http://localhost:8080/api/v1/inspections/inspector/50",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/inspections/status/ASSIGNED",
+      "name": "GET /api/v1/inspections/status/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/inspections/status/ASSIGNED",
+        "url": "http://localhost:8080/api/v1/inspections/status/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/inspections/target/PRODUCT/23",
+      "name": "GET /api/v1/inspections/target/47/23",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/inspections/target/PRODUCT/23",
+        "url": "http://localhost:8080/api/v1/inspections/target/47/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -810,18 +1275,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/logistics/jobs",
         "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "GET /api/v1/logistics/jobs/13",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13",
-        "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -832,18 +1293,50 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/logistics/jobs/13/tracking",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/logistics/jobs/driver/37",
+      "name": "GET /api/v1/logistics/jobs/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/driver/37",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/v1/logistics/jobs/driver/44",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/logistics/jobs/driver/44",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -854,40 +1347,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/logistics/jobs/order/52",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/logistics/jobs/status/PENDING_ASSIGNMENT",
+      "name": "GET /api/v1/logistics/jobs/status/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/status/PENDING_ASSIGNMENT",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/status/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/logistics/proof-of-delivery/21",
+      "name": "GET /api/v1/logistics/proof-of-delivery/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/21",
+        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/logistics/proof-of-delivery/driver/37",
+      "name": "GET /api/v1/logistics/proof-of-delivery/driver/44",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/driver/37",
+        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/driver/44",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -898,29 +1419,50 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery/job/13",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/logistics/tracking-events/22",
+      "name": "GET /api/v1/logistics/tracking-events/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/tracking-events/22",
+        "url": "http://localhost:8080/api/v1/logistics/tracking-events/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/logistics/tracking-events/driver/37",
+      "name": "GET /api/v1/logistics/tracking-events/driver/44",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/tracking-events/driver/37",
+        "url": "http://localhost:8080/api/v1/logistics/tracking-events/driver/44",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -931,7 +1473,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/logistics/tracking-events/job/13",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -942,40 +1491,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/notifications",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/notifications/26",
+      "name": "GET /api/v1/notifications/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/26",
+        "url": "http://localhost:8080/api/v1/notifications/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/notifications/user/40",
+      "name": "GET /api/v1/notifications/user/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/user/40",
+        "url": "http://localhost:8080/api/v1/notifications/user/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/notifications/user/40/unread",
+      "name": "GET /api/v1/notifications/user/47/unread",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/user/40/unread",
+        "url": "http://localhost:8080/api/v1/notifications/user/47/unread",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -986,40 +1563,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/orders",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/orders/52",
+      "name": "GET /api/v1/orders/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52",
+        "url": "http://localhost:8080/api/v1/orders/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/orders/52/timeline",
+      "name": "GET /api/v1/orders/47/timeline",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52/timeline",
+        "url": "http://localhost:8080/api/v1/orders/47/timeline",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/orders/buyer/4",
+      "name": "GET /api/v1/orders/buyer/48",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/buyer/4",
+        "url": "http://localhost:8080/api/v1/orders/buyer/48",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1030,18 +1635,32 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/orders/search",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/payments/62",
+      "name": "GET /api/v1/payments/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/payments/62",
+        "url": "http://localhost:8080/api/v1/payments/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1052,7 +1671,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/payments/order/52",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1063,7 +1689,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/products/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1074,7 +1707,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/products/23/images",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1085,7 +1725,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/products/category/16",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1096,51 +1743,86 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/products/search",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/products/seller/3",
+      "name": "GET /api/v1/products/seller/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/products/seller/3",
+        "url": "http://localhost:8080/api/v1/products/seller/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/profiles/buyers/4",
+      "name": "GET /api/v1/profiles/buyers/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/buyers/4",
+        "url": "http://localhost:8080/api/v1/profiles/buyers/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/profiles/drivers/37",
+      "name": "GET /api/v1/profiles/drivers/6",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37",
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/profiles/drivers/37/images",
+      "name": "GET /api/v1/profiles/drivers/6/images",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37/images",
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6/images",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1151,7 +1833,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/farmers/3",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1162,7 +1851,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/farmers/3/images",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1173,7 +1869,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/inspectors/7",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1184,7 +1887,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/inspectors/7/images",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1195,7 +1905,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/suppliers/5",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1206,40 +1923,68 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/suppliers/5/images",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/sellers/3/products",
+      "name": "GET /api/v1/sellers/47/products",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/sellers/3/products",
+        "url": "http://localhost:8080/api/v1/sellers/47/products",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/users/40",
+      "name": "GET /api/v1/users/47",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/users/40",
+        "url": "http://localhost:8080/api/v1/users/47",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "GET /api/v1/users/40/addresses",
+      "name": "GET /api/v1/users/47/addresses",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "http://localhost:8080/api/v1/users/40/addresses",
+        "url": "http://localhost:8080/api/v1/users/47/addresses",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1250,7 +1995,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/users/addresses",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1266,196 +2018,38 @@
       }
     },
     {
-      "name": "PATCH /api/v1/admin/products/23/status?status=ACTIVE",
+      "name": "PATCH /api/v1/admin/products/23/status",
       "request": {
         "method": "PATCH",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/products/23/status?status=ACTIVE",
+        "url": "http://localhost:8080/api/v1/admin/products/23/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PATCH /api/v1/admin/users/40/status?status=ACTIVE",
+      "name": "PATCH /api/v1/admin/users/47/status",
       "request": {
         "method": "PATCH",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/users/40/status?status=ACTIVE",
+        "url": "http://localhost:8080/api/v1/admin/users/47/status",
         "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "POST /api/auth/forgot-password?email=faith.driver%40example.com",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": "http://localhost:8080/api/auth/forgot-password?email=faith.driver%40example.com",
-        "auth": {
-          "type": "noauth"
-        }
-      }
-    },
-    {
-      "name": "POST /api/auth/login",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/auth/login",
-        "auth": {
-          "type": "noauth"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"faith.driver@example.com\",\n  \"password\": \"secret1234567\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
-        }
-      }
-    },
-    {
-      "name": "POST /api/auth/logout",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": "http://localhost:8080/api/auth/logout",
-        "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "POST /api/auth/refresh",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/auth/refresh",
-        "auth": {
-          "type": "noauth"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"refreshToken\": \"Delivery update\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "POST /api/auth/register",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/auth/register",
-        "auth": {
-          "type": "noauth"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"faith.driver@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"DRIVER\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "POST /api/auth/reset-password",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/auth/reset-password",
-        "auth": {
-          "type": "noauth"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"faith.driver@example.com\",\n  \"newPassword\": \"secret1234567\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "POST /api/users",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/users",
-        "auth": {
-          "type": "noauth"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"faith.driver@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"DRIVER\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "POST /api/v1/40/addresses",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/v1/40/addresses",
-        "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
+          ]
         }
       }
     },
@@ -1469,18 +2063,57 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/addresses",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
+          "raw": "{\n  \"addressText\": \"12 Independence Ave, Accra\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"label\",\n  \"userId\": 47\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/addresses",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /api/v1/admin/drivers",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Faith Mensah\",\n  \"username\": \"faith.mensah\",\n  \"password\": \"Kilivana#2026\",\n  \"phone\": \"0240001122\",\n  \"email\": \"faith.driver@kilivana.com\",\n  \"region\": \"Western\",\n  \"address\": \"Takoradi, Sekondi\",\n  \"idType\": \"Ghana Card\",\n  \"idNumber\": \"GHA-745678901-4\",\n  \"licenceNumber\": \"DL-101455\",\n  \"licenceExpiry\": \"2028-05-20\",\n  \"kycStatus\": \"PENDING\",\n  \"vehicleType\": \"Pickup\",\n  \"vehicleCapacity\": \"2T\",\n  \"plateNumber\": \"WP-7788-24\",\n  \"vehicleMake\": \"Toyota Hilux\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "http://localhost:8080/api/v1/admin/drivers",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1494,23 +2127,30 @@
             "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": "http://localhost:8080/api/v1/admin/inspections",
         "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/admin/inspections/16/evidence",
+      "name": "POST /api/v1/admin/inspections/47/evidence",
       "request": {
         "method": "POST",
         "header": [
@@ -1519,23 +2159,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/admin/inspections/16/evidence",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/admin/inspections/47/evidence",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/admin/inspections/16/result?result=APPROVED",
+      "name": "POST /api/v1/admin/inspections/47/result",
       "request": {
         "method": "POST",
         "header": [
@@ -1544,18 +2191,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/admin/inspections/16/result?result=APPROVED",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/admin/inspections/47/result",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1569,18 +2223,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/admin/mail/test",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"to\": \"admin@kilivana.com\",\n  \"subject\": \"Kilivana delivery update\",\n  \"body\": \"Message sent while testing the endpoint\"\n}",
+          "raw": "{\n  \"to\": \"to\",\n  \"subject\": \"subject\",\n  \"body\": \"body\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/admin/mail/test",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1594,29 +2255,43 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/admin/notifications",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"userId\": 40,\n  \"type\": \"ORDER_UPDATE\",\n  \"title\": \"Delivery update\",\n  \"message\": \"Message sent while testing the endpoint\"\n}",
+          "raw": "{\n  \"userId\": 47,\n  \"type\": \"type\",\n  \"title\": \"title\",\n  \"message\": \"message\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/admin/notifications",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/admin/notifications/26/read",
+      "name": "POST /api/v1/admin/notifications/47/read",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/26/read",
+        "url": "http://localhost:8080/api/v1/admin/notifications/47/read",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1627,18 +2302,32 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/admin/notifications/read-all",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/admin/notifications/user/40/read-all",
+      "name": "POST /api/v1/admin/notifications/user/47/read-all",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/user/40/read-all",
+        "url": "http://localhost:8080/api/v1/admin/notifications/user/47/read-all",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1652,27 +2341,34 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/admin/users",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"New Administrator\",\n  \"email\": \"new.admin@example.com\",\n  \"phone\": \"0712345679\",\n  \"password\": \"secret1234567\",\n  \"role\": \"ADMIN\"\n}",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"new.account@kilivana.com\",\n  \"phone\": \"0240001122\",\n  \"password\": \"Kilivana#2026\",\n  \"role\": \"DRIVER\",\n  \"username\": \"faith.driver\",\n  \"region\": \"Greater Accra\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/admin/users",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/auth/forgot-password?email=faith.driver%40example.com",
+      "name": "POST /api/v1/auth/forgot-password",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/auth/forgot-password?email=faith.driver%40example.com",
+        "url": "http://localhost:8080/api/v1/auth/forgot-password",
         "auth": {
           "type": "noauth"
         }
@@ -1688,18 +2384,18 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/auth/login",
-        "auth": {
-          "type": "noauth"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"faith.driver@example.com\",\n  \"password\": \"secret1234567\"\n}",
+          "raw": "{\n  \"email\": \"admin@kilivana.com\",\n  \"password\": \"Admin@123\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/auth/login",
+        "auth": {
+          "type": "noauth"
         }
       }
     },
@@ -1710,7 +2406,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/auth/logout",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1724,18 +2427,18 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/auth/refresh",
-        "auth": {
-          "type": "noauth"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"refreshToken\": \"Delivery update\"\n}",
+          "raw": "{\n  \"refreshToken\": \"{{accessToken}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/auth/refresh",
+        "auth": {
+          "type": "noauth"
         }
       }
     },
@@ -1749,18 +2452,18 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/auth/register",
-        "auth": {
-          "type": "noauth"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"faith.driver@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"DRIVER\"\n}",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"new.account@kilivana.com\",\n  \"phone\": \"0240001122\",\n  \"password\": \"Kilivana#2026\",\n  \"role\": \"DRIVER\",\n  \"username\": \"faith.driver\",\n  \"region\": \"Greater Accra\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/auth/register",
+        "auth": {
+          "type": "noauth"
         }
       }
     },
@@ -1774,18 +2477,18 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/auth/reset-password",
-        "auth": {
-          "type": "noauth"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"faith.driver@example.com\",\n  \"newPassword\": \"secret1234567\"\n}",
+          "raw": "{\n  \"email\": \"new.account@kilivana.com\",\n  \"newPassword\": \"Kilivana#2027\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/auth/reset-password",
+        "auth": {
+          "type": "noauth"
         }
       }
     },
@@ -1799,18 +2502,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/cart/items",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"productId\": 23,\n  \"quantity\": 2\n}",
+          "raw": "{\n  \"productId\": 23,\n  \"quantity\": 1\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/cart/items",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1824,18 +2534,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/categories",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Category Demo\",\n  \"type\": \"FARMER\"\n}",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"type\": \"FARMER\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/categories",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1846,7 +2563,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/checkout",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1857,23 +2581,37 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/checkout/validate",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/ecommerce/carts/47/checkout",
+      "name": "POST /api/v1/ecommerce/carts/48/checkout",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/carts/47/checkout",
+        "url": "http://localhost:8080/api/v1/ecommerce/carts/48/checkout",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/ecommerce/carts/buyer/4/items",
+      "name": "POST /api/v1/ecommerce/carts/buyer/48/items",
       "request": {
         "method": "POST",
         "header": [
@@ -1882,18 +2620,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/ecommerce/carts/buyer/4/items",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"productId\": 23,\n  \"quantity\": 2\n}",
+          "raw": "{\n  \"productId\": 23,\n  \"quantity\": 1\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/ecommerce/carts/buyer/48/items",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1907,18 +2652,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/ecommerce/disputes",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"orderId\": 52,\n  \"raisedBy\": 4,\n  \"reason\": \"Buyer was unavailable at the drop-off point\",\n  \"description\": \"Sample description for this record\",\n  \"status\": \"OPEN\"\n}",
+          "raw": "{\n  \"orderId\": 52,\n  \"raisedBy\": 48,\n  \"reason\": \"Customer requested cancellation\",\n  \"description\": \"Sample description for this record\",\n  \"status\": \"ACTIVE\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/ecommerce/disputes",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -1932,23 +2684,30 @@
             "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": "http://localhost:8080/api/v1/inspections",
         "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/inspections/16/evidence",
+      "name": "POST /api/v1/inspections/47/evidence",
       "request": {
         "method": "POST",
         "header": [
@@ -1957,23 +2716,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/inspections/16/evidence",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/inspections/47/evidence",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/inspections/16/result?result=APPROVED",
+      "name": "POST /api/v1/inspections/47/result",
       "request": {
         "method": "POST",
         "header": [
@@ -1982,18 +2748,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/inspections/16/result?result=APPROVED",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/inspections/47/result",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2007,40 +2780,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/logistics/jobs",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"orderId\": 52,\n  \"pickupAddress\": \"Kumasi Central Market\",\n  \"destinationAddress\": \"Adum, Kumasi\",\n  \"pickupLatitude\": 6.6885,\n  \"pickupLongitude\": -1.6244,\n  \"destinationLatitude\": 6.6885,\n  \"destinationLongitude\": -1.6244,\n  \"cargoDescription\": \"Maize, 20 sacks\",\n  \"quantity\": 2,\n  \"payoutAmount\": 20,\n  \"scheduledPickupAt\": \"2026-01-15T10:30:00\",\n  \"scheduledDropoffAt\": \"2026-01-15T10:30:00\",\n  \"distanceKm\": 1,\n  \"estimatedMinutes\": 1,\n  \"deliveryOtpVerified\": true,\n  \"status\": \"PENDING_ASSIGNMENT\",\n  \"driverId\": 37,\n  \"cancellationReason\": \"Cancelled by the buyer\"\n}",
+          "raw": "{\n  \"orderId\": 52,\n  \"pickupAddress\": \"Tema Industrial Area, Accra\",\n  \"destinationAddress\": \"Kumasi, Adum\",\n  \"pickupLatitude\": 1,\n  \"pickupLongitude\": 1,\n  \"destinationLatitude\": 1,\n  \"destinationLongitude\": 1,\n  \"cargoDescription\": \"Sample note\",\n  \"quantity\": 1,\n  \"payoutAmount\": 1,\n  \"scheduledPickupAt\": \"2026-12-31T09:30:00\",\n  \"scheduledDropoffAt\": \"2026-12-31T09:30:00\",\n  \"distanceKm\": 1,\n  \"estimatedMinutes\": 1,\n  \"deliveryOtpVerified\": true,\n  \"status\": \"ACTIVE\",\n  \"driverId\": 44,\n  \"cancellationReason\": \"Customer unavailable at pickup\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
-        }
-      }
-    },
-    {
-      "name": "POST /api/v1/logistics/jobs/13/accept?driverId=37",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/accept?driverId=37",
+        },
+        "url": "http://localhost:8080/api/v1/logistics/jobs",
         "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "POST /api/v1/logistics/jobs/13/assign?driverId=37",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/assign?driverId=37",
-        "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2054,29 +2812,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/location",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"logisticsJobId\": 14,\n  \"status\": \"PENDING_ASSIGNMENT\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"note\": \"Recorded while testing the endpoint\",\n  \"driverId\": 37\n}",
+          "raw": "{\n  \"logisticsJobId\": 13,\n  \"status\": \"ACTIVE\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"note\": \"Sample note\",\n  \"driverId\": 44\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
-        }
-      }
-    },
-    {
-      "name": "POST /api/v1/logistics/jobs/13/otp/verify?otp=123456",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/otp/verify?otp=123456",
+        },
+        "url": "http://localhost:8080/api/v1/logistics/jobs/13/location",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2090,29 +2844,97 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/proof-of-delivery",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"logisticsJobId\": 14,\n  \"recipientName\": \"Test Name\",\n  \"signatureUrl\": \"https://example.com/signature.png\",\n  \"photoUrl\": \"https://example.com/photo.jpg\",\n  \"otpReference\": \"OTP-123456\"\n}",
+          "raw": "{\n  \"logisticsJobId\": 13,\n  \"signatureUrl\": \"https://example.com/signature.png\",\n  \"photoUrl\": \"https://example.com/photo.jpg\",\n  \"otpReference\": \"OTP-123456\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/logistics/jobs/13/proof-of-delivery",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/logistics/jobs/13/status?status=PENDING_ASSIGNMENT",
+      "name": "POST /api/v1/logistics/jobs/47/accept",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/status?status=PENDING_ASSIGNMENT",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/accept",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /api/v1/logistics/jobs/47/assign",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/assign",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /api/v1/logistics/jobs/47/otp/verify",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/otp/verify",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /api/v1/logistics/jobs/47/status",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/status",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2126,18 +2948,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"logisticsJobId\": 14,\n  \"recipientName\": \"Test Name\",\n  \"signatureUrl\": \"https://example.com/signature.png\",\n  \"photoUrl\": \"https://example.com/photo.jpg\",\n  \"otpReference\": \"OTP-123456\"\n}",
+          "raw": "{\n  \"logisticsJobId\": 13,\n  \"signatureUrl\": \"https://example.com/signature.png\",\n  \"photoUrl\": \"https://example.com/photo.jpg\",\n  \"otpReference\": \"OTP-123456\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/logistics/proof-of-delivery",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2151,18 +2980,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/logistics/tracking-events",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"logisticsJobId\": 14,\n  \"status\": \"PENDING_ASSIGNMENT\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"note\": \"Recorded while testing the endpoint\",\n  \"driverId\": 37\n}",
+          "raw": "{\n  \"logisticsJobId\": 13,\n  \"status\": \"ACTIVE\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"note\": \"Sample note\",\n  \"driverId\": 44\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/logistics/tracking-events",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2176,29 +3012,43 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/notifications",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"userId\": 40,\n  \"type\": \"ORDER_UPDATE\",\n  \"title\": \"Delivery update\",\n  \"message\": \"Message sent while testing the endpoint\"\n}",
+          "raw": "{\n  \"userId\": 47,\n  \"type\": \"type\",\n  \"title\": \"title\",\n  \"message\": \"message\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/notifications",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/notifications/26/read",
+      "name": "POST /api/v1/notifications/47/read",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/26/read",
+        "url": "http://localhost:8080/api/v1/notifications/47/read",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2209,18 +3059,32 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/notifications/read-all",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/notifications/user/40/read-all",
+      "name": "POST /api/v1/notifications/user/47/read-all",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/user/40/read-all",
+        "url": "http://localhost:8080/api/v1/notifications/user/47/read-all",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2234,51 +3098,79 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/orders",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"buyerId\": 4,\n  \"subtotal\": 20,\n  \"deliveryFee\": 5,\n  \"total\": 25,\n  \"addressId\": 3\n}",
+          "raw": "{\n  \"buyerId\": 48,\n  \"subtotal\": 20,\n  \"deliveryFee\": 5,\n  \"total\": 25,\n  \"addressId\": 3\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/orders",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/orders/52/cancel",
+      "name": "POST /api/v1/orders/47/cancel",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52/cancel",
+        "url": "http://localhost:8080/api/v1/orders/47/cancel",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/orders/52/confirm-receipt",
+      "name": "POST /api/v1/orders/47/confirm-receipt",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52/confirm-receipt",
+        "url": "http://localhost:8080/api/v1/orders/47/confirm-receipt",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/orders/52/status?status=PENDING",
+      "name": "POST /api/v1/orders/47/status",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52/status?status=PENDING",
+        "url": "http://localhost:8080/api/v1/orders/47/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2292,29 +3184,43 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/payments",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"orderId\": 52,\n  \"provider\": \"MTN_MOMO\",\n  \"reference\": \"MP260101.0001.123456\",\n  \"amount\": 20\n}",
+          "raw": "{\n  \"orderId\": 52,\n  \"provider\": \"provider\",\n  \"reference\": \"MP260102.0001.123456\",\n  \"amount\": 1\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/payments",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/payments/62/refund",
+      "name": "POST /api/v1/payments/47/refund",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/payments/62/refund",
+        "url": "http://localhost:8080/api/v1/payments/47/refund",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2328,18 +3234,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/payments/initiate",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"orderId\": 52,\n  \"provider\": \"MTN_MOMO\",\n  \"reference\": \"MP260101.0001.123456\",\n  \"amount\": 20\n}",
+          "raw": "{\n  \"orderId\": 52,\n  \"provider\": \"provider\",\n  \"reference\": \"MP260102.0001.123456\",\n  \"amount\": 1\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/payments/initiate",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2353,18 +3266,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/payments/webhook",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"orderId\": 52,\n  \"provider\": \"MTN_MOMO\",\n  \"reference\": \"MP260101.0001.123456\",\n  \"amount\": 20\n}",
+          "raw": "{\n  \"orderId\": 52,\n  \"provider\": \"provider\",\n  \"reference\": \"MP260102.0001.123456\",\n  \"amount\": 1\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/payments/webhook",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2378,23 +3298,23 @@
             "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sellerId\": 47,\n  \"sellerType\": \"FARMER\",\n  \"categoryId\": 16,\n  \"name\": \"Faith Driver\",\n  \"description\": \"Sample description for this record\",\n  \"unit\": \"kg\",\n  \"price\": 1,\n  \"stockQty\": 1,\n  \"minimumOrderQty\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": "http://localhost:8080/api/v1/products",
         "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "formdata",
-          "formdata": [
+          "type": "bearer",
+          "bearer": [
             {
-              "key": "product",
-              "value": "{\n  \"name\": \"Fresh Tomatoes\",\n  \"description\": \"Sample description for this record\",\n  \"price\": 20,\n  \"stockQty\": 50,\n  \"minimumOrderQty\": 1,\n  \"unit\": \"kg\",\n  \"categoryId\": 16,\n  \"sellerId\": 3,\n  \"sellerType\": \"FARMER\"\n}",
-              "type": "text",
-              "contentType": "application/json"
-            },
-            {
-              "key": "images",
-              "type": "file",
-              "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
           ]
         }
@@ -2405,10 +3325,6 @@
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/products/23/images",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -2418,11 +3334,22 @@
               "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
             }
           ]
+        },
+        "url": "http://localhost:8080/api/v1/products/23/images",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/profiles/buyers/4",
+      "name": "POST /api/v1/profiles/buyers/47",
       "request": {
         "method": "POST",
         "header": [
@@ -2431,23 +3358,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/buyers/4",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"contactDetails\": \"Call 0712345670 before delivery\",\n  \"savedAddresses\": \"Kumasi, Adum, Ghana\"\n}",
+          "raw": "{\n  \"contactDetails\": \"+233241112233\",\n  \"savedAddresses\": \"12 Independence Ave, Accra\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/buyers/47",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/profiles/drivers/37",
+      "name": "POST /api/v1/profiles/drivers/6",
       "request": {
         "method": "POST",
         "header": [
@@ -2456,30 +3390,33 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"licenseNumber\": \"Delivery update\",\n  \"vehicleType\": \"TRUCK\",\n  \"vehicleNumber\": \"Delivery update\",\n  \"vehicleDetails\": \"Isuzu N-Series, 5T\",\n  \"availabilityStatus\": \"AVAILABLE\",\n  \"vehicleMake\": \"Isuzu\",\n  \"vehicleCapacityKg\": 5000,\n  \"licenseExpiryDate\": \"2027-08-15\",\n  \"idType\": \"Ghana Card\",\n  \"idNumber\": \"GHA-712345678-1\"\n}",
+          "raw": "{\n  \"address\": \"12 Independence Ave, Accra\",\n  \"licenseNumber\": \"DL-101455\",\n  \"vehicleType\": \"PICKUP\",\n  \"vehicleNumber\": \"WP-7788-24\",\n  \"vehicleDetails\": \"Toyota Hilux 2T\",\n  \"vehicleMake\": \"Toyota Hilux\",\n  \"vehicleCapacity\": \"2T\",\n  \"vehicleCapacityKg\": 1,\n  \"licenseExpiryDate\": \"2028-05-20\",\n  \"idType\": \"Ghana Card\",\n  \"idNumber\": \"GHA-745678901-4\",\n  \"kycStatus\": \"PENDING\",\n  \"availabilityStatus\": \"AVAILABLE\",\n  \"suspensionReason\": \"Licence under investigation\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/profiles/drivers/37/images",
+      "name": "POST /api/v1/profiles/drivers/6/images",
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37/images",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -2487,6 +3424,17 @@
               "key": "image",
               "type": "file",
               "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
+            }
+          ]
+        },
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6/images",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
           ]
         }
@@ -2502,18 +3450,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/farmers/3",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"farmName\": \"Faith Chebet Farm\",\n  \"location\": \"Delivery update\",\n  \"farmDetails\": \"Maize and tomato farm, 12 acres\",\n  \"verificationInfo\": \"Delivery update\"\n}",
+          "raw": "{\n  \"farmName\": \"Amara Osei Farm\",\n  \"location\": \"Ashanti, Ghana\",\n  \"farmDetails\": \"Crops: Cocoa, Maize\",\n  \"verificationInfo\": \"verification info\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/farmers/3",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2522,10 +3477,6 @@
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/farmers/3/images",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -2533,6 +3484,17 @@
               "key": "image",
               "type": "file",
               "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
+            }
+          ]
+        },
+        "url": "http://localhost:8080/api/v1/profiles/farmers/3/images",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
           ]
         }
@@ -2548,18 +3510,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/inspectors/7",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorDetails\": \"Certified produce inspector\",\n  \"assignedArea\": \"Greater Accra\",\n  \"status\": \"Delivery update\"\n}",
+          "raw": "{\n  \"inspectorDetails\": \"Sample note\",\n  \"assignedArea\": \"Ashanti Region\",\n  \"status\": \"ACTIVE\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/inspectors/7",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2568,10 +3537,6 @@
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/inspectors/7/images",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -2579,6 +3544,17 @@
               "key": "image",
               "type": "file",
               "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
+            }
+          ]
+        },
+        "url": "http://localhost:8080/api/v1/profiles/inspectors/7/images",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
           ]
         }
@@ -2594,18 +3570,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/suppliers/5",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"businessName\": \"Kilivana Agro Supplies\",\n  \"businessDetails\": \"Fertiliser, seed and farm tooling\",\n  \"location\": \"Delivery update\",\n  \"verificationInfo\": \"Delivery update\"\n}",
+          "raw": "{\n  \"businessName\": \"AgroInput Ghana\",\n  \"businessDetails\": \"Fertilizers & Seeds\",\n  \"location\": \"Ashanti, Ghana\",\n  \"verificationInfo\": \"verification info\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/suppliers/5",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2614,10 +3597,6 @@
       "request": {
         "method": "POST",
         "header": [],
-        "url": "http://localhost:8080/api/v1/profiles/suppliers/5/images",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -2625,6 +3604,17 @@
               "key": "image",
               "type": "file",
               "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
+            }
+          ]
+        },
+        "url": "http://localhost:8080/api/v1/profiles/suppliers/5/images",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
           ]
         }
@@ -2640,23 +3630,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/users",
-        "auth": {
-          "type": "noauth"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"faith.driver@example.com\",\n  \"phone\": \"0712345670\",\n  \"password\": \"secret1234567\",\n  \"role\": \"DRIVER\"\n}",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"new.account@kilivana.com\",\n  \"phone\": \"0240001122\",\n  \"password\": \"Kilivana#2026\",\n  \"role\": \"DRIVER\",\n  \"username\": \"faith.driver\",\n  \"region\": \"Greater Accra\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/users",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "POST /api/v1/users/40/addresses",
+      "name": "POST /api/v1/users/47/addresses",
       "request": {
         "method": "POST",
         "header": [
@@ -2665,18 +3662,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/users/40/addresses",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
+          "raw": "{\n  \"addressText\": \"12 Independence Ave, Accra\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"label\",\n  \"userId\": 47\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/users/47/addresses",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2690,23 +3694,30 @@
             "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"addressText\": \"12 Independence Ave, Accra\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"label\",\n  \"userId\": 47\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": "http://localhost:8080/api/v1/users/addresses",
         "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/users/me",
+      "name": "PUT /api/v1/addresses/3",
       "request": {
         "method": "PUT",
         "header": [
@@ -2715,23 +3726,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/users/me",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Kilivana Admin\",\n  \"email\": \"admin@kilivana.com\",\n  \"phone\": \"0700009000\"\n}",
+          "raw": "{\n  \"addressText\": \"12 Independence Ave, Accra\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"label\",\n  \"userId\": 47\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/addresses/3",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/40/addresses/64",
+      "name": "PUT /api/v1/admin/inspections/47/result",
       "request": {
         "method": "PUT",
         "header": [
@@ -2740,23 +3758,84 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/40/addresses/64",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/admin/inspections/47/result",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/addresses/64",
+      "name": "PUT /api/v1/admin/inspections/47/status",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/admin/inspections/47/status",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT /api/v1/admin/notifications/47/read",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/admin/notifications/47/read",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT /api/v1/admin/notifications/user/47/read-all",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": "http://localhost:8080/api/v1/admin/notifications/user/47/read-all",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT /api/v1/admin/users/47",
       "request": {
         "method": "PUT",
         "header": [
@@ -2765,123 +3844,61 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/addresses/64",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"new.account@kilivana.com\",\n  \"phone\": \"0240001122\",\n  \"password\": \"Kilivana#2026\",\n  \"role\": \"DRIVER\",\n  \"username\": \"faith.driver\",\n  \"region\": \"Greater Accra\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
-        }
-      }
-    },
-    {
-      "name": "PUT /api/v1/admin/inspections/16/result?result=APPROVED",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/v1/admin/inspections/16/result?result=APPROVED",
-        "auth": {
-          "type": "bearer"
         },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        "url": "http://localhost:8080/api/v1/admin/users/47",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/admin/inspections/16/status?status=ASSIGNED",
+      "name": "PUT /api/v1/admin/users/47/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/inspections/16/status?status=ASSIGNED",
+        "url": "http://localhost:8080/api/v1/admin/users/47/status",
         "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "PUT /api/v1/admin/notifications/26/read",
-      "request": {
-        "method": "PUT",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/26/read",
-        "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "PUT /api/v1/admin/notifications/user/40/read-all",
-      "request": {
-        "method": "PUT",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/admin/notifications/user/40/read-all",
-        "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "PUT /api/v1/admin/users/40",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": "http://localhost:8080/api/v1/admin/users/40",
-        "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Kilivana Admin\",\n  \"email\": \"admin@kilivana.com\",\n  \"phone\": \"0700009000\",\n  \"password\": \"secret1234567\",\n  \"role\": \"ADMIN\",\n  \"username\": \"faith.driver\",\n  \"region\": \"Greater Accra\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/admin/users/40/status?status=ACTIVE",
+      "name": "PUT /api/v1/cart/items/15",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/admin/users/40/status?status=ACTIVE",
+        "url": "http://localhost:8080/api/v1/cart/items/15",
         "auth": {
-          "type": "bearer"
-        }
-      }
-    },
-    {
-      "name": "PUT /api/v1/cart/items/14?quantity=2",
-      "request": {
-        "method": "PUT",
-        "header": [],
-        "url": "http://localhost:8080/api/v1/cart/items/14?quantity=2",
-        "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -2895,45 +3912,66 @@
             "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"type\": \"FARMER\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": "http://localhost:8080/api/v1/categories/16",
         "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Verification Crop\",\n  \"type\": \"FARMER\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
-          }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/categories/16/status?active=true",
+      "name": "PUT /api/v1/categories/16/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/categories/16/status?active=true",
+        "url": "http://localhost:8080/api/v1/categories/16/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/ecommerce/carts/47/items/23?quantity=2",
+      "name": "PUT /api/v1/ecommerce/carts/48/items/23",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/carts/47/items/23?quantity=2",
+        "url": "http://localhost:8080/api/v1/ecommerce/carts/48/items/23",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/ecommerce/disputes/11/resolution",
+      "name": "PUT /api/v1/ecommerce/disputes/47/resolution",
       "request": {
         "method": "PUT",
         "header": [
@@ -2942,34 +3980,48 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/ecommerce/disputes/11/resolution",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "\"Buyer was unavailable at the drop-off point\"",
+          "raw": "\"text\"",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/ecommerce/disputes/47/resolution",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/ecommerce/disputes/11/status?status=OPEN",
+      "name": "PUT /api/v1/ecommerce/disputes/47/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/ecommerce/disputes/11/status?status=OPEN",
+        "url": "http://localhost:8080/api/v1/ecommerce/disputes/47/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/inspections/16/result?result=APPROVED",
+      "name": "PUT /api/v1/inspections/47/result",
       "request": {
         "method": "PUT",
         "header": [
@@ -2978,56 +4030,84 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/inspections/16/result?result=APPROVED",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorId\": 7,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ASSIGNED\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Recorded while testing the endpoint\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
+          "raw": "{\n  \"inspectorId\": 50,\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": 23,\n  \"status\": \"ACTIVE\",\n  \"result\": \"APPROVED\",\n  \"notes\": \"Sample note\",\n  \"evidenceUrls\": \"https://example.com/evidence/1.jpg\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/inspections/47/result",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/inspections/16/status?status=ASSIGNED",
+      "name": "PUT /api/v1/inspections/47/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/inspections/16/status?status=ASSIGNED",
+        "url": "http://localhost:8080/api/v1/inspections/47/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/logistics/jobs/13/accept?driverId=37",
+      "name": "PUT /api/v1/logistics/jobs/47/accept",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/accept?driverId=37",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/accept",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/logistics/jobs/13/assign?driverId=37",
+      "name": "PUT /api/v1/logistics/jobs/47/assign",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/assign?driverId=37",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/assign",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/logistics/jobs/13/cancel",
+      "name": "PUT /api/v1/logistics/jobs/47/cancel",
       "request": {
         "method": "PUT",
         "header": [
@@ -3036,73 +4116,115 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/cancel",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "\"Buyer was unavailable at the drop-off point\"",
+          "raw": "\"text\"",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/cancel",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/logistics/jobs/13/status?status=PENDING_ASSIGNMENT",
+      "name": "PUT /api/v1/logistics/jobs/47/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/logistics/jobs/13/status?status=PENDING_ASSIGNMENT",
+        "url": "http://localhost:8080/api/v1/logistics/jobs/47/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/notifications/26/read",
+      "name": "PUT /api/v1/notifications/47/read",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/26/read",
+        "url": "http://localhost:8080/api/v1/notifications/47/read",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/notifications/user/40/read-all",
+      "name": "PUT /api/v1/notifications/user/47/read-all",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/notifications/user/40/read-all",
+        "url": "http://localhost:8080/api/v1/notifications/user/47/read-all",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/orders/52/status?status=PENDING",
+      "name": "PUT /api/v1/orders/47/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/orders/52/status?status=PENDING",
+        "url": "http://localhost:8080/api/v1/orders/47/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/payments/62/status?status=PENDING",
+      "name": "PUT /api/v1/payments/47/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/payments/62/status?status=PENDING",
+        "url": "http://localhost:8080/api/v1/payments/47/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3116,37 +4238,33 @@
             "value": "application/json"
           }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sellerId\": 47,\n  \"sellerType\": \"FARMER\",\n  \"categoryId\": 16,\n  \"name\": \"Faith Driver\",\n  \"description\": \"Sample description for this record\",\n  \"unit\": \"kg\",\n  \"price\": 1,\n  \"stockQty\": 1,\n  \"minimumOrderQty\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": "http://localhost:8080/api/v1/products/23",
         "auth": {
-          "type": "bearer"
-        },
-        "body": {
-          "mode": "formdata",
-          "formdata": [
+          "type": "bearer",
+          "bearer": [
             {
-              "key": "product",
-              "value": "{\n  \"name\": \"Fresh Tomatoes\",\n  \"description\": \"Sample description for this record\",\n  \"price\": 20,\n  \"stockQty\": 50,\n  \"minimumOrderQty\": 1,\n  \"unit\": \"kg\",\n  \"categoryId\": 16,\n  \"sellerId\": 3,\n  \"sellerType\": \"FARMER\"\n}",
-              "type": "text",
-              "contentType": "application/json"
-            },
-            {
-              "key": "images",
-              "type": "file",
-              "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
             }
           ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/products/23/images/13",
+      "name": "PUT /api/v1/products/23/images/16",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/products/23/images/13",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -3156,17 +4274,35 @@
               "src": "uploads/kilivana_drivers_6/2b7fd4f418bf08d2e3350aa5.png"
             }
           ]
+        },
+        "url": "http://localhost:8080/api/v1/products/23/images/16",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/products/23/images/13/primary",
+      "name": "PUT /api/v1/products/23/images/16/primary",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/products/23/images/13/primary",
+        "url": "http://localhost:8080/api/v1/products/23/images/16/primary",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3180,34 +4316,48 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/products/23/images/reorder",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "[]",
+          "raw": "[\n  1\n]",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/products/23/images/reorder",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/products/23/status?status=ACTIVE",
+      "name": "PUT /api/v1/products/23/status",
       "request": {
         "method": "PUT",
         "header": [],
-        "url": "http://localhost:8080/api/v1/products/23/status?status=ACTIVE",
+        "url": "http://localhost:8080/api/v1/products/23/status",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/profiles/buyers/4",
+      "name": "PUT /api/v1/profiles/buyers/47",
       "request": {
         "method": "PUT",
         "header": [
@@ -3216,23 +4366,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/buyers/4",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"contactDetails\": \"Call 0712345670 before delivery\",\n  \"savedAddresses\": \"Kumasi, Adum, Ghana\"\n}",
+          "raw": "{\n  \"contactDetails\": \"+233241112233\",\n  \"savedAddresses\": \"12 Independence Ave, Accra\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/buyers/47",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/profiles/drivers/37",
+      "name": "PUT /api/v1/profiles/drivers/6",
       "request": {
         "method": "PUT",
         "header": [
@@ -3241,18 +4398,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/drivers/37",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"licenseNumber\": \"Delivery update\",\n  \"vehicleType\": \"TRUCK\",\n  \"vehicleNumber\": \"Delivery update\",\n  \"vehicleDetails\": \"Isuzu N-Series, 5T\",\n  \"availabilityStatus\": \"AVAILABLE\",\n  \"vehicleMake\": \"Isuzu\",\n  \"vehicleCapacityKg\": 5000,\n  \"licenseExpiryDate\": \"2027-08-15\",\n  \"idType\": \"Ghana Card\",\n  \"idNumber\": \"GHA-712345678-1\"\n}",
+          "raw": "{\n  \"address\": \"12 Independence Ave, Accra\",\n  \"licenseNumber\": \"DL-101455\",\n  \"vehicleType\": \"PICKUP\",\n  \"vehicleNumber\": \"WP-7788-24\",\n  \"vehicleDetails\": \"Toyota Hilux 2T\",\n  \"vehicleMake\": \"Toyota Hilux\",\n  \"vehicleCapacity\": \"2T\",\n  \"vehicleCapacityKg\": 1,\n  \"licenseExpiryDate\": \"2028-05-20\",\n  \"idType\": \"Ghana Card\",\n  \"idNumber\": \"GHA-745678901-4\",\n  \"kycStatus\": \"PENDING\",\n  \"availabilityStatus\": \"AVAILABLE\",\n  \"suspensionReason\": \"Licence under investigation\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/drivers/6",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3266,18 +4430,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/farmers/3",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"farmName\": \"Faith Chebet Farm\",\n  \"location\": \"Delivery update\",\n  \"farmDetails\": \"Maize and tomato farm, 12 acres\",\n  \"verificationInfo\": \"Delivery update\"\n}",
+          "raw": "{\n  \"farmName\": \"Amara Osei Farm\",\n  \"location\": \"Ashanti, Ghana\",\n  \"farmDetails\": \"Crops: Cocoa, Maize\",\n  \"verificationInfo\": \"verification info\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/farmers/3",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3288,7 +4459,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/farmers/3/images/3/primary",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3302,18 +4480,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/inspectors/7",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"inspectorDetails\": \"Certified produce inspector\",\n  \"assignedArea\": \"Greater Accra\",\n  \"status\": \"Delivery update\"\n}",
+          "raw": "{\n  \"inspectorDetails\": \"Sample note\",\n  \"assignedArea\": \"Ashanti Region\",\n  \"status\": \"ACTIVE\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/inspectors/7",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3324,7 +4509,14 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/inspectors/7/images/2/primary",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3338,18 +4530,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/profiles/suppliers/5",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"businessName\": \"Kilivana Agro Supplies\",\n  \"businessDetails\": \"Fertiliser, seed and farm tooling\",\n  \"location\": \"Delivery update\",\n  \"verificationInfo\": \"Delivery update\"\n}",
+          "raw": "{\n  \"businessName\": \"AgroInput Ghana\",\n  \"businessDetails\": \"Fertilizers & Seeds\",\n  \"location\": \"Ashanti, Ghana\",\n  \"verificationInfo\": \"verification info\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/profiles/suppliers/5",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3360,12 +4559,19 @@
         "header": [],
         "url": "http://localhost:8080/api/v1/profiles/suppliers/5/images/2/primary",
         "auth": {
-          "type": "bearer"
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/users/40/addresses/64",
+      "name": "PUT /api/v1/users/47/addresses/3",
       "request": {
         "method": "PUT",
         "header": [
@@ -3374,23 +4580,30 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/users/40/addresses/64",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
+          "raw": "{\n  \"addressText\": \"12 Independence Ave, Accra\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"label\",\n  \"userId\": 47\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/users/47/addresses/3",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
     {
-      "name": "PUT /api/v1/users/addresses/64",
+      "name": "PUT /api/v1/users/addresses/3",
       "request": {
         "method": "PUT",
         "header": [
@@ -3399,18 +4612,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/users/addresses/64",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"addressText\": \"Kumasi, Adum, Ghana\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"Home\",\n  \"userId\": 40\n}",
+          "raw": "{\n  \"addressText\": \"12 Independence Ave, Accra\",\n  \"latitude\": 6.6885,\n  \"longitude\": -1.6244,\n  \"label\": \"label\",\n  \"userId\": 47\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/users/addresses/3",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     },
@@ -3424,18 +4644,25 @@
             "value": "application/json"
           }
         ],
-        "url": "http://localhost:8080/api/v1/users/me",
-        "auth": {
-          "type": "bearer"
-        },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Kilivana Admin\",\n  \"email\": \"admin@kilivana.com\",\n  \"phone\": \"0700009000\"\n}",
+          "raw": "{\n  \"name\": \"Faith Driver\",\n  \"email\": \"new.account@kilivana.com\",\n  \"phone\": \"0240001122\"\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        },
+        "url": "http://localhost:8080/api/v1/users/me",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
         }
       }
     }
