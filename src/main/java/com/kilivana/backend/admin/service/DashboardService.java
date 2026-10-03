@@ -35,7 +35,7 @@ public class DashboardService {
             List.of(OrderStatus.DELIVERED, OrderStatus.COMPLETED);
 
     private static final List<OrderStatus> ACTIVE_STATUSES = List.of(
-            OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PREPARING,
+            OrderStatus.PLACED, OrderStatus.CONFIRMED, OrderStatus.PREPARING,
             OrderStatus.READY_FOR_PICKUP, OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT);
 
     private static final List<DisputeStatus> OPEN_DISPUTE_STATUSES =

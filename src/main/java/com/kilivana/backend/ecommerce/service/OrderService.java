@@ -51,7 +51,7 @@ public class OrderService {
     public Order createOrder(Long buyerId, BigDecimal subtotal, BigDecimal deliveryFee, BigDecimal total, Long addressId) {
         Order order = Order.builder()
                 .buyerId(buyerId)
-                .status(OrderStatus.PENDING)
+                .status(OrderStatus.PLACED)
             .paymentStatus(PaymentStatus.PENDING)
                 .subtotal(subtotal)
                 .deliveryFee(deliveryFee)

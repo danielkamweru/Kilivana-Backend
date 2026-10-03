@@ -79,8 +79,8 @@ class OptionalFilterQueryTest {
     void searchOrders_shouldAcceptFiltersOmitted() {
         assertThat(orderRepository.searchOrders(null, null, PAGE)).isNotNull();
         assertThat(orderRepository.searchOrders(1L, null, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(null, OrderStatus.PENDING, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(1L, OrderStatus.PENDING, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(null, OrderStatus.PLACED, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(1L, OrderStatus.PLACED, PAGE)).isNotNull();
     }
 
     @Test
@@ -96,7 +96,7 @@ class OptionalFilterQueryTest {
     void orderShouldPersistWithTimestampsPopulated() {
         Order order = Order.builder()
                 .buyerId(1L)
-                .status(OrderStatus.PENDING)
+                .status(OrderStatus.PLACED)
                 .subtotal(new BigDecimal("100.00"))
                 .deliveryFee(new BigDecimal("10.00"))
                 .total(new BigDecimal("110.00"))
