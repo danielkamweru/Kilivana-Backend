@@ -1,6 +1,7 @@
 package com.kilivana.backend.ecommerce.entity;
 
 import com.kilivana.backend.common.enums.PaymentStatus;
+import com.kilivana.backend.common.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,8 +28,9 @@ public class Payment {
     @Column(nullable = false)
     private Long orderId;
 
-    @Column(nullable = false)
-    private String provider;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider", nullable = false)
+    private PaymentMethod method;
 
     @Column(nullable = false)
     private String reference;

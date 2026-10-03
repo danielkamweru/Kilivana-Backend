@@ -1,5 +1,6 @@
 package com.kilivana.backend.ecommerce.dto;
 
+import com.kilivana.backend.common.enums.PaymentMethod;
 import com.kilivana.backend.common.enums.PaymentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +18,7 @@ public class PaymentResponse {
 
     private Long id;
     private Long orderId;
-    private String provider;
+    private PaymentMethod method;
     private String reference;
     private BigDecimal amount;
     private PaymentStatus status;

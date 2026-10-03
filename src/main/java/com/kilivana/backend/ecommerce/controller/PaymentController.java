@@ -25,8 +25,9 @@ public class PaymentController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<PaymentResponse>> createPayment(@RequestBody PaymentRequest request) {
-        Payment payment = paymentService.createPayment(request.getOrderId(), request.getProvider(), request.getReference(), request.getAmount());
-        PaymentResponse response = new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getProvider(), payment.getReference(), payment.getAmount(), payment.getStatus(), payment.getPaidAt(), payment.getCreatedAt(), payment.getUpdatedAt());
+        Payment payment = paymentService.createPayment(request.getOrderId(), request.resolveMethod(),
+                request.getReference(), request.getAmount());
+        PaymentResponse response = paymentService.mapToResponse(payment);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
@@ -43,20 +44,21 @@ public class PaymentController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPaymentById(@PathVariable Long id) {
         Payment payment = paymentService.getPaymentById(id);
-        PaymentResponse response = new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getProvider(), payment.getReference(), payment.getAmount(), payment.getStatus(), payment.getPaidAt(), payment.getCreatedAt(), payment.getUpdatedAt());
+        PaymentResponse response = paymentService.mapToResponse(payment);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/order/{orderId}")
     public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentsByOrder(@PathVariable Long orderId) {
         List<Payment> payments = paymentService.getPaymentsByOrder(orderId);
-        return ResponseEntity.ok(ApiResponse.success(payments.stream().map(p -> new PaymentResponse(p.getId(), p.getOrderId(), p.getProvider(), p.getReference(), p.getAmount(), p.getStatus(), p.getPaidAt(), p.getCreatedAt(), p.getUpdatedAt())).toList()));
+        return ResponseEntity.ok(ApiResponse.success(
+                payments.stream().map(paymentService::mapToResponse).toList()));
     }
 
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<PaymentResponse>> updatePaymentStatus(@PathVariable Long id, @RequestParam PaymentStatus status) {
         Payment payment = paymentService.updatePaymentStatus(id, status);
-        PaymentResponse response = new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getProvider(), payment.getReference(), payment.getAmount(), payment.getStatus(), payment.getPaidAt(), payment.getCreatedAt(), payment.getUpdatedAt());
+        PaymentResponse response = paymentService.mapToResponse(payment);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

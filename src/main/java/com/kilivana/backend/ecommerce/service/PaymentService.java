@@ -4,7 +4,9 @@ import com.kilivana.backend.ecommerce.dto.PaymentResponse;
 import com.kilivana.backend.ecommerce.entity.Payment;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.enums.PaymentMethod;
 import com.kilivana.backend.common.enums.PaymentStatus;
+import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,10 +24,19 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
 
     @Transactional
-    public Payment createPayment(Long orderId, String provider, String reference, BigDecimal amount) {
+    /**
+     * @throws BadRequestException when the method is not one the panel can send, rather
+     *     than storing a provider string nothing will ever read back
+     */
+    public Payment createPayment(Long orderId, String method, String reference, BigDecimal amount) {
+        PaymentMethod paymentMethod = PaymentMethod.from(method);
+        if (paymentMethod == null) {
+            throw new BadRequestException("Unknown payment method '" + method
+                    + "'. Expected one of: MPESA, BANK or CARD.");
+        }
         Payment payment = Payment.builder()
                 .orderId(orderId)
-                .provider(provider)
+                .method(paymentMethod)
                 .reference(reference)
                 .amount(amount)
                 .status(PaymentStatus.PENDING)
@@ -51,14 +62,16 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", id));
         payment.setStatus(status);
-        if (status == PaymentStatus.COMPLETED) {
+        // paidAt records when the money actually arrived, so the escrow steps that
+        // follow PAID must not stamp it again.
+        if (status == PaymentStatus.PAID && payment.getPaidAt() == null) {
             payment.setPaidAt(LocalDateTime.now());
         }
         return paymentRepository.save(payment);
     }
 
     public PaymentResponse mapToResponse(Payment payment) {
-        return new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getProvider(),
+        return new PaymentResponse(payment.getId(), payment.getOrderId(), payment.getMethod(),
                 payment.getReference(), payment.getAmount(), payment.getStatus(),
                 payment.getPaidAt(), payment.getCreatedAt(), payment.getUpdatedAt());
     }
