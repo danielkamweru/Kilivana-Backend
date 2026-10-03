@@ -166,7 +166,7 @@ public class DevelopmentDataSeeder {
                 .orElseGet(() -> inspectorProfileRepository.save(InspectorProfile.builder()
                         .userId(user.getId())
                         .assignedArea("Nakuru")
-                        .status("ACTIVE")
+                        .status("active")
                         .build())));
     }
 

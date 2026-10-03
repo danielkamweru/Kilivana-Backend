@@ -28,6 +28,9 @@ public class InspectorProfile {
     @Column(columnDefinition = "TEXT")
     private String inspectorDetails;
 
+    /** What the inspector is qualified to check, e.g. "Tea & Coffee". */
+    private String specialization;
+
     @Column(nullable = false)
     private String assignedArea;
 

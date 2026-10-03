@@ -241,6 +241,7 @@ public class ProfileService {
         InspectorProfile profile = InspectorProfile.builder()
                 .userId(userId)
                 .inspectorDetails(request.getInspectorDetails())
+                .specialization(request.getSpecialization())
                 .assignedArea(request.getAssignedArea())
                 .status(request.getStatus())
                 .updatedAt(LocalDateTime.now())
@@ -255,6 +256,7 @@ public class ProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
         ensureRole(userId, UserRole.INSPECTOR);
         profile.setInspectorDetails(request.getInspectorDetails());
+        profile.setSpecialization(request.getSpecialization());
         profile.setAssignedArea(request.getAssignedArea());
         profile.setStatus(request.getStatus());
         profile.setUpdatedAt(LocalDateTime.now());

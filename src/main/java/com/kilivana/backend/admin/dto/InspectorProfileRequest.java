@@ -14,6 +14,9 @@ public class InspectorProfileRequest {
 
     private String inspectorDetails;
 
+    /** What the inspector is qualified to check, e.g. "Tea & Coffee". */
+    private String specialization;
+
     @NotBlank
     private String assignedArea;
 

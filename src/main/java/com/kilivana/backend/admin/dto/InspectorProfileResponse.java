@@ -15,6 +15,7 @@ public class InspectorProfileResponse {
     private Long id;
     private Long userId;
     private String inspectorDetails;
+    private String specialization;
     private String assignedArea;
     private String status;
     private LocalDateTime createdAt;
@@ -30,6 +31,7 @@ public class InspectorProfileResponse {
                 .id(profile.getId())
                 .userId(profile.getUserId())
                 .inspectorDetails(profile.getInspectorDetails())
+                .specialization(profile.getSpecialization())
                 .assignedArea(profile.getAssignedArea())
                 .status(profile.getStatus())
                 .createdAt(profile.getCreatedAt())
