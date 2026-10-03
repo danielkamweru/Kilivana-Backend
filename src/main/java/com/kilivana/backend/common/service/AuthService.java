@@ -14,6 +14,7 @@ import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.UnauthorizedException;
 import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.service.KenyaCounty;
 import com.kilivana.backend.security.JwtProperties;
 import com.kilivana.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -51,7 +52,7 @@ public class AuthService {
                 .email(email)
                 .phone(phone)
                 .username(request.getUsername())
-                .region(request.getRegion())
+                .region(normaliseRegion(request.getRegion()))
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .status(UserStatus.ACTIVE)
@@ -124,6 +125,22 @@ public class AuthService {
 
     private static String normalizePhone(String phone) {
         return phone == null ? null : phone.trim();
+    }
+
+    /**
+     * The registration screen offers the 47 Kenyan counties, so a
+     * region that is not one of them is refused rather than stored
+     * in a spelling the screen will never send again.
+     */
+    private static String normaliseRegion(String region) {
+        if (region == null) {
+            return null;
+        }
+        String county = KenyaCounty.normalise(region);
+        if (county == null) {
+            throw new BadRequestException("Region must be one of the 47 Kenyan counties");
+        }
+        return county;
     }
 
     @Transactional

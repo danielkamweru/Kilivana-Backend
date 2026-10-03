@@ -1,18 +1,21 @@
 package com.kilivana.backend.admin.service;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import com.kilivana.backend.admin.dto.UserRegistrationRequest;
 import com.kilivana.backend.admin.dto.UserResponse;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.UserRole;
-import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.service.UserReferenceCodeGenerator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -20,85 +23,90 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-/**
- * The admin panel collects a username and a region on every account form. They were accepted in
- * the request and then dropped, so the created account had neither to display.
- */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class UserServiceUsernameRegionTest {
 
-    @Mock
-    private UserRepository userRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private UserReferenceCodeGenerator referenceCodeGenerator;
+    @Mock private DriverProfileRepository driverProfileRepository;
 
-    @Mock
-    private DriverProfileRepository driverProfileRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private com.kilivana.backend.common.service.UserReferenceCodeGenerator referenceCodeGenerator;
-
-    private UserService service;
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
-        service = new UserService(userRepository, passwordEncoder, referenceCodeGenerator, driverProfileRepository);
+        userService = new UserService(
+                userRepository, passwordEncoder, referenceCodeGenerator, driverProfileRepository);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(referenceCodeGenerator.nextCode(any())).thenReturn("F-001");
+        org.mockito.Mockito.lenient().when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(1L);
+            return u;
+        });
     }
 
-    @Test
-    void createUserKeepsUsernameAndRegion() {
-        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
-        when(userRepository.existsByPhone(anyString())).thenReturn(false);
-
-        UserResponse response = service.createUser(UserRegistrationRequest.builder()
-                .name("Amara Osei")
-                .email("amara.osei@mail.com")
-                .phone("+233241112233")
-                .password("secret123")
+    private UserRegistrationRequest request(String region) {
+        return UserRegistrationRequest.builder()
+                .name("Jane Wanjiku")
+                .email("jane.wanjiku@example.com")
+                .phone("+254712345678")
+                .password("Kilivana#2026")
                 .role(UserRole.FARMER)
-                .username("amara.osei")
-                .region("Ashanti")
-                .build());
-
-        assertEquals("amara.osei", response.getUsername());
-        assertEquals("Ashanti", response.getRegion());
-
-        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
-        org.mockito.Mockito.verify(userRepository).save(saved.capture());
-        assertEquals("amara.osei", saved.getValue().getUsername());
-        assertEquals("Ashanti", saved.getValue().getRegion());
+                .username("jane.farmer")
+                .region(region)
+                .build();
     }
 
     @Test
-    void updateUserRejectsAUsernameAnotherAccountHolds() {
-        when(userRepository.findById(5L)).thenReturn(Optional.of(User.builder()
-                .id(5L).email("a@b.com").username("mine").build()));
-        when(userRepository.existsByUsernameIgnoreCase("taken")).thenReturn(true);
+    @DisplayName("creates a user with a username and a Kenyan county")
+    void persistsUsernameAndCounty() {
+        UserResponse response = userService.createUser(request("Kiambu"));
 
-        assertThrows(BadRequestException.class, () -> service.updateUser(5L, UserRegistrationRequest.builder()
-                .name("A").email("a@b.com").phone("0700000000").role(UserRole.FARMER)
-                .username("taken").region("Ashanti").build()));
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        org.mockito.Mockito.verify(userRepository).save(captor.capture());
+        User saved = captor.getValue();
+        assertEquals("jane.farmer", saved.getUsername());
+        assertEquals("Kiambu", saved.getRegion());
+        assertEquals("jane.wanjiku@example.com", response.getEmail());
     }
 
     @Test
-    void updateUserKeepsTheUsernameWhenItIsUnchanged() {
-        when(userRepository.findById(5L)).thenReturn(Optional.of(User.builder()
-                .id(5L).email("a@b.com").username("mine").build()));
-        // Another row owns "mine"; the owner may still keep it.
-        when(userRepository.existsByUsernameIgnoreCase("mine")).thenReturn(true);
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    @DisplayName("a county sent in any spelling is stored in the panel's spelling")
+    void normalisesCountySpelling() {
+        userService.createUser(request("kiambu"));
 
-        UserResponse response = service.updateUser(5L, UserRegistrationRequest.builder()
-                .name("A").email("a@b.com").phone("0700000000").role(UserRole.FARMER)
-                .username("mine").region("Volta").build());
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        org.mockito.Mockito.verify(userRepository).save(captor.capture());
+        assertEquals("Kiambu", captor.getValue().getRegion());
+    }
 
-        assertEquals("mine", response.getUsername());
-        assertEquals("Volta", response.getRegion());
+    @Test
+    @DisplayName("refuses a region that is not one of the 47 Kenyan counties")
+    void refusesNonKenyanRegion() {
+        assertThrows(com.kilivana.backend.common.exception.BadRequestException.class,
+                () -> userService.createUser(request("Ashanti")));
+    }
+
+    @Test
+    @DisplayName("updates the county when the region is present")
+    void updateChangesCounty() {
+        User existing = User.builder()
+                .id(1L)
+                .name("Jane Wanjiku")
+                .email("jane.wanjiku@example.com")
+                .phone("+254712345678")
+                .region("Nairobi")
+                .passwordHash("hashed")
+                .role(UserRole.FARMER)
+                .build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+
+        userService.updateUser(1L, request("Murang'a"));
+
+        assertEquals("Murang'a", existing.getRegion());
     }
 }

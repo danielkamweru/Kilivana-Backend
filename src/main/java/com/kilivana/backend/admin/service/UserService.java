@@ -10,6 +10,7 @@ import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.common.service.KenyaCounty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -46,7 +47,7 @@ public class UserService {
                 // Both of these were accepted in the request and then dropped, so an account
                 // created from the admin panel arrived with no username or region to display.
                 .username(request.getUsername() == null ? null : request.getUsername().trim())
-                .region(request.getRegion())
+                .region(normaliseRegion(request.getRegion()))
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .status(UserStatus.ACTIVE)
@@ -99,7 +100,7 @@ public class UserService {
             user.setUsername(username);
         }
         if (request.getRegion() != null) {
-            user.setRegion(request.getRegion());
+            user.setRegion(normaliseRegion(request.getRegion()));
         }
         if (!user.getEmail().equalsIgnoreCase(email) && userRepository.existsByEmailIgnoreCase(email)) {
             throw new BadRequestException("Email already exists");
@@ -147,6 +148,22 @@ public class UserService {
 
     private static String normalizePhone(String phone) {
         return phone == null ? null : phone.trim();
+    }
+
+    /**
+     * The panel offers the 47 Kenyan counties, so a region that is
+     * not one of them is refused rather than stored in a spelling
+     * the panel will never show again.
+     */
+    private static String normaliseRegion(String region) {
+        if (region == null) {
+            return null;
+        }
+        String county = KenyaCounty.normalise(region);
+        if (county == null) {
+            throw new BadRequestException("Region must be one of the 47 Kenyan counties");
+        }
+        return county;
     }
 
     private UserResponse mapToResponse(User user) {
