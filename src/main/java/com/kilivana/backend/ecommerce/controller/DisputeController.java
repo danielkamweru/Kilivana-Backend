@@ -1,6 +1,7 @@
 package com.kilivana.backend.ecommerce.controller;
 
 import com.kilivana.backend.ecommerce.dto.DisputeRequest;
+import com.kilivana.backend.ecommerce.dto.DisputeResolutionRequest;
 import com.kilivana.backend.ecommerce.dto.DisputeResponse;
 import com.kilivana.backend.ecommerce.service.DisputeService;
 import com.kilivana.backend.common.dto.ApiResponse;
@@ -14,9 +15,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+/**
+ * Disputes live beside orders and payments, so the panel's short
+ * resource paths ({@code /api/v1/disputes}) answer alongside the
+ * module-scoped ones.
+ */
 @Tag(name = "E-Commerce · Orders", description = "Order placement, status transitions, timeline and disputes")
 @RestController
-@RequestMapping("/api/v1/ecommerce/disputes")
+@RequestMapping({"/api/v1/ecommerce/disputes", "/api/v1/disputes"})
 @RequiredArgsConstructor
 public class DisputeController {
 
@@ -53,8 +59,9 @@ public class DisputeController {
     }
 
     @PutMapping("/{id}/resolution")
-    public ResponseEntity<ApiResponse<DisputeResponse>> resolveDispute(@PathVariable Long id, @RequestBody String resolution) {
-        DisputeResponse dispute = disputeService.resolveDispute(id, resolution);
+    public ResponseEntity<ApiResponse<DisputeResponse>> resolveDispute(
+            @PathVariable Long id, @RequestBody DisputeResolutionRequest request) {
+        DisputeResponse dispute = disputeService.resolveDispute(id, request);
         return ResponseEntity.ok(ApiResponse.success(dispute));
     }
 }
