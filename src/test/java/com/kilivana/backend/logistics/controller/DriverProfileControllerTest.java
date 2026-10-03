@@ -201,9 +201,10 @@ class DriverProfileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.vehicleType").value("VAN"))
-                .andExpect(jsonPath("$.data.availabilityStatus").value("ON_DELIVERY"))
-                .andExpect(jsonPath("$.data.kycStatus").value("VERIFIED"));
+                // The response speaks the panel's own spelling back.
+                .andExpect(jsonPath("$.data.vehicleType").value("Van"))
+                .andExpect(jsonPath("$.data.availabilityStatus").value("on-delivery"))
+                .andExpect(jsonPath("$.data.kycStatus").value("verified"));
     }
 
     @Test

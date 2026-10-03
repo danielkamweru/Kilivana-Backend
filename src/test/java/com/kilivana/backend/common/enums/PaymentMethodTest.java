@@ -65,7 +65,6 @@ class PaymentMethodTest {
         assertTrue(PaymentStatus.SETTLED.isRefundable());
 
         assertFalse(PaymentStatus.PENDING.isRefundable());
-        assertFalse(PaymentStatus.FAILED.isRefundable());
         assertFalse(PaymentStatus.REFUNDED.isRefundable());
     }
 
@@ -73,7 +72,7 @@ class PaymentMethodTest {
     @DisplayName("the status set is exactly what the panel renders")
     void statusSetMatchesThePanel() {
         assertEquals(
-                java.util.Set.of("PENDING", "PAID", "HELD", "SETTLED", "FAILED", "REFUNDED"),
+                java.util.Set.of("PENDING", "PAID", "HELD", "SETTLED", "REFUNDED"),
                 java.util.Arrays.stream(PaymentStatus.values()).map(Enum::name)
                         .collect(java.util.stream.Collectors.toSet()));
     }

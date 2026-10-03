@@ -1,5 +1,7 @@
 package com.kilivana.backend.common.enums;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * How money moves, as the admin panel names it.
  *
@@ -29,5 +31,11 @@ public enum PaymentMethod {
             case "CARD", "CREDIT_CARD", "DEBIT_CARD", "VISA", "MASTERCARD" -> CARD;
             default -> null;
         };
+    }
+
+    /** The spelling the panel sends and expects back, e.g. {@code mpesa}. */
+    @JsonValue
+    public String wire() {
+        return name().toLowerCase(java.util.Locale.ROOT);
     }
 }

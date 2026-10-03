@@ -1,13 +1,17 @@
 package com.kilivana.backend.common.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
  * Where a payment sits between the buyer paying and the seller being settled.
  *
  * <p>HELD and SETTLED are what the admin panel shows and they are not cosmetic:
  * HELD means the money is in escrow awaiting delivery, SETTLED means it has been
  * released to the seller. Folding those into COMPLETED would lose the escrow
- * step, so they stay separate. PROCESSING and PARTIALLY_REFUNDED were dropped
- * because nothing set them and the panel has no display for either.
+ * step, so they stay separate. PROCESSING, PARTIALLY_REFUNDED and FAILED were
+ * dropped because nothing set them, the panel has no display for any of them, and
+ * the panel's own union has no FAILED either.
  */
 public enum PaymentStatus {
     /** Initiated, not yet confirmed by the provider. */
@@ -18,8 +22,18 @@ public enum PaymentStatus {
     HELD,
     /** Released to the seller after delivery. */
     SETTLED,
-    FAILED,
     REFUNDED;
+
+    @JsonCreator
+    public static PaymentStatus from(String value) {
+        return EnumNameMatcher.match(PaymentStatus.class, value, "payment status");
+    }
+
+    /** The spelling the panel sends and expects back, e.g. {@code settled}. */
+    @JsonValue
+    public String wire() {
+        return name().toLowerCase(java.util.Locale.ROOT);
+    }
 
     public boolean isRefundable() {
         return this == PAID || this == HELD || this == SETTLED;

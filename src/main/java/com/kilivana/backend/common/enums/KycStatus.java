@@ -1,6 +1,7 @@
 package com.kilivana.backend.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * Whether a driver's licence and national ID have been checked by an administrator.
@@ -16,5 +17,11 @@ public enum KycStatus {
     @JsonCreator
     public static KycStatus from(String value) {
         return EnumNameMatcher.match(KycStatus.class, value, "KYC status");
+    }
+
+    /** The spelling the panel sends and expects back, e.g. {@code verified}. */
+    @JsonValue
+    public String wire() {
+        return name().toLowerCase(java.util.Locale.ROOT);
     }
 }

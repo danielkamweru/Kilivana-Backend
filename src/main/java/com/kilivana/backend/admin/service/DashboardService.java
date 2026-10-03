@@ -34,9 +34,11 @@ public class DashboardService {
     private static final List<OrderStatus> SETTLED_STATUSES =
             List.of(OrderStatus.DELIVERED, OrderStatus.COMPLETED);
 
+    /** Everything the panel has not closed, disputes included: a disputed
+     *  order is still open, because its money is held rather than gone. */
     private static final List<OrderStatus> ACTIVE_STATUSES = List.of(
-            OrderStatus.PLACED, OrderStatus.CONFIRMED, OrderStatus.PREPARING,
-            OrderStatus.READY_FOR_PICKUP, OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT);
+            OrderStatus.PLACED, OrderStatus.CONFIRMED, OrderStatus.IN_TRANSIT,
+            OrderStatus.DELIVERED, OrderStatus.DISPUTED);
 
     private static final List<DisputeStatus> OPEN_DISPUTE_STATUSES =
             List.of(DisputeStatus.OPEN, DisputeStatus.IN_PROGRESS);
