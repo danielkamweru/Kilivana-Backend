@@ -11,12 +11,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     
     List<Product> findBySellerId(Long sellerId);
-    
+
+    /** Stable identity for a seeded listing: its name within one seller's catalogue. */
+    Optional<Product> findByNameAndSellerId(String name, Long sellerId);
+
     List<Product> findBySellerIdAndSellerType(Long sellerId, SellerType sellerType);
     
     List<Product> findByCategoryId(Long categoryId);
