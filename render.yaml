@@ -50,6 +50,12 @@ services:
       # anyone but you uses the deployment.
       - key: SEED_DEMO_PASSWORD
         value: "Kilivana#2026"
+      # Keep the seeded accounts' passwords equal to the values
+      # above, so a redeploy always leaves the documented logins
+      # working. Intended for the demo deployment; leave false in
+      # production.
+      - key: SEED_ENFORCE_PASSWORDS
+        value: "true"
       # The Render filesystem is ephemeral, so uploaded images live in
       # PostgreSQL. Switch to cloudinary only when the CLOUDINARY_*
       # secrets are configured.

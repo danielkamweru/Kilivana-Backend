@@ -120,6 +120,16 @@ public class SeedDataRunner {
     @Value("${app.seed.demo-password:Kilivana#2026}")
     private String demoPassword;
 
+    /**
+     * When true, a seeded account whose password no longer matches
+     * the configured value is reset to it. Off by default so a
+     * production deploy never silently changes a password; turn it
+     * on for a demo environment where the seeded accounts are the
+     * intended logins and must stay reproducible.
+     */
+    @Value("${app.seed.enforce-passwords:false}")
+    private boolean enforcePasswords;
+
     /** Stable identity of every seeded account. */
     private static final String FARMER_EMAIL = "farmer@kilivana.demo";
     private static final String BUYER_EMAIL = "buyer@kilivana.demo";
@@ -155,19 +165,27 @@ public class SeedDataRunner {
     /**
      * Creates an account when no account with that email exists. An
      * existing account is left exactly as it is, so a seed run never
-     * touches a real user. The result reports whether this run created
-     * the account, so the summary counts only real insertions.
+     * touches a real user - unless password enforcement is on, in
+     * which case a seeded account whose password no longer matches
+     * the configured value is reset to it. The result reports whether
+     * this run created the account, so the summary counts only real
+     * insertions.
      */
-    private SeededUser findOrCreateUser(String email, String name, String phone, UserRole role) {
+    private SeededUser findOrCreateUser(String email, String name, String phone, UserRole role, String password) {
         Optional<User> existing = userRepository.findByEmailIgnoreCase(email);
         if (existing.isPresent()) {
-            return new SeededUser(existing.get(), false);
+            User user = existing.get();
+            if (enforcePasswords && !passwordEncoder.matches(password, user.getPasswordHash())) {
+                user.setPasswordHash(passwordEncoder.encode(password));
+                userRepository.save(user);
+            }
+            return new SeededUser(user, false);
         }
         User user = User.builder()
                 .name(name)
                 .email(email)
                 .phone(phone)
-                .passwordHash(passwordEncoder.encode(demoPassword))
+                .passwordHash(passwordEncoder.encode(password))
                 .role(role)
                 .status(com.kilivana.backend.common.enums.UserStatus.ACTIVE)
                 .verificationStatus(com.kilivana.backend.common.enums.VerificationStatus.NOT_REQUIRED)
@@ -197,7 +215,7 @@ public class SeedDataRunner {
         // The initial administrator. Without SEED_ADMIN_PASSWORD there is
         // nothing safe to put in the account, so it is simply not created.
         if (!adminPassword.isBlank()) {
-            SeededUser admin = findOrCreateUser(adminEmail, "Kilivana Admin", "+254700000001", UserRole.ADMIN);
+            SeededUser admin = findOrCreateUser(adminEmail, "Kilivana Admin", "+254700000001", UserRole.ADMIN, adminPassword);
             if (admin.created()) {
                 created++;
             }
@@ -205,11 +223,11 @@ public class SeedDataRunner {
             log.warn("SEED_ADMIN_PASSWORD is not set; the administrator account was not seeded.");
         }
 
-        SeededUser farmer = findOrCreateUser(FARMER_EMAIL, "Wanjiru Mwangi", "+254712345601", UserRole.FARMER);
-        SeededUser buyer = findOrCreateUser(BUYER_EMAIL, "Nia Wambui", "+254712345602", UserRole.BUYER);
-        SeededUser supplier = findOrCreateUser(SUPPLIER_EMAIL, "Kamau Maina", "+254712345603", UserRole.SUPPLIER);
-        SeededUser driver = findOrCreateUser(DRIVER_EMAIL, "Kiprop Saina", "+254712345604", UserRole.DRIVER);
-        SeededUser inspector = findOrCreateUser(INSPECTOR_EMAIL, "Grace Achieng", "+254712345605", UserRole.INSPECTOR);
+        SeededUser farmer = findOrCreateUser(FARMER_EMAIL, "Wanjiru Mwangi", "+254712345601", UserRole.FARMER, demoPassword);
+        SeededUser buyer = findOrCreateUser(BUYER_EMAIL, "Nia Wambui", "+254712345602", UserRole.BUYER, demoPassword);
+        SeededUser supplier = findOrCreateUser(SUPPLIER_EMAIL, "Kamau Maina", "+254712345603", UserRole.SUPPLIER, demoPassword);
+        SeededUser driver = findOrCreateUser(DRIVER_EMAIL, "Kiprop Saina", "+254712345604", UserRole.DRIVER, demoPassword);
+        SeededUser inspector = findOrCreateUser(INSPECTOR_EMAIL, "Grace Achieng", "+254712345605", UserRole.INSPECTOR, demoPassword);
         created += SeededUser.count(farmer, buyer, supplier, driver, inspector);
 
         User farmerUser = farmer.user();

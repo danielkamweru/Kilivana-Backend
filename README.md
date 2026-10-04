@@ -79,6 +79,7 @@ The backend will run on:
 | `SEED_ADMIN_EMAIL` | `admin@kilivana.com` | Email of the seeded initial administrator. |
 | `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it in the Render dashboard as a secret. |
 | `SEED_DEMO_PASSWORD` | `Kilivana#2026` | Shared password of the seeded demo accounts. Change it before anyone else uses the deployment. |
+| `SEED_ENFORCE_PASSWORDS` | `false` | Reset a seeded account's password to the configured value when it no longer matches. Use for a demo environment whose seeded accounts are the intended logins; leave `false` in production. |
 | `STORAGE_PROVIDER` | `database` | Image storage: `local`, `database`, or `cloudinary`. The Render filesystem is ephemeral, so `database` (the default) is the right choice there. |
 | `STORAGE_FALLBACK_PROVIDER` | `database` | Provider used when the primary one fails. `none` fails hard instead. |
 | `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Disk directory for the `local` provider. |
