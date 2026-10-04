@@ -10,10 +10,9 @@
 services:
   - type: web
     name: kilivana-backend
-    env: java
-    region: nairobi
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/*.jar
+    # Built from the Dockerfile in the repository root.
+    env: docker
+    region: oregon
     healthCheckPath: /api/v1/health
     plan: free
     envVars:
