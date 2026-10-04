@@ -1,0 +1,64 @@
+# Render deployment for the Kilivana backend.
+#
+# The service is a plain Java/Spring Boot application: Render builds the
+# JAR with Maven and runs it. PostgreSQL is a separate Render service;
+# Render injects its connection string as DATABASE_URL, which the
+# application translates into the datasource settings at startup.
+#
+# See README.md for the full deployment walkthrough and every
+# environment variable.
+services:
+  - type: web
+    name: kilivana-backend
+    env: java
+    region: nairobi
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
+    healthCheckPath: /api/v1/health
+    plan: free
+    envVars:
+      # The attached PostgreSQL service owns this value; it is a full
+      # postgres:// URL that the app translates at startup.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kilivana-postgres
+          property: databaseUrl
+      # Stable signing key so issued JWTs survive a restart. Render
+      # generates and stores the value.
+      - key: JWT_SECRET
+        generateValue: true
+      # Finite token lifetime in a shared environment.
+      - key: JWT_EXPIRATION
+        value: "86400000"
+      # The separately deployed KilivanaAdmin2 origin. Replace with the
+      # frontend's actual Render (or other) hostname.
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://kilivana-admin.onrender.com
+      # Absolute URL the API advertises in Swagger and image links.
+      - key: PUBLIC_BASE_URL
+        value: https://kilivana-backend.onrender.com
+      # Populate the database with the Kenyan demo data on first boot.
+      # Set to false once the data you want is in place.
+      - key: SEED_DATA
+        value: "true"
+      - key: SEED_ADMIN_EMAIL
+        value: admin@kilivana.com
+      # REQUIRED: the initial administrator's password. Set it in the
+      # Render dashboard as a secret - no password is committed here.
+      # - key: SEED_ADMIN_PASSWORD
+      #   fromSecret: kilivana-admin-password
+      # Demo (non-admin) accounts share this password; change it before
+      # anyone but you uses the deployment.
+      - key: SEED_DEMO_PASSWORD
+        value: "Kilivana#2026"
+      # The Render filesystem is ephemeral, so uploaded images live in
+      # PostgreSQL. Switch to cloudinary only when the CLOUDINARY_*
+      # secrets are configured.
+      - key: STORAGE_PROVIDER
+        value: database
+      # Swagger stays on so the deployment documents itself; turn it off
+      # with a false value when it is no longer wanted.
+      - key: SWAGGER_ENABLED
+        value: "true"
+      - key: API_DOCS_ENABLED
+        value: "true"

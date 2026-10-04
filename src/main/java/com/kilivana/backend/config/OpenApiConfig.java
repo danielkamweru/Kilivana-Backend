@@ -70,22 +70,21 @@ public class OpenApiConfig {
     }
 
     /**
-     * Advertises the tunnel origin when one is configured so that Swagger "Try it out"
-     * calls the public URL instead of a stale localhost address. Never hard-codes the
-     * ngrok hostname, because free tunnels are reassigned on every restart.
+     * Advertises the deployed origin when one is configured so that Swagger
+     * "Try it out" calls the public URL instead of the host the documentation
+     * happens to be served from. When no origin is configured no server is
+     * listed, and the UI calls whatever host the browser is on - which is
+     * exactly what a deployment on Render wants. Never hard-codes a tunnel
+     * hostname, because free tunnels are reassigned on every restart.
      */
     private List<Server> buildServers() {
-        Server local = new Server()
-                .url("http://localhost:8080")
-                .description("Local development server");
-
         if (publicBaseUrl == null || publicBaseUrl.isBlank()) {
-            return List.of(local);
+            return List.of();
         }
 
         Server remote = new Server()
                 .url(publicBaseUrl)
-                .description("Public tunnel");
-        return List.of(local, remote);
+                .description("Deployed API");
+        return List.of(remote);
     }
 }

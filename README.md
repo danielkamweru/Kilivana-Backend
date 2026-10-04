@@ -1,6 +1,6 @@
 # Kilivana Backend
 
-Kilivana Backend is the Spring Boot API for the Kilivana platform, covering admin operations, e-commerce features, and logistics workflows. The application exposes REST endpoints, Swagger documentation, and health monitoring for local development and public tunneling via ngrok.
+Kilivana Backend is the Spring Boot API for the Kilivana platform, covering admin operations, e-commerce features, and logistics workflows. The application exposes REST endpoints, OpenAPI documentation, and health monitoring for local development and deployment on Render.
 
 ## Tech Stack
 
@@ -32,6 +32,8 @@ Before starting the app, make sure you have:
 
 ## Database Setup
 
+The datasource is read from `DB_URL`, `DB_USERNAME` and `DB_PASSWORD`, or — on Render — from the platform's `DATABASE_URL`, which `DatabaseUrlEnvironmentPostProcessor` translates into the datasource settings at startup. `DATABASE_URL` wins whenever it is present.
+
 Create the database and user locally if they do not already exist:
 
 ```sql
@@ -39,47 +41,52 @@ CREATE DATABASE kilivana;
 GRANT ALL PRIVILEGES ON DATABASE kilivana TO kilivana_user;
 ```
 
-Then confirm the app configuration in `src/main/resources/application.properties`:
+A development instance also runs as a Docker container on port 5433 (`docker start kilivana-postgres`; user `kilivana_user`, database `kilivana`). The defaults in `src/main/resources/application.properties` are:
 
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/kilivana
-spring.datasource.username=kilivana_user
-
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/kilivana}
+spring.datasource.username=${DB_USERNAME:}
+spring.datasource.password=${DB_PASSWORD:}
 ```
 
 ## Run the Application
 
-From the project root:
+From the project root (the Maven wrapper downloads the matching Maven version):
 
 ```bash
-mvn clean install
-CLOUDINARY_CLOUD_NAME=your_cloud_name \
-CLOUDINARY_API_KEY=your_api_key \
-CLOUDINARY_API_SECRET=your_api_secret \
-mvn spring-boot:run
+./mvnw clean install
+./mvnw spring-boot:run
 ```
 
 The backend will run on:
 
 - Local: http://localhost:8080
-- Health check: http://localhost:8080/actuator/health
+- Health check: http://localhost:8080/api/v1/health
 
 ### Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `JWT_SECRET` | *(generated per startup)* | HS512 signing key. **Set this in any shared environment** — if unset, every restart invalidates all issued tokens. |
+| `PORT` | `8080` | HTTP port. Render injects its own value. |
+| `DATABASE_URL` | *(empty)* | Full `postgres://user:password@host:port/database` URL, set by Render's attached PostgreSQL service. Takes precedence over `DB_URL`/`DB_USERNAME`/`DB_PASSWORD`. |
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | local defaults | Datasource settings for local development. |
+| `JWT_SECRET` | *(empty)* | HS512 signing key. **Set this in any shared environment** — if unset, every restart invalidates all issued tokens. |
 | `JWT_EXPIRATION` | `0` | Access-token lifetime in ms. `0` means no expiry. |
 | `JWT_REFRESH_EXPIRATION` | `0` | Refresh-token lifetime in ms. |
-| `PUBLIC_BASE_URL` | *(empty)* | Public tunnel URL, so `/api-docs` does not advertise `http://localhost:8080` over HTTPS. |
-| `DEV_SEED_ENABLED` | `true` | Seeds development accounts. Never enable in a deployment. |
-| `CLOUDINARY_*` | *(empty)* | Image upload provider. |
+| `CORS_ALLOWED_ORIGINS` | local dev origins | Comma-separated browser origins; wildcard patterns allowed. Set it to the KilivanaAdmin2 origin for a deployment. |
+| `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs and the OpenAPI server entry, e.g. `https://kilivana-backend.onrender.com`. |
+| `SEED_DATA` | `false` | Populates a fresh database with Kenyan demo data on startup. Idempotent: a restart never duplicates or overwrites records. |
+| `SEED_ADMIN_EMAIL` | `admin@kilivana.com` | Email of the seeded initial administrator. |
+| `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it in the Render dashboard as a secret. |
+| `SEED_DEMO_PASSWORD` | `Kilivana#2026` | Shared password of the seeded demo accounts. Change it before anyone else uses the deployment. |
+| `STORAGE_PROVIDER` | `database` | Image storage: `local`, `database`, or `cloudinary`. The Render filesystem is ephemeral, so `database` (the default) is the right choice there. |
+| `STORAGE_FALLBACK_PROVIDER` | `database` | Provider used when the primary one fails. `none` fails hard instead. |
+| `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Disk directory for the `local` provider. |
+| `CLOUDINARY_*` | *(empty)* | Image upload credentials, used only when `STORAGE_PROVIDER=cloudinary`. |
 | `SENDGRID_ENABLED` | `false` | Master switch for transactional email. |
 | `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
-| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins, wildcard patterns allowed. The default allows any origin so any dev server, LAN address or reassigned ngrok tunnel works; narrow it to a fixed list for a deployment. |
-| `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs, e.g. `https://either-juvenile-progeny.ngrok-free.dev`. Required when the app is reached through a tunnel, because Android blocks plain `http://` image URLs. |
 
 ### Image uploads
 
@@ -87,8 +94,8 @@ The backend will run on:
 
 | Value | Behaviour |
 | --- | --- |
-| `local` *(default)* | Writes to `app.storage.local.directory` (`./uploads`) and serves `{PUBLIC_BASE_URL}/uploads/...`. |
-| `database` | Stores the bytes as `bytea` in `stored_images` and serves `{PUBLIC_BASE_URL}/api/v1/images/{publicId}`. |
+| `local` | Writes to `app.storage.local.directory` (`./uploads`) and serves `{PUBLIC_BASE_URL}/uploads/...`. |
+| `database` *(default)* | Stores the bytes as `bytea` in `stored_images` and serves `{PUBLIC_BASE_URL}/api/v1/images/{publicId}`. |
 | `cloudinary` | Uploads to Cloudinary, which needs the three credentials below. |
 
 With `cloudinary`, a missing or failing Cloudinary account no longer breaks uploads: the image is
@@ -137,13 +144,12 @@ Swagger UI is available at:
 
 - Local: http://localhost:8080/swagger-ui/index.html
 - Local fallback: http://localhost:8080/swagger-ui.html
-- Public ngrok: https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
-- ngrok dev: https://either-juvenile-progeny.ngrok-free.dev
+- Deployed: https://kilivana-backend.onrender.com/swagger-ui/index.html
 
 API docs JSON is available at:
 
 - Local: http://localhost:8080/api-docs
-- Public ngrok: https://either-juvenile-progeny.ngrok-free.dev/api-docs
+- Deployed: https://kilivana-backend.onrender.com/api-docs
 
 ## API Contract Coverage
 
@@ -411,45 +417,39 @@ The API documentation is available at `http://localhost:8080/api-docs`, and the 
 
 ## Security and CORS
 
-The application is configured with Spring Security so the main public routes remain open while other endpoints stay protected. The following endpoints are allowed publicly:
+Spring Security protects every endpoint that is not listed below. Authentication uses a Bearer access token (`Authorization: Bearer <token>`); `/api/v1/admin/**` additionally requires the `ADMIN` role.
 
-- `/api/v1/**`
-- `/swagger-ui/**`
-- `/swagger-ui.html`
-- `/api-docs/**`
-- `/actuator/**`
+Public without a token:
 
-CORS is enabled for local frontend development and ngrok origins, including:
+- Auth: `POST /api/v1/auth/register`, `/login`, `/refresh`, `/forgot-password`, `/reset-password` (plus the `/api/auth/...` compatibility aliases)
+- Registration: `POST /api/v1/users`, `POST /api/users`
+- Reference data: `GET /api/v1/regions`, `GET /api/v1/regions/**`
+- Health: `GET /api/v1/health`, `GET /actuator/health`, `GET /actuator/info`
+- Images: `GET /uploads/**`, `GET /api/v1/images/**` (readable from `<img>` tags and mobile clients that cannot attach a token)
+- Documentation: `/swagger-ui/**`, `/api-docs/**`, `/v3/api-docs/**`
 
-- http://localhost:3000
-- http://localhost:5173
+CORS is configured from `CORS_ALLOWED_ORIGINS`; the local default is:
+
+- http://localhost:4200
 - http://localhost:8080
-- https://*.ngrok-free.dev
-- https://*.ngrok.app
+- http://127.0.0.1:4200
 
-## Ngrok Public Access
+## Render Deployment
 
-To expose the app publicly, start ngrok in the terminal:
+The repository ships a [`render.yaml`](render.yaml) blueprint: it builds the JAR with Maven, runs it on the port Render assigns, and attaches the PostgreSQL service's `DATABASE_URL` automatically.
 
-```bash
-ngrok http 8080
-```
+1. Push the repository to GitHub.
+2. In the Render dashboard, create a **Web Service** from this repository (or import `render.yaml` as a blueprint).
+3. Attach a **PostgreSQL** database to the service; Render injects `DATABASE_URL`.
+4. Set the remaining values in the service dashboard:
+   - `JWT_SECRET` — a long random string (Render can generate it)
+   - `SEED_ADMIN_PASSWORD` — the initial administrator's password (a secret)
+   - `SEED_DEMO_PASSWORD` — change the shared demo-account password
+   - `CORS_ALLOWED_ORIGINS` — the KilivanaAdmin2 origin
+   - `PUBLIC_BASE_URL` — the service's own URL
+5. The health check is `GET /api/v1/health`; Render polls it to mark the service live.
 
-The working public Swagger route is:
-
-- https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
-
-The working health route is:
-
-- https://either-juvenile-progeny.ngrok-free.dev/actuator/health
-
-If you see a browser warning or 403 page from ngrok, add this header in the browser request or API client:
-
-```http
-ngrok-skip-browser-warning: true
-```
-
-This is a browser-side warning from ngrok and not an application error.
+With `SEED_DATA=true` a fresh database is populated with Kenyan demo data on first boot. The seed is idempotent, so a restart or redeploy never duplicates or overwrites records; set `SEED_DATA=false` once the data you want is in place. Uploaded images default to `STORAGE_PROVIDER=database` because the Render filesystem is ephemeral.
 
 ## Development Notes
 
@@ -464,29 +464,29 @@ This is a browser-side warning from ngrok and not an application error.
 ### Common checks
 
 ```bash
-pg_isready -h localhost -p 5432
-psql -h localhost -p 5432 -U kilivana_user -d kilivana -c "select 1;"
-curl http://localhost:8080/actuator/health
+pg_isready -h localhost -p 5433
+psql -h localhost -p 5433 -U kilivana_user -d kilivana -c "select 1;"
+curl http://localhost:8080/api/v1/health
 ```
 
 ## Useful Commands
 
 ```bash
 # Exercise every API group against a running backend and print a pass/fail table.
-# Bash and curl only. Retries dropped ngrok connections so tunnel flakiness is not
+# Bash and curl only. Retries dropped connections so transient
 # reported as a broken endpoint.
 ./scripts/smoke-test.sh
-./scripts/smoke-test.sh https://either-juvenile-progeny.ngrok-free.dev
+./scripts/smoke-test.sh https://kilivana-backend.onrender.com
 ```
 
 Test credentials for every role and a per-endpoint verified-status table live in
 [`docs/API_TEST_CREDENTIALS.md`](docs/API_TEST_CREDENTIALS.md).
 
 ```bash
-mvn clean install
-mvn spring-boot:run
-mvn test
-mvn clean package
+./mvnw clean install
+./mvnw spring-boot:run
+./mvnw test
+./mvnw clean package
 ```
 
 ## Git Convention

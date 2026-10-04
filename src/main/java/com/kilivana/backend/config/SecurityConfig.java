@@ -36,6 +36,8 @@ public class SecurityConfig {
             "GET", "/favicon.ico",
             "GET", "/actuator/health",
             "GET", "/actuator/info",
+            // Render's health check hits the API path directly.
+            "GET", "/api/v1/health",
             // Uploaded images are referenced by URL from <img> tags and mobile clients,
             // which cannot attach a bearer token. Filenames are random, so the files are
             // safe to read without a token.
