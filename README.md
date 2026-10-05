@@ -189,11 +189,11 @@ Swagger UI is available at:
 API docs JSON is available at:
 
 - Local: http://localhost:8080/api-docs
-- Deployed: https://kilivana-backend.onrender.com/api-docs
+- Deployed: https://kilivana-backend-a44w.onrender.com/api-docs
 
 ## API Contract Coverage
 
-The backend keeps the existing `/api/v1/ecommerce/...` and admin routes and also exposes the documented canonical routes, including:
+The backend exposes the canonical `/api/v1/...` routes, including:
 
 - Authentication: register, login, logout, refresh, password recovery/reset, and current-user lookup
 - Users and profiles: user lookup, own-profile update, addresses, and farmer, buyer, supplier, inspector, and driver profile CRUD
@@ -247,7 +247,7 @@ Farmers and suppliers who create products own those products. Only the product o
 **Create a product with images:**
 
 ```http
-POST http://localhost:8080/api/v1/ecommerce/products
+POST http://localhost:8080/api/v1/products
 Authorization: Bearer <token>
 X-User-Id: <user-id>
 Content-Type: multipart/form-data
@@ -261,7 +261,7 @@ The `sellerId` in the response is derived from the authenticated `X-User-Id` hea
 **Upload an additional image:**
 
 ```http
-POST http://localhost:8080/api/v1/ecommerce/products/{productId}/images
+POST http://localhost:8080/api/v1/products/{productId}/images
 X-User-Id: <user-id> (must be product owner or ADMIN)
 Content-Type: multipart/form-data
 
@@ -273,13 +273,13 @@ isPrimary=false
 **Get product images:**
 
 ```http
-GET http://localhost:8080/api/v1/ecommerce/products/{productId}/images
+GET http://localhost:8080/api/v1/products/{productId}/images
 ```
 
 **Replace an image:**
 
 ```http
-PUT http://localhost:8080/api/v1/ecommerce/products/{productId}/images/{imageId}
+PUT http://localhost:8080/api/v1/products/{productId}/images/{imageId}
 X-User-Id: <user-id (owner or ADMIN)>
 Content-Type: multipart/form-data
 
@@ -289,14 +289,14 @@ image=@new-photo.png
 **Set primary image:**
 
 ```http
-PUT http://localhost:8080/api/v1/ecommerce/products/{productId}/images/{imageId}/primary
+PUT http://localhost:8080/api/v1/products/{productId}/images/{imageId}/primary
 X-User-Id: <user-id (owner or ADMIN)>
 ```
 
 **Reorder images:**
 
 ```http
-PUT http://localhost:8080/api/v1/ecommerce/products/{productId}/images/reorder
+PUT http://localhost:8080/api/v1/products/{productId}/images/reorder
 X-User-Id: <user-id (owner or ADMIN)>
 Content-Type: application/json
 
@@ -306,7 +306,7 @@ Content-Type: application/json
 **Delete an image (removes from Cloudinary and PostgreSQL):**
 
 ```http
-DELETE http://localhost:8080/api/v1/ecommerce/products/{productId}/images/{imageId}
+DELETE http://localhost:8080/api/v1/products/{productId}/images/{imageId}
 X-User-Id: <user-id (owner or ADMIN)>
 ```
 
