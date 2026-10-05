@@ -29,13 +29,17 @@ services:
       # Finite token lifetime in a shared environment.
       - key: JWT_EXPIRATION
         value: "86400000"
-      # The separately deployed KilivanaAdmin2 origin. Replace with the
-      # frontend's actual Render (or other) hostname.
+      # Browser clients may call the API from any origin. Safe
+      # here because the app uses allowed origin patterns, which
+      # support "*" together with credentials. Restrict to a
+      # comma-separated list of frontend hostnames for a locked
+      # deployment. Native clients (Android/iOS) ignore CORS.
       - key: CORS_ALLOWED_ORIGINS
-        value: https://kilivana-admin.onrender.com
+        value: "*"
       # Absolute URL the API advertises in Swagger and image links.
+      # This is the service's live hostname on Render.
       - key: PUBLIC_BASE_URL
-        value: https://kilivana-backend.onrender.com
+        value: https://kilivana-backend-a44w.onrender.com
       # Populate the database with the Kenyan demo data on first boot.
       # Set to false once the data you want is in place.
       - key: SEED_DATA
