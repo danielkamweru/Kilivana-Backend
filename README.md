@@ -58,10 +58,49 @@ From the project root (the Maven wrapper downloads the matching Maven version):
 ./mvnw spring-boot:run
 ```
 
+To run against the local Docker database and seed the demo accounts
+(including the administrator) on a fresh database, set the seed variables:
+
+```bash
+docker start kilivana-postgres
+DB_URL=jdbc:postgresql://localhost:5433/kilivana \
+DB_USERNAME=kilivana_user \
+DB_PASSWORD='daniel kamweru' \
+SEED_DATA=true \
+SEED_ADMIN_PASSWORD='Admin@123' \
+SEED_DEMO_PASSWORD='Kilivana#2026' \
+SEED_ENFORCE_PASSWORDS=true \
+./mvnw spring-boot:run
+```
+
 The backend will run on:
 
 - Local: http://localhost:8080
 - Health check: http://localhost:8080/api/v1/health
+
+### Seeded accounts
+
+With `SEED_DATA=true` the seeder creates these accounts on every boot
+(idempotent; `SEED_ENFORCE_PASSWORDS=true` keeps their passwords equal to
+the configured values). The same accounts work locally and on the Render
+deployment:
+
+| Role | Email | Password |
+|---|---|---|
+| `ADMIN` | `admin@kilivana.com` | whatever `SEED_ADMIN_PASSWORD` is set to (`Admin@123` in `render.yaml`) |
+| `FARMER` | `farmer@kilivana.demo` | `Kilivana#2026` |
+| `BUYER` | `buyer@kilivana.demo` | `Kilivana#2026` |
+| `SUPPLIER` | `supplier@kilivana.demo` | `Kilivana#2026` |
+| `DRIVER` | `driver@kilivana.demo` | `Kilivana#2026` |
+| `INSPECTOR` | `inspector@kilivana.demo` | `Kilivana#2026` |
+
+Login:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@kilivana.com","password":"Admin@123"}'
+```
 
 ### Environment variables
 
@@ -73,11 +112,11 @@ The backend will run on:
 | `JWT_SECRET` | *(empty)* | HS512 signing key. **Set this in any shared environment** — if unset, every restart invalidates all issued tokens. |
 | `JWT_EXPIRATION` | `0` | Access-token lifetime in ms. `0` means no expiry. |
 | `JWT_REFRESH_EXPIRATION` | `0` | Refresh-token lifetime in ms. |
-| `CORS_ALLOWED_ORIGINS` | local dev origins | Comma-separated browser origins; wildcard patterns allowed. Set it to the KilivanaAdmin2 origin for a deployment. |
-| `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs and the OpenAPI server entry, e.g. `https://kilivana-backend.onrender.com`. |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins; wildcard patterns allowed, so `*` permits every origin (the default). Restrict to the KilivanaAdmin2 origin for a locked deployment. |
+| `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs and the OpenAPI server entry, e.g. `https://kilivana-backend-a44w.onrender.com`. |
 | `SEED_DATA` | `false` | Populates a fresh database with Kenyan demo data on startup. Idempotent: a restart never duplicates or overwrites records. |
 | `SEED_ADMIN_EMAIL` | `admin@kilivana.com` | Email of the seeded initial administrator. |
-| `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it in the Render dashboard as a secret. |
+| `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it here, in the environment, or as a Render secret. |
 | `SEED_DEMO_PASSWORD` | `Kilivana#2026` | Shared password of the seeded demo accounts. Change it before anyone else uses the deployment. |
 | `SEED_ENFORCE_PASSWORDS` | `false` | Reset a seeded account's password to the configured value when it no longer matches. Use for a demo environment whose seeded accounts are the intended logins; leave `false` in production. |
 | `STORAGE_PROVIDER` | `database` | Image storage: `local`, `database`, or `cloudinary`. The Render filesystem is ephemeral, so `database` (the default) is the right choice there. |
@@ -342,7 +381,7 @@ Verify the integration:
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin.test@kilivana.local","password":"Kilivana#2026"}' \
+  -d '{"email":"admin@kilivana.com","password":"Admin@123"}' \
   | jq -r '.data.accessToken')
 
 curl -X POST http://localhost:8080/api/v1/admin/mail/test \
