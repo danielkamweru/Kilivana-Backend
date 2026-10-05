@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "E-Commerce · Payments", description = "Payment initiation, webhooks, refunds and status")
 @RestController
-@RequestMapping({"/api/v1/ecommerce/payments", "/api/v1/payments"})
+@RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
 public class PaymentController {
 

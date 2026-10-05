@@ -26,7 +26,7 @@ import jakarta.validation.Valid;
 
 @Tag(name = "E-Commerce · Products", description = "Product catalogue, pricing and product imagery")
 @RestController
-@RequestMapping({"/api/v1/ecommerce/products", "/api/v1/products"})
+@RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
 public class ProductController {
 

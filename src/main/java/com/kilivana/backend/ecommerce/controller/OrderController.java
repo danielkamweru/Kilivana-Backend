@@ -20,7 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "E-Commerce · Orders", description = "Order placement, status transitions, timeline and disputes")
 @RestController
-@RequestMapping({"/api/v1/ecommerce/orders", "/api/v1/orders"})
+@RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
