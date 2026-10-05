@@ -3,8 +3,10 @@ package com.kilivana.backend.ecommerce.service;
 import com.kilivana.backend.ecommerce.dto.ProductImageResponse;
 import com.kilivana.backend.ecommerce.dto.ProductRequest;
 import com.kilivana.backend.ecommerce.dto.ProductResponse;
+import com.kilivana.backend.ecommerce.entity.Category;
 import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.entity.ProductImage;
+import com.kilivana.backend.ecommerce.repository.CategoryRepository;
 import com.kilivana.backend.ecommerce.repository.ProductImageRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
 import com.kilivana.backend.common.service.ImageStorage;
@@ -33,6 +35,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
+    private final CategoryRepository categoryRepository;
     private final ImageStorage cloudinaryService;
     private final UserService userService;
 
@@ -43,7 +46,7 @@ public class ProductService {
         Product product = Product.builder()
                 .sellerId(userId)
                 .sellerType(sellerType)
-                .categoryId(request.getCategoryId())
+                .categoryId(resolveCategoryId(request, sellerType))
                 .name(request.getName())
                 .description(request.getDescription())
                 .unit(request.getUnit())
@@ -60,6 +63,23 @@ public class ProductService {
 
     public ProductResponse createProduct(ProductRequest request) {
         return createProduct(request, request.getSellerId());
+    }
+
+    private Long resolveCategoryId(ProductRequest request, SellerType sellerType) {
+        if (request.getCategoryId() != null) {
+            return request.getCategoryId();
+        }
+        if (request.getCategory() != null && !request.getCategory().isBlank()) {
+            String name = request.getCategory().trim();
+            return categoryRepository.findByNameIgnoreCase(name)
+                    .orElseGet(() -> categoryRepository.save(Category.builder()
+                            .name(name)
+                            .type(sellerType)
+                            .active(true)
+                            .build()))
+                    .getId();
+        }
+        throw new BadRequestException("Category ID or category name is required");
     }
 
     @Transactional(readOnly = true)
@@ -111,6 +131,10 @@ public class ProductService {
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        if (request.getCategoryId() != null
+                || (request.getCategory() != null && !request.getCategory().isBlank())) {
+            product.setCategoryId(resolveCategoryId(request, product.getSellerType()));
+        }
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setUnit(request.getUnit());

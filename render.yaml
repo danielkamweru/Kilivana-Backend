@@ -26,9 +26,11 @@ services:
       # generates and stores the value.
       - key: JWT_SECRET
         generateValue: true
-      # Finite token lifetime in a shared environment.
+      # Token lifetime: one year, so clients are not
+      # logged out by expiry. A leaked token lives that
+      # long; rotate JWT_SECRET to invalidate all of them.
       - key: JWT_EXPIRATION
-        value: "86400000"
+        value: "31536000000"
       # Browser clients may call the API from any origin. Safe
       # here because the app uses allowed origin patterns, which
       # support "*" together with credentials. Restrict to a

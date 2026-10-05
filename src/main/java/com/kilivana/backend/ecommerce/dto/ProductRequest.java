@@ -15,14 +15,14 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class ProductRequest {
     
-    @NotNull(message = "Seller ID is required")
     private Long sellerId;
-    
-    @NotNull(message = "Seller type is required")
+
     private SellerType sellerType;
-    
-    @NotNull(message = "Category ID is required")
+
     private Long categoryId;
+
+    @Size(max = 100, message = "Category name must be at most 100 characters")
+    private String category;
     
     @NotBlank(message = "Product name is required")
     @Size(min = 2, max = 200, message = "Product name must be between 2 and 200 characters")

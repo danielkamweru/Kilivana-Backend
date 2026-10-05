@@ -5,6 +5,7 @@ import com.kilivana.backend.ecommerce.dto.ProductRequest;
 import com.kilivana.backend.ecommerce.dto.ProductResponse;
 import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.ecommerce.service.CategoryService;
 import com.kilivana.backend.ecommerce.service.ProductService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.ProductStatus;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @Tag(name = "E-Commerce · Products", description = "Product catalogue, pricing and product imagery")
 @RestController
@@ -29,11 +31,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ProductController {
 
     private final ProductService productService;
+    private final CategoryService categoryService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @AuthenticationPrincipal Long userId,
-            @RequestPart("product") ProductRequest request,
+            @Valid @RequestPart("product") ProductRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
         ProductResponse product;
         if (images != null && !images.isEmpty()) {
@@ -47,9 +50,14 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> createProductJson(
             @AuthenticationPrincipal Long userId,
-            @RequestBody ProductRequest request) {
+            @Valid @RequestBody ProductRequest request) {
         ProductResponse product = productService.createProduct(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<ApiResponse<List<com.kilivana.backend.ecommerce.dto.CategoryResponse>>> listCategories() {
+        return ResponseEntity.ok(ApiResponse.success(categoryService.getAllCategories()));
     }
 
     @GetMapping("/{id}")
@@ -84,7 +92,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
-            @RequestPart("product") ProductRequest request,
+            @Valid @RequestPart("product") ProductRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
         productService.ensureProductOwnership(id, userId);
         ProductResponse product;
@@ -100,7 +108,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> updateProductJson(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
-            @RequestBody ProductRequest request) {
+            @Valid @RequestBody ProductRequest request) {
         productService.ensureProductOwnership(id, userId);
         ProductResponse product = productService.updateProduct(id, request);
         return ResponseEntity.ok(ApiResponse.success(product));

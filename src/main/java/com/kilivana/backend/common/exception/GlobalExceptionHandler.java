@@ -280,7 +280,7 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("The request conflicts with existing data", error));
+                .body(ApiResponse.error("The request violates a data constraint: " + rootMessage(ex), error));
     }
 
     private String rootMessage(Throwable ex) {
