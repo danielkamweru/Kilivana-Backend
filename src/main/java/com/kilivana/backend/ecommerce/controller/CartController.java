@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "E-Commerce · Cart & Checkout", description = "Buyer cart items and checkout")
 @RestController
-@RequestMapping("/api/v1/ecommerce/carts")
+@RequestMapping("/api/v1/carts")
 @RequiredArgsConstructor
 public class CartController {
 
