@@ -105,8 +105,10 @@ public class SecurityConfig {
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                // Dispatching and the order lifecycle are administrator
-                // powers: creating delivery jobs, assigning drivers and
+                // Product catalogue browsing is public: categories, product listing, search, etc.
+                .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                // Ordering and the order lifecycle are administrator powers: creating delivery jobs, assigning drivers and
                 // moving or deleting an order are the panel's actions.
                 // Drivers keep the job endpoints they drive with (accept,
                 // advance status, verify the handover code, file proof).

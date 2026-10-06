@@ -60,6 +60,11 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(categoryService.getAllCategories()));
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts() {
+        return ResponseEntity.ok(ApiResponse.success(productService.getAllProducts()));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
         ProductResponse product = productService.getProductById(id);

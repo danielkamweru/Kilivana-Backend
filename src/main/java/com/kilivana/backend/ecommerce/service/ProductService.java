@@ -110,6 +110,12 @@ public class ProductService {
         return mapToResponse(product);
     }
 
+    public List<ProductResponse> getAllProducts() {
+        return productRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     public List<ProductResponse> getProductsBySeller(Long sellerId) {
         return productRepository.findBySellerId(sellerId).stream()
                 .map(this::mapToResponse)
