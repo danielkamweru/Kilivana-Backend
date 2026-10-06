@@ -41,10 +41,10 @@ public class AuthService {
         String email = normalizeEmail(request.getEmail());
         String phone = normalizePhone(request.getPhone());
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ConflictException("Email already exists");
+            throw new ConflictException("Email already exists, please log in instead");
         }
         if (userRepository.existsByPhone(phone)) {
-            throw new ConflictException("Phone already exists");
+            throw new ConflictException("Phone number already exists, please log in instead");
         }
 
         User user = User.builder()
