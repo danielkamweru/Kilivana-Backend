@@ -37,6 +37,13 @@ public class FarmerProfile {
     @Column(columnDefinition = "TEXT")
     private String verificationInfo;
 
+    @Column
+    private String suspensionReason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private com.kilivana.backend.common.enums.VerificationStatus kycStatus = com.kilivana.backend.common.enums.VerificationStatus.PENDING;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

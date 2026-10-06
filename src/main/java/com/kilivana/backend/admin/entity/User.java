@@ -61,6 +61,15 @@ public class User {
     @Column(nullable = false)
     private VerificationStatus verificationStatus;
 
+    @Column(name = "status_changed_at")
+    private LocalDateTime statusChangedAt;
+
+    @Column(name = "status_changed_by")
+    private Long statusChangedBy;
+
+    @Column(name = "suspension_reason", columnDefinition = "TEXT")
+    private String suspensionReason;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

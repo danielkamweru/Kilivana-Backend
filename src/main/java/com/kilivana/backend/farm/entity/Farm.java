@@ -1,4 +1,4 @@
-package com.kilivana.backend.admin.entity;
+package com.kilivana.backend.farm.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,44 +8,50 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "supplier_profiles")
+@Table(name = "farms")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SupplierProfile {
+public class Farm {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private Long userId;
+    @Column(name = "farmer_id", nullable = false)
+    private Long farmerId;
 
     @Column(nullable = false)
-    private String businessName;
+    private String name;
 
-    @Column(columnDefinition = "TEXT")
-    private String businessDetails;
+    @Column(nullable = false)
+    private String county;
+
+    private String subCounty;
 
     @Column(columnDefinition = "TEXT")
     private String address;
 
-    @Column
-    private String category;
+    private Double latitude;
+    private Double longitude;
 
+    @Column(name = "size_acres", nullable = false)
+    private Double sizeAcres;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ownership_type", nullable = false)
+    private com.kilivana.backend.common.enums.OwnershipType ownershipType;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String location;
+    private com.kilivana.backend.common.enums.FarmStatus status = com.kilivana.backend.common.enums.FarmStatus.ACTIVE;
 
     @Column(columnDefinition = "TEXT")
-    private String verificationInfo;
-
-    /** When the supplier's current contract lapses, if one is in force. */
-    private LocalDate contractEndDate;
+    private String description;
 
     @Column(nullable = false, updatable = false)
     @CreationTimestamp

@@ -110,7 +110,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiResponse<Void>> handleConflictException(ConflictException ex) {
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
-                .code("CONFLICT")
+                .code(ex.getErrorCode())
                 .details(ex.getMessage())
                 .build();
 

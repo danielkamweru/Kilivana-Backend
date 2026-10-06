@@ -7,6 +7,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -20,14 +21,28 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+        List<String> allowedOrigins = new ArrayList<>(Arrays.stream(corsAllowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
-                .toList();
-        config.setAllowedOriginPatterns(allowedOrigins);
+                .toList());
+
+        if (allowedOrigins.contains("*")) {
+            config.setAllowedOriginPatterns(List.of("*", "http://localhost:4200",
+                    "https://*.ngrok-free.dev", "https://*.ngrok.io"));
+        } else {
+            if (!allowedOrigins.contains("http://localhost:4200")) {
+                allowedOrigins.add("http://localhost:4200");
+            }
+            for (String origin : List.of("https://*.ngrok-free.dev", "https://*.ngrok.io")) {
+                if (!allowedOrigins.contains(origin)) {
+                    allowedOrigins.add(origin);
+                }
+            }
+            config.setAllowedOriginPatterns(allowedOrigins);
+        }
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowedHeaders(Arrays.asList("*", "ngrok-skip-browser-warning"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

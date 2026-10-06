@@ -45,12 +45,16 @@ public class SecurityConfig {
             // Same reason as /uploads/**: images kept in PostgreSQL are served from here and
             // are referenced from <img> tags and mobile payloads that carry no bearer token.
             "GET", "/api/v1/images/**",
-            "POST", "/api/v1/auth/register",
-            "POST", "/api/v1/auth/login",
-            // Reference data with nothing sensitive in it, but the registration screen
-            // needs the county list before the caller has a token.
+            // Product catalogue browsing is public: categories, product listing, search, etc.
+            "GET", "/api/v1/products/**",
+            "GET", "/api/v1/categories/**",
+            // Crop types for farmer registration dropdown
+            "GET", "/api/v1/crop-types/**",
+            // Reference data: counties and currency
             "GET", "/api/v1/regions",
             "GET", "/api/v1/regions/**",
+            "POST", "/api/v1/auth/register",
+            "POST", "/api/v1/auth/login",
             "POST", "/api/v1/auth/refresh",
             "POST", "/api/v1/auth/forgot-password",
             "POST", "/api/v1/auth/reset-password",
@@ -105,13 +109,7 @@ public class SecurityConfig {
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                // Product catalogue browsing is public: categories, product listing, search, etc.
-                .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                // Ordering and the order lifecycle are administrator powers: creating delivery jobs, assigning drivers and
-                // moving or deleting an order are the panel's actions.
-                // Drivers keep the job endpoints they drive with (accept,
-                // advance status, verify the handover code, file proof).
+                // Ordering and the order lifecycle are administrator powers.
                 .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/logistics/jobs/{id}/assign").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs/{id}/assign").hasRole("ADMIN")

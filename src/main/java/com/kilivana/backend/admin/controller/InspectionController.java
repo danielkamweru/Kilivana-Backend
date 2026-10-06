@@ -5,14 +5,20 @@ import com.kilivana.backend.admin.dto.InspectionResponse;
 import com.kilivana.backend.admin.entity.Inspection;
 import com.kilivana.backend.admin.service.InspectionService;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.enums.InspectionStatus;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "Administration · Inspections", description = "Quality inspection lifecycle, evidence and result recording")
@@ -79,6 +85,32 @@ public class InspectionController {
     @PostMapping("/{id}/evidence")
     public ResponseEntity<ApiResponse<InspectionResponse>> submitEvidence(@PathVariable Long id, @RequestBody InspectionRequest request) {
         return updateInspectionResult(id, "CHANGES_REQUIRED", request);
+    }
+
+    @Operation(summary = "Upload inspection evidence image",
+            description = "Uploads an evidence photo to an inspection. The image URL is appended to "
+                    + "the inspection's evidenceUrls and returned to the caller.")
+    @PostMapping(value = "/{id}/evidence/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<List<ImageResponse>>> uploadEvidenceImage(
+            @PathVariable Long id,
+            @RequestPart("image") MultipartFile image,
+            @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
+        List<ImageResponse> images = inspectionService.uploadEvidenceImage(id, image, isPrimary);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(images));
+    }
+
+    @Operation(summary = "List inspection evidence images")
+    @GetMapping("/{id}/evidence/images")
+    public ResponseEntity<ApiResponse<List<ImageResponse>>> listEvidenceImages(@PathVariable Long id) {
+        List<ImageResponse> images = inspectionService.listEvidenceImages(id);
+        return ResponseEntity.ok(ApiResponse.success(images));
+    }
+
+    @Operation(summary = "Delete an inspection evidence image")
+    @DeleteMapping("/{id}/evidence/images/{imageId}")
+    public ResponseEntity<ApiResponse<Void>> deleteEvidenceImage(@PathVariable Long id, @PathVariable Long imageId) throws IOException {
+        inspectionService.deleteEvidenceImage(id, imageId);
+        return ResponseEntity.ok(ApiResponse.successMessage("Evidence image deleted"));
     }
 
     @DeleteMapping("/{id}")
