@@ -13,11 +13,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 
@@ -51,6 +53,26 @@ public class AdminDriverController {
     public ResponseEntity<ApiResponse<Void>> deleteDriver(@PathVariable Long userId) {
         adminDriverService.deleteDriver(userId);
         return ResponseEntity.ok(ApiResponse.successMessage("Driver deleted successfully"));
+    }
+
+    @Operation(summary = "Suspend a driver",
+            description = "Takes a driver off the road. The account stays; the "
+                    + "roster reads them as suspended and the reason is kept on "
+                    + "the profile for the panel to show. A reason is required.")
+    @PutMapping("/{userId}/suspend")
+    public ResponseEntity<ApiResponse<AdminDriverResponse>> suspendDriver(
+            @PathVariable Long userId, @RequestParam String reason) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminDriverService.suspendDriver(userId, reason)));
+    }
+
+    @Operation(summary = "Reinstate a driver",
+            description = "Lifts a suspension and puts the driver back online.")
+    @PutMapping("/{userId}/unsuspend")
+    public ResponseEntity<ApiResponse<AdminDriverResponse>> unsuspendDriver(
+            @PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminDriverService.unsuspendDriver(userId)));
     }
 
     @Operation(summary = "List drivers",

@@ -2,6 +2,8 @@ package com.kilivana.backend.ecommerce.service;
 
 import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
+import com.kilivana.backend.admin.repository.DriverProfileRepository;
+import com.kilivana.backend.admin.repository.FarmerProfileRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.PaymentStatus;
@@ -19,6 +21,8 @@ import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.service.LogisticsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,6 +57,10 @@ class OrderServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private UserRepository userRepository;
     @Mock private AddressRepository addressRepository;
+    @Mock private FarmerProfileRepository farmerProfileRepository;
+    @Mock private DriverProfileRepository driverProfileRepository;
+    @Mock private LogisticsService logisticsService;
+    @Mock private LogisticsJobRepository logisticsJobRepository;
 
     private OrderService orderService;
 
@@ -64,11 +72,14 @@ class OrderServiceTest {
     void setUp() {
         orderService = new OrderService(orderRepository, orderItemRepository,
                 orderEventRepository, paymentRepository, productRepository,
-                userRepository, addressRepository);
+                userRepository, addressRepository, farmerProfileRepository,
+                driverProfileRepository, logisticsService, logisticsJobRepository);
 
         when(userRepository.existsByIdAndRole(BUYER_ID, UserRole.BUYER)).thenReturn(true);
         Address address = Address.builder().id(ADDRESS_ID).userId(BUYER_ID).build();
         when(addressRepository.findById(ADDRESS_ID)).thenReturn(Optional.of(address));
+        // The next order reference continues after the highest existing one.
+        when(orderRepository.maxNumericOrderCode()).thenReturn(99);
 
         Product product = Product.builder()
                 .id(PRODUCT_ID).sellerId(9L).name("Green Tea").unit("kg")

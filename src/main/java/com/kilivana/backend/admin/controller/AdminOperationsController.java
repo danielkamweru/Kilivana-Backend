@@ -65,11 +65,35 @@ public class AdminOperationsController {
                 productService.updateProductStatus(id, ProductStatus.from(status))));
     }
 
+    /**
+     * The order pipeline, filterable by buyer and status, so the
+     * panel can show its tabs: placed, confirmed (processing),
+     * in_transit (shipped), delivered, completed, disputed, cancelled.
+     */
     @GetMapping("/orders")
-    public ResponseEntity<ApiResponse<Page<OrderResponse>>> orders(Pageable pageable) {
-        Page<OrderResponse> orders = orderService.searchOrders(null, null, pageable)
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> orders(
+            @RequestParam(required = false) Long buyerId,
+            @RequestParam(required = false) String status,
+            Pageable pageable) {
+        Page<OrderResponse> orders = orderService.searchOrders(buyerId, status, pageable)
                 .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
+    /**
+     * Dispatches an order: the pending delivery job is reused or
+     * created (pickup defaults to the first seller's region, the
+     * destination to the buyer's delivery address), and the driver
+     * is assigned. The order moves to confirmed with the assignment.
+     */
+    @PostMapping("/orders/{orderId}/assign")
+    public ResponseEntity<ApiResponse<LogisticsJob>> assignOrderToDriver(
+            @PathVariable Long orderId,
+            @RequestParam Long driverId,
+            @RequestParam(required = false) String pickupAddress,
+            @RequestParam(required = false) String destinationAddress) {
+        return ResponseEntity.ok(ApiResponse.success(
+                orderService.assignOrderToDriver(orderId, driverId, pickupAddress, destinationAddress)));
     }
 
     @GetMapping("/logistics/jobs")

@@ -105,6 +105,19 @@ public class SecurityConfig {
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                // Dispatching and the order lifecycle are administrator
+                // powers: creating delivery jobs, assigning drivers and
+                // moving or deleting an order are the panel's actions.
+                // Drivers keep the job endpoints they drive with (accept,
+                // advance status, verify the handover code, file proof).
+                .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/logistics/jobs/{id}/assign").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs/{id}/assign").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/logistics/jobs/{id}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/orders/{id}/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/orders/{id}/status").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/orders/{id}/cancel").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/orders/{id}").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(authenticationErrorHandler)

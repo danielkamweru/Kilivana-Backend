@@ -21,6 +21,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /** The reference is unique, so it identifies a seed record across restarts. */
     Optional<Order> findByCode(String code);
+
+    /**
+     * Highest numeric suffix of any ORD-nnnnn reference, so a new order's
+     * code can be derived before the row exists. The IDENTITY strategy
+     * inserts immediately, so the code cannot be derived from the id the
+     * way the panel reference was originally built. Non-numeric codes
+     * (the ORD-SEED-nnn records) do not match and are ignored.
+     */
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM 'ORD-([0-9]+)') AS INTEGER)), 0) " +
+                   "FROM orders WHERE code LIKE 'ORD-%'", nativeQuery = true)
+    Integer maxNumericOrderCode();
     
     List<Order> findByStatus(OrderStatus status);
     

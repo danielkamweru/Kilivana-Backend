@@ -3,12 +3,15 @@ package com.kilivana.backend.logistics.service;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
+import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.entity.OrderEvent;
+import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
@@ -40,6 +43,7 @@ public class LogisticsService {
     private final DeliveryOtpNotifier deliveryOtpNotifier;
     private final PasswordEncoder passwordEncoder;
     private final OrderRepository orderRepository;
+    private final OrderEventRepository orderEventRepository;
     private final UserRepository userRepository;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
@@ -201,8 +205,11 @@ public class LogisticsService {
         return logisticsJobRepository.findAll();
     }
 
+    /** The jobs one driver is working, newest first. */
     public List<LogisticsJob> getJobsByDriver(Long driverId) {
-        return logisticsJobRepository.findByDriverId(driverId);
+        return logisticsJobRepository.findByDriverId(driverId).stream()
+                .sorted(java.util.Comparator.comparing(LogisticsJob::getId).reversed())
+                .toList();
     }
 
     public List<LogisticsJob> getJobsByOrder(Long orderId) {
@@ -227,7 +234,9 @@ public class LogisticsService {
         }
         job.setDriverId(driverId);
         job.setStatus(DeliveryStatus.ASSIGNED);
-        return logisticsJobRepository.save(job);
+        LogisticsJob saved = logisticsJobRepository.save(job);
+        syncOrderStatus(saved);
+        return saved;
     }
 
     @Transactional
@@ -241,15 +250,77 @@ public class LogisticsService {
             throw new BadRequestException("Job cannot be accepted in current status");
         }
         job.setStatus(DeliveryStatus.ACCEPTED);
-        return logisticsJobRepository.save(job);
+        LogisticsJob saved = logisticsJobRepository.save(job);
+        syncOrderStatus(saved);
+        return saved;
     }
+
+    /** The states a job may move to from each state, in order. */
+    private static final java.util.Map<DeliveryStatus, java.util.Set<DeliveryStatus>> NEXT_STATUSES =
+            java.util.Map.ofEntries(
+                    java.util.Map.entry(DeliveryStatus.PENDING_ASSIGNMENT,
+                            java.util.Set.of(DeliveryStatus.ASSIGNED, DeliveryStatus.CANCELLED)),
+                    java.util.Map.entry(DeliveryStatus.ASSIGNED,
+                            java.util.Set.of(DeliveryStatus.ACCEPTED, DeliveryStatus.CANCELLED)),
+                    java.util.Map.entry(DeliveryStatus.ACCEPTED,
+                            java.util.Set.of(DeliveryStatus.EN_ROUTE_TO_PICKUP, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                    java.util.Map.entry(DeliveryStatus.EN_ROUTE_TO_PICKUP,
+                            java.util.Set.of(DeliveryStatus.ARRIVED_AT_PICKUP, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                    java.util.Map.entry(DeliveryStatus.ARRIVED_AT_PICKUP,
+                            java.util.Set.of(DeliveryStatus.PICKED_UP, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                    java.util.Map.entry(DeliveryStatus.PICKED_UP,
+                            java.util.Set.of(DeliveryStatus.IN_TRANSIT, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                    java.util.Map.entry(DeliveryStatus.IN_TRANSIT,
+                            java.util.Set.of(DeliveryStatus.ARRIVED_AT_DESTINATION, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                    java.util.Map.entry(DeliveryStatus.ARRIVED_AT_DESTINATION,
+                            java.util.Set.of(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                    java.util.Map.entry(DeliveryStatus.DELIVERED, java.util.Set.of()),
+                    java.util.Map.entry(DeliveryStatus.CANCELLED, java.util.Set.of()),
+                    java.util.Map.entry(DeliveryStatus.FAILED, java.util.Set.of()));
 
     @Transactional
     public LogisticsJob updateJobStatus(Long jobId, DeliveryStatus status) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
+        // A job walks the delivery pipeline one step at a time. Without this
+        // check any authenticated caller could jump a job straight to DELIVERED
+        // and settle an order that was never handed over.
+        if (!NEXT_STATUSES.getOrDefault(job.getStatus(), java.util.Set.of()).contains(status)) {
+            throw new BadRequestException("A " + job.getStatus().wire() + " job cannot move to "
+                    + status.wire());
+        }
         job.setStatus(status);
-        return logisticsJobRepository.save(job);
+        LogisticsJob saved = logisticsJobRepository.save(job);
+        syncOrderStatus(saved);
+        return saved;
+    }
+
+    /**
+     * Mirrors a job's progress onto its order, so the panel's order
+     * pipeline advances as the delivery does: assignment or pickup
+     * confirms the order, the road leg puts it in transit, and handover
+     * delivers it. Only forward moves are applied — a disputed, completed
+     * or cancelled order is never overwritten by its delivery, and a
+     * cancelled or failed job leaves the order for the administrator to
+     * settle, because the goods may still be re-dispatched.
+     */
+    private void syncOrderStatus(LogisticsJob job) {
+        Order order = orderRepository.findById(job.getOrderId()).orElse(null);
+        if (order == null) {
+            return;
+        }
+        OrderStatus target = switch (job.getStatus()) {
+            case ASSIGNED, ACCEPTED, EN_ROUTE_TO_PICKUP, ARRIVED_AT_PICKUP, PICKED_UP -> OrderStatus.CONFIRMED;
+            case IN_TRANSIT, ARRIVED_AT_DESTINATION -> OrderStatus.IN_TRANSIT;
+            case DELIVERED -> OrderStatus.DELIVERED;
+            default -> null;
+        };
+        if (target != null && target.ordinal() > order.getStatus().ordinal()) {
+            order.setStatus(target);
+            orderRepository.save(order);
+            orderEventRepository.save(OrderEvent.builder()
+                    .orderId(order.getId()).status(target).build());
+        }
     }
 
     @Transactional

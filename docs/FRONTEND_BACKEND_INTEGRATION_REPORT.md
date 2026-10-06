@@ -212,8 +212,9 @@ Admin routes require the `ADMIN` **or** `SUPER_ADMIN` role; any other token gets
 | Buyers | `GET/POST /api/v1/profiles/buyers/{userId}`, `PUT`, `DELETE` |
 | Suppliers | `GET/POST /api/v1/profiles/suppliers/{userId}`, `PUT`, `DELETE`; images at `.../images` |
 | Inspectors | `GET/POST /api/v1/profiles/inspectors/{userId}`, `PUT`, `DELETE`; images at `.../images` |
+| Drivers | `GET /api/v1/admin/drivers`; `PUT /api/v1/admin/drivers/{userId}/suspend?reason=` and `.../unsuspend` (§4.10); profiles and images at `/api/v1/profiles/drivers/{userId}` |
 | Products | `GET/POST /api/v1/admin/products`, `/admin/products/{id}/status`, images, categories |
-| Orders | `GET/POST /api/v1/admin/orders`, `/admin/orders/{id}/status`, disputes |
+| Orders | `GET/POST /api/v1/admin/orders`, `/admin/orders/{id}/status`, `POST /admin/orders/{id}/assign?driverId=` (dispatch to a driver, §4.10), `POST /api/v1/orders/{id}/cancel?reason=` (§4.10), disputes |
 | Payments | `GET /api/v1/admin/payments`, `/admin/payments/{id}/status`, refunds |
 | Inspections | `GET/POST /api/v1/admin/inspections`, `/admin/inspections/{id}/result`, `/status` |
 | Notifications | `GET /api/v1/admin/notifications` (optional `?unread=true`), `/admin/notifications/user/{userId}`, `/user/{userId}/unread`, `/read-all` |
@@ -447,6 +448,30 @@ A warning naming the same variables is logged at startup. **Until the credential
 supplied, no image upload in either app will succeed.** This is configuration, not code —
 nothing else in the upload path is broken.
 
+### 4.10 Admin order dispatch, driver suspension, cancel reason
+
+- **Assign an order to a driver** — `POST /api/v1/admin/orders/{orderId}/assign?driverId=`,
+  with optional `pickupAddress` and `destinationAddress` query parameters. One
+  call does the whole dispatch: it reuses the order's pending delivery job or
+  creates one (pickup defaults to the first seller's region, destination to the
+  buyer's delivery address), assigns the driver, and the order becomes
+  `confirmed` through that assignment. Returns the `LogisticsJob`.
+- **Suspend / reinstate a driver** — `PUT /api/v1/admin/drivers/{userId}/suspend?reason=`
+  (a reason is required) and `PUT /api/v1/admin/drivers/{userId}/unsuspend`.
+  The account stays; the roster reads the driver as `suspended` with the reason
+  on the profile until they are reinstated.
+- **Cancel with a reason** — `POST /api/v1/orders/{id}/cancel?reason=`; the
+  reason is stored on the order and returned as `cancellationReason`.
+- **The order response is self-contained** — `OrderResponse` now carries
+  `logisticsJobId` and `deliveryStatus`, the buyer (`buyerName`, `buyerPhone`,
+  `buyerCounty`, `deliveryAddress`), the first line item's seller (`sellerName`,
+  `sellerPhone`, `sellerCounty`, `sellerLocation`), the payment (`paymentMethod`,
+  `paymentReference`, `paidAt`) and the assigned driver (`driverId`, `driverName`,
+  `driverPhone`, `driverVehicle`, `driverPlate`), so the order detail view needs
+  no second round trip per name.
+- **A driver's job list** — `GET /api/v1/logistics/jobs/driver/{driverId}`,
+  newest first (already listed in §2.3).
+
 ---
 
 ## 5. Local setup
@@ -480,6 +505,25 @@ The tunnel hostname rotates, so two things must be updated when it changes:
 
 CORS already allows `https://*.ngrok-free.dev` and `https://*.ngrok.app`, so no change is
 needed per hostname.
+
+> **ngrok free tier breaks browser preflight requests.** Any cross-origin browser client
+> (the Angular admin panel) sends an `OPTIONS` preflight for every request carrying
+> `Authorization`. ngrok free answers those with `502 ERR_NGROK_8012` — no CORS headers,
+> and the `ngrok-skip-browser-warning: true` header cannot help because the *browser*
+> generates the preflight and the app cannot attach headers to it. The admin panel then
+> reports a "CORS preflight error" and shows an empty list, while Swagger UI (same-origin)
+> and the Android driver app (native, no CORS, non-browser user agent) keep working.
+> For browser clients use a Cloudflare quick tunnel instead (no account needed):
+> `cloudflared tunnel --url http://localhost:8080` and point the panel at the
+> `*.trycloudflare.com` URL — preflights return 200 with the backend's CORS headers.
+> A paid ngrok plan also removes the block.
+
+**Set `JWT_SECRET`.** With it unset the backend generates a random signing key at every
+startup, so every token issued before a restart is rejected — a page refresh after a
+restart then looks like the data "disappeared" (it is a 401, not missing data). The
+local run command should include a stable value, e.g.
+`JWT_SECRET=<base64 string of 32+ bytes> mvn spring-boot:run`. Tokens also never expire
+(`JWT_EXPIRATION=0`); set a finite duration for anything shared.
 
 Seeded accounts, password `Kilivana#2026`:
 `admin`, `farmer`, `buyer`, `supplier`, `driver`, `inspector`, each at `@kilivana.local`

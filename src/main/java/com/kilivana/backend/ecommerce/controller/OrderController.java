@@ -74,8 +74,10 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(@PathVariable Long id) {
-        Order order = orderService.cancelOrder(id);
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason) {
+        Order order = orderService.cancelOrder(id, reason);
         return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 

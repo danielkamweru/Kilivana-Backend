@@ -200,6 +200,46 @@ public class AdminDriverService {
                 .build();
     }
 
+    /**
+     * Suspends a driver: the account stays, but the roster
+     * reads them as suspended and the reason is kept on the
+     * profile for the panel to show.
+     */
+    @Transactional
+    public AdminDriverResponse suspendDriver(Long userId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new BadRequestException("A suspension reason is required when a driver is suspended");
+        }
+        User user = driverUser(userId);
+        DriverProfile profile = driverProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Driver " + userId + " has no profile to suspend"));
+        profile.setAvailabilityStatus(DriverStatus.SUSPENDED);
+        profile.setSuspensionReason(reason.trim());
+        driverProfileRepository.save(profile);
+        return findDriver(userId).orElseThrow();
+    }
+
+    /** Lifts a suspension and puts the driver back online. */
+    @Transactional
+    public AdminDriverResponse unsuspendDriver(Long userId) {
+        driverUser(userId);
+        DriverProfile profile = driverProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Driver " + userId + " has no profile to reinstate"));
+        profile.setAvailabilityStatus(DriverStatus.AVAILABLE);
+        profile.setSuspensionReason(null);
+        driverProfileRepository.save(profile);
+        return findDriver(userId).orElseThrow();
+    }
+
+    /** The user, proven to be a driver account. */
+    private User driverUser(Long userId) {
+        return userRepository.findById(userId)
+                .filter(candidate -> candidate.getRole() == UserRole.DRIVER)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver", userId));
+    }
+
     @Transactional(readOnly = true)
     public Optional<AdminDriverResponse> findDriver(Long userId) {
         Optional<User> user = userRepository.findById(userId)
