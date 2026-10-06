@@ -19,6 +19,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     
     List<Order> findByBuyerId(Long buyerId);
 
+    /** Number of orders and total spend per buyer, for the admin buyer roster. */
+    @Query("SELECT o.buyerId, COUNT(o), COALESCE(SUM(o.total), 0) FROM Order o GROUP BY o.buyerId")
+    List<Object[]> countAndSumTotalByBuyerId();
+
     /** The reference is unique, so it identifies a seed record across restarts. */
     Optional<Order> findByCode(String code);
 
