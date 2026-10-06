@@ -181,7 +181,7 @@ application compares addresses case-insensitively while the generated constraint
 ## Swagger Documentation
 
 Swagger UI is available at:
-
+- ngrok: https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
 - Local: http://localhost:8080/swagger-ui/index.html
 - Local fallback: http://localhost:8080/swagger-ui.html
 - Deployed: https://kilivana-backend.onrender.com/swagger-ui/index.html
