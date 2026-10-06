@@ -106,6 +106,13 @@ public class UserService {
             throw new BadRequestException("Email already exists");
         }
         user.setEmail(email);
+
+        // Admin-set password: only update when a new one is provided, so a profile edit
+        // that leaves the password field blank does not wipe the existing hash.
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        }
+
         return mapToResponse(userRepository.save(user));
     }
 
