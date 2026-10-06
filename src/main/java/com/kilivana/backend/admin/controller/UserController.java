@@ -77,4 +77,16 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.ok(ApiResponse.successMessage("User deleted successfully"));
     }
+
+    @PutMapping("/{id}/suspend")
+    public ResponseEntity<ApiResponse<UserResponse>> suspendUser(@PathVariable Long id, @RequestParam String reason) {
+        UserResponse user = userService.suspendUser(id, reason);
+        return ResponseEntity.ok(ApiResponse.success(user));
+    }
+
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<ApiResponse<UserResponse>> activateUser(@PathVariable Long id) {
+        UserResponse user = userService.activateUser(id);
+        return ResponseEntity.ok(ApiResponse.success(user));
+    }
 }

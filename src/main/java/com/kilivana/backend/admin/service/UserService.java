@@ -125,6 +125,28 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponse suspendUser(Long id, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new BadRequestException("A suspension reason is required");
+        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new BadRequestException("Administrator accounts cannot be suspended from this endpoint");
+        }
+        user.setStatus(UserStatus.SUSPENDED);
+        return mapToResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse activateUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        user.setStatus(UserStatus.ACTIVE);
+        return mapToResponse(userRepository.save(user));
+    }
+
+    @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
