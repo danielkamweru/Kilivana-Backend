@@ -106,6 +106,17 @@ public class DriverProfileController {
         return ResponseEntity.ok(ApiResponse.success(images));
     }
 
+    @Operation(summary = "Set the primary driver image",
+            description = "Marks one image as the driver's primary. Allowed for the driver themselves or an administrator.")
+    @PutMapping("/{userId}/images/{imageId}/primary")
+    public ResponseEntity<ApiResponse<Void>> setPrimaryDriverImage(
+            @AuthenticationPrincipal Long authenticatedUserId,
+            @PathVariable Long userId,
+            @PathVariable Long imageId) {
+        profileService.setPrimaryDriverProfileImage(authenticatedUserId, userId, imageId);
+        return ResponseEntity.ok(ApiResponse.successMessage("Primary image updated successfully"));
+    }
+
     @Operation(summary = "Delete a driver image",
             description = "Deletes one of the driver's images. Allowed for the driver themselves or an administrator.")
     @DeleteMapping("/{userId}/images/{imageId}")
