@@ -301,10 +301,29 @@ public class SeedDataRunner {
 
     private int seedCategories() {
         int created = 0;
+        // Farmer categories: farm-produced goods
         created += category("Fresh Produce", SellerType.FARMER);
+        created += category("Fruits", SellerType.FARMER);
+        created += category("Vegetables", SellerType.FARMER);
+        created += category("Cereals", SellerType.FARMER);
+        created += category("Legumes", SellerType.FARMER);
+        created += category("Herbs & Spices", SellerType.FARMER);
         created += category("Tea & Coffee", SellerType.FARMER);
-        created += category("Nuts & Grains", SellerType.FARMER);
+        created += category("Nuts & Seeds", SellerType.FARMER);
         created += category("Dairy & Eggs", SellerType.FARMER);
+        created += category("Poultry", SellerType.FARMER);
+        created += category("Meat & Livestock", SellerType.FARMER);
+        created += category("Honey & Beeswax", SellerType.FARMER);
+
+        // Supplier categories: farming inputs and supplies
+        created += category("Fertilizers", SellerType.SUPPLIER);
+        created += category("Seeds & Seedlings", SellerType.SUPPLIER);
+        created += category("Animal Feeds", SellerType.SUPPLIER);
+        created += category("Farm Equipment", SellerType.SUPPLIER);
+        created += category("Agricultural Tools", SellerType.SUPPLIER);
+        created += category("Pesticides & Crop Protection", SellerType.SUPPLIER);
+        created += category("Irrigation Supplies", SellerType.SUPPLIER);
+        created += category("Packaging Materials", SellerType.SUPPLIER);
         created += category("Groceries", SellerType.SUPPLIER);
         created += category("Pantry Staples", SellerType.SUPPLIER);
         return created;
@@ -323,19 +342,63 @@ public class SeedDataRunner {
         User supplier = userRepository.findByEmailIgnoreCase(SUPPLIER_EMAIL).orElseThrow();
         int created = 0;
 
+        // Farmer products
+        created += product("Red Delicious Apples", farmer, "Fruits", "Fresh from the orchard, sweet and crisp",
+                "kg", money("180.00"), 150, 5);
+        created += product("Kale (Sukuma Wiki)", farmer, "Vegetables", "Freshly harvested leafy greens",
+                "bunch", money("45.00"), 200, 10);
+        created += product("Tomatoes", farmer, "Vegetables", " Vine-ripened, locally grown",
+                "kg", money("120.00"), 100, 5);
+        created += product("Maize Grain", farmer, "Cereals", "Grade 1 white maize, dried and shelled",
+                "bag", money("2500.00"), 50, 2);
+        created += product("Cowpeas (Beans)", farmer, "Legumes", "Fresh pigeon peas, shelled",
+                "kg", money("180.00"), 80, 5);
+        created += product("Fresh Ginger", farmer, "Herbs & Spices", "Organic ginger root, freshly harvested",
+                "kg", money("350.00"), 30, 3);
         created += product("Green Tea", farmer, "Tea & Coffee", "Loose leaf green tea from the highlands",
                 "kg", money("50.00"), 100, 1);
         created += product("Roasted Coffee Beans", farmer, "Tea & Coffee",
                 "Single-origin beans, medium roast", "kg", money("450.00"), 60, 1);
-        created += product("Macadamia Nuts", farmer, "Nuts & Grains",
+        created += product("Macadamia Nuts", farmer, "Nuts & Seeds",
                 "Raw kernel, grade A", "kg", money("600.00"), 40, 1);
-        created += product("Hass Avocados", farmer, "Fresh Produce",
-                "Fresh from the farm, ready to ripen", "piece", money("35.00"), 200, 1);
-        created += product("Sukuma Wiki", farmer, "Fresh Produce",
-                "Freshly picked leafy greens", "bunch", money("45.00"), 150, 1);
+        created += product("Hass Avocados", farmer, "Fruits",
+                "Fresh from the farm, ready to ripen", "piece", money("35.00"), 200, 50);
         created += product("Fresh Milk", farmer, "Dairy & Eggs",
-                "Whole milk, morninging collection", "litre", money("65.00"), 80, 1);
+                "Pasteurized whole milk, morning collection", "litre", money("65.00"), 80, 2);
+        created += product("Free-Range Eggs", farmer, "Dairy & Eggs",
+                "Large brown eggs, 30pcs crate", "crate", money("320.00"), 40, 1);
+        created += product("Broilers (Live)", farmer, "Poultry",
+                "5-week old broiler chicken", "piece", money("450.00"), 300, 20);
+        created += product("Goat Meat", farmer, "Meat & Livestock",
+                "Fresh goat meat, cuts assorted", "kg", money("800.00"), 25, 2);
+        created += product("Pure Wildflower Honey", farmer, "Honey & Beeswax",
+                "Raw, unfiltered honey from local hives", "jar", money("450.00"), 60, 2);
 
+        // Supplier products
+        created += product("DAP Fertilizer", supplier, "Fertilizers",
+                "Di-ammonium phosphate, 50kg bag", "bag", money("1800.00"), 200, 1);
+        created += product("Nitrogen Fertilizer (CAN)", supplier, "Fertilizers",
+                "Calcium ammonium nitrate, 50kg bag", "bag", money("1500.00"), 150, 1);
+        created += product("Hybrid Maize Seeds", supplier, "Seeds & Seedlings",
+                "High-yield hybrid maize, 1kg packet", "packet", money("450.00"), 500, 5);
+        created += product("Tomato Seedlings", supplier, "Seeds & Seedlings",
+                "Disease-resistant variety, 50 per pack", "tray", money("800.00"), 300, 2);
+        created += product("Broiler Chicken Feed", supplier, "Animal Feeds",
+                "Premium starter/finisher feed, 25kg bag", "bag", money("1200.00"), 400, 2);
+        created += product("Cattle Feed Block", supplier, "Animal Feeds",
+                "Mineral salt lick for dairy cows, 2kg", "piece", money("280.00"), 100, 5);
+        created += product("Hand Hoe", supplier, "Agricultural Tools",
+                "Ergonomic hand hoe with wooden handle", "piece", money("350.00"), 120, 5);
+        created += product("Pruning Shears", supplier, "Agricultural Tools",
+                "Stainless steel pruning shears", "pair", money("550.00"), 80, 2);
+        created += product("Herbicide (Glyphosate)", supplier, "Pesticides & Crop Protection",
+                "Broad-spectrum weed killer, 1L", "bottle", money("450.00"), 250, 2);
+        created += product("Insect Netting", supplier, "Pesticides & Crop Protection",
+                "Anti-insect garden netting, 10m roll", "roll", money("300.00"), 150, 1);
+        created += product("Drip Irrigation Kit", supplier, "Irrigation Supplies",
+                "Complete drip irrigation for 0.1 acre", "kit", money("8000.00"), 30, 1);
+        created += product("HDPE Grow Bags", supplier, "Packaging Materials",
+                "Black grow bags, 15L, pack of 10", "pack", money("1200.00"), 90, 2);
         created += product("Maize Flour (Unga)", supplier, "Pantry Staples",
                 "Grade 1 sifted maize meal", "bag", money("180.00"), 120, 1);
         created += product("Cooking Oil", supplier, "Groceries",
