@@ -111,7 +111,7 @@ public class ProductService {
     }
 
     public List<ProductResponse> getAllProducts() {
-        return productRepository.findAll().stream()
+        return productRepository.findByStatus(ProductStatus.ACTIVE).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

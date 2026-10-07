@@ -538,3 +538,24 @@ expiry. Both warnings are logged at startup.
 Email note: `SENDGRID_API_KEY` must be supplied through the environment and must never be
 committed. Rotate the key if it is ever pasted into a chat, a log or a commit — that includes
 the keys used for local verification. `.gitignore` blocks `.env*` and `sendgrid-secrets.*`.
+
+## API Test Credentials
+
+### Development Seeder
+
+Set  to seed demo buyer-side products on startup:
+- Farmer account (email: ): Products include Tomatoes and Sweet Potatoes
+- Supplier account (email: ): Products include DAP Fertilizer and Hybrid Maize Seeds
+
+All seeded products have  status and appear in .
+
+
+## API Test Credentials
+
+### Development Seeder
+
+Set `DEV_SEED_ENABLED=true` to seed demo buyer-side products on startup:
+- Farmer account (email: `farmer@kilivana.demo`): Products include Tomatoes and Sweet Potatoes
+- Supplier account (email: `supplier@kilivana.demo`): Products include DAP Fertilizer and Hybrid Maize Seeds
+
+All seeded products have `ACTIVE` status and appear in `GET /api/v1/products`.
