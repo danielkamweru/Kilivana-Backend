@@ -543,3 +543,303 @@ The project stays well under the recommended limit of 20 commits while keeping a
 ## License
 
 This project is currently configured for internal development use. Add a license file if you plan to open-source or distribute it externally.
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/kilivana` | PostgreSQL connection URL |
+| `DB_USERNAME` | (empty) | Database username |
+| `DB_PASSWORD` | (empty) | Database password |
+| `JWT_SECRET` | (generated) | JWT signing secret (min 32 bytes) |
+| `JWT_EXPIRATION` | `0` | Access token expiry in ms (0 = no expiry) |
+| `JWT_REFRESH_EXPIRATION` | `604800000` | Refresh token expiry (7 days) |
+| `SEED_DATA` | `false` | Seed database with demo data on startup |
+| `SEED_ADMIN_EMAIL` | (none) | Initial admin user email |
+| `SEED_ADMIN_PASSWORD` | (none) | Initial admin user password |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:4200,http://localhost:8080,http://127.0.0.1:4200` | Comma-separated allowed CORS origins |
+| `PORT` | `8080` | Server port |
+| `STORAGE_PROVIDER` | `database` | `database`, `local`, or `cloudinary` |
+| `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Local storage directory (when `STORAGE_PROVIDER=local`) |
+| `PUBLIC_BASE_URL` | (server URL) | Base URL for Swagger docs |
+| `CLOUDINARY_CLOUD_NAME` | (none) | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | (none) | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | (none) | Cloudinary API secret |
+| `SENDGRID_ENABLED` | `false` | Enable/disable SendGrid email |
+| `SENDGRID_API_KEY` | (none) | SendGrid API key |
+| `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Sender email address |
+
+## Complete API Endpoint Reference
+
+### Authentication (public)
+- `POST /api/v1/auth/login` — Login with email/password → returns `{accessToken, refreshToken, user}`
+- `POST /api/v1/auth/register` — Register new user
+- `POST /api/v1/auth/refresh` — Refresh access token
+- `POST /api/v1/auth/forgot-password` — Send password reset email
+- `POST /api/v1/auth/reset-password` — Reset password
+- `POST /api/v1/auth/logout` — Logout
+- `GET /api/v1/auth/me` — Get current user
+
+### Admin — Users & Suppliers
+- `GET /api/v1/admin/users` — List all users
+- `GET /api/v1/admin/users/{id}` — Get user by id
+- `POST /api/v1/admin/users` — Create user (admin)
+- `PUT /api/v1/admin/users/{id}` — Update user
+- `DELETE /api/v1/admin/users/{id}` — Delete user
+- `PATCH /api/v1/admin/users/{id}/status` — Update user status (suspend/activate)
+- `GET /api/v1/admin/users/status/{status}` — Users by status
+- `GET /api/v1/admin/users/role/{role}` — Users by role
+- `GET /api/v1/admin/suppliers` — List suppliers
+- `POST /api/v1/admin/suppliers` — Register supplier
+- `GET /api/v1/admin/suppliers/{userId}` — Get supplier
+- `PUT /api/v1/admin/suppliers/{userId}` — Edit supplier
+- `PUT /api/v1/admin/suppliers/{userId}/suspend` — Suspend supplier
+- `PUT /api/v1/admin/suppliers/{userId}/unsuspend` — Unsuspend supplier
+- `DELETE /api/v1/admin/suppliers/{userId}` — Delete supplier
+
+### Admin — Farmers
+- `GET /api/v1/admin/farmers` — List farmers (paged)
+- `GET /api/v1/admin/farmers/{id}` — Get farmer details
+- `GET /api/v1/admin/farmers/stats` — Farmer stats summary
+- `POST /api/v1/admin/farmers/{id}/approve` — Approve farmer
+- `POST /api/v1/admin/farmers/{id}/reject` — Reject farmer
+- `PUT /api/v1/admin/farmers/{userId}/suspend` — Suspend farmer
+- `PUT /api/v1/admin/farmers/{userId}/unsuspend` — Unsuspend farmer
+
+### Admin — Drivers & Inspectors
+- `GET /api/v1/admin/drivers` — List drivers
+- `POST /api/v1/admin/drivers` — Register driver
+- `PUT /api/v1/admin/drivers/{userId}/suspend` — Suspend driver
+- `PUT /api/v1/admin/drivers/{userId}/unsuspend` — Reinstate driver
+- `PUT /api/v1/admin/inspectors/{userId}/suspend` — Suspend inspector
+- `PUT /api/v1/admin/inspectors/{userId}/unsuspend` — Unsuspend inspector
+
+### Admin — Buyers
+- `GET /api/v1/admin/buyers` — List buyers
+- `PUT /api/v1/admin/buyers/{userId}/suspend` — Suspend buyer
+- `PUT /api/v1/admin/buyers/{userId}/unsuspend` — Unsuspend buyer
+
+### Admin — Orders & Payments
+- `GET /api/v1/admin/orders` — List all orders
+- `GET /api/v1/admin/payments` — List all payments
+- `POST /api/v1/admin/orders/{orderId}/assign` — Assign order to driver
+- `GET /api/v1/admin/reports` — Admin reports
+- `GET /api/v1/admin/dashboard` — Dashboard overview
+- `GET /api/v1/admin/dashboard/stats` — Dashboard statistics
+
+### Admin — Crops
+- `GET /api/v1/admin/crops` — List crops
+- `POST /api/v1/admin/crops` — Create crop
+- `GET /api/v1/admin/crops/{id}` — Get crop
+- `PUT /api/v1/admin/crops/{id}` — Update crop
+- `DELETE /api/v1/admin/crops/{id}` — Delete crop
+- `PUT /api/v1/admin/crops/{id}/status` — Update crop status
+- `GET /api/v1/admin/crops/summary` — Crop summary
+- `GET /api/v1/admin/crops/types` — Crop types for dropdowns
+
+### Admin — Farms
+- `GET /api/v1/admin/farms` — List farms
+- `POST /api/v1/admin/farms` — Create farm
+- `GET /api/v1/admin/farms/{id}` — Get farm
+- `PUT /api/v1/admin/farms/{id}` — Update farm
+- `PUT /api/v1/admin/farms/{id}/status` — Update farm status
+- `DELETE /api/v1/admin/farms/{id}` — Delete farm
+
+### Admin — Inspections
+- `GET /api/v1/admin/inspections` — List inspections
+- `POST /api/v1/admin/inspections` — Create inspection
+- `GET /api/v1/admin/inspections/{id}` — Get inspection
+- `PUT /api/v1/admin/inspections/{id}/status` — Update status
+- `PUT /api/v1/admin/inspections/{id}/result` — Update result
+- `POST /api/v1/inspections/{id}/evidence/images` — Upload evidence image
+- `GET /api/v1/inspections/{id}/evidence/images` — List evidence images
+- `DELETE /api/v1/inspections/{id}/evidence/images/{imageId}` — Delete evidence image
+- `GET /api/v1/admin/inspections/inspector/{inspectorId}` — Inspections by inspector
+- `GET /api/v1/admin/inspections/status/{status}` — Inspections by status
+- `GET /api/v1/admin/inspections/target/{targetType}/{targetId}` — Inspections by target
+
+### Admin — KYC Documents
+- `GET /api/v1/admin/kyc` — List all KYC documents
+- `GET /api/v1/admin/kyc/pending` — List pending KYC documents
+- `POST /api/v1/admin/kyc/{id}/approve` — Approve KYC document
+- `POST /api/v1/admin/kyc/{id}/reject` — Reject KYC document
+
+### Admin — Notifications
+- `POST /api/v1/admin/notifications` — Create notification
+- `GET /api/v1/admin/notifications` — List all notifications
+- `GET /api/v1/admin/notifications/{id}` — Get notification
+- `GET /api/v1/admin/notifications/user/{userId}` — Notifications by user
+- `GET /api/v1/admin/notifications/user/{userId}/unread` — Unread notifications
+- `PUT /api/v1/admin/notifications/{id}/read` — Mark as read
+- `POST /api/v1/admin/notifications/{id}/read` — Mark as read (POST alias)
+- `PUT /api/v1/admin/notifications/user/{userId}/read-all` — Mark all as read
+- `DELETE /api/v1/admin/notifications/{id}` — Delete notification
+
+### Ecommerce — Notifications
+- `POST /api/v1/ecommerce/notifications/orders/{orderId}` — Order notification
+- `POST /api/v1/ecommerce/notifications/payments/{paymentId}` — Payment notification
+- `POST /api/v1/ecommerce/notifications/disputes/{disputeId}` — Dispute notification
+- `POST /api/v1/ecommerce/notifications/inventory/{productId}` — Inventory notification
+- `GET /api/v1/ecommerce/notifications` — List user ecommerce notifications
+- `POST /api/v1/ecommerce/notifications/{id}/read` — Mark notification read
+- `POST /api/v1/ecommerce/notifications/read-all` — Mark all as read
+- `DELETE /api/v1/ecommerce/notifications/{id}` — Delete notification
+
+### Ecommerce — Products
+- `GET /api/v1/products` — List/search products (public)
+- `GET /api/v1/products/{id}` — Get product (public)
+- `POST /api/v1/products` — Create product with optional images
+- `PUT /api/v1/products/{id}` — Update product
+- `DELETE /api/v1/products/{id}` — Delete product
+- `GET /api/v1/products/{id}/images` — List product images
+- `POST /api/v1/products/{id}/images` — Upload product image
+- `PUT /api/v1/products/{productId}/images/{imageId}` — Replace image
+- `PUT /api/v1/products/{productId}/images/{imageId}/primary` — Set primary image
+- `PUT /api/v1/products/{productId}/images/reorder` — Reorder images
+- `DELETE /api/v1/products/{productId}/images/{imageId}` — Delete image
+- `PUT /api/v1/products/{id}/status` — Update product status
+- `GET /api/v1/sellers/{sellerId}/products` — Products by seller
+- `GET /api/v1/products/seller/{sellerId}` — Products by seller (alias)
+- `GET /api/v1/products/search` — Search products (public)
+- `GET /api/v1/products/category/{categoryId}` — Products by category (public)
+- `GET /api/v1/products/categories` — List categories (public)
+
+### Ecommerce — Categories
+- `GET /api/v1/categories` — List categories
+- `GET /api/v1/categories/{id}` — Get category
+- `GET /api/v1/categories/type/{type}` — Category by type
+- `GET /api/v1/categories/active` — Active categories (public)
+- `POST /api/v1/categories` — Create category
+- `PUT /api/v1/categories/{id}` — Update category
+- `PUT /api/v1/categories/{id}/status` — Update category status
+- `DELETE /api/v1/categories/{id}` — Delete category
+
+### Ecommerce — Orders
+- `POST /api/v1/orders` — Create order
+- `GET /api/v1/orders/{id}` — Get order
+- `GET /api/v1/orders` — List orders
+- `GET /api/v1/orders/{id}/timeline` — Order timeline
+- `GET /api/v1/orders/search` — Search orders
+- `GET /api/v1/orders/buyer/{buyerId}` — Orders by buyer
+- `POST /api/v1/orders/{id}/status` — Update order status
+- `POST /api/v1/orders/{id}/confirm-receipt` — Confirm receipt
+- `POST /api/v1/orders/{id}/cancel` — Cancel order
+
+### Ecommerce — Payments
+- `POST /api/v1/payments` — Create payment
+- `GET /api/v1/payments/{id}` — Get payment
+- `GET /api/v1/payments/order/{orderId}` — Payments by order
+- `POST /api/v1/payments/initiate` — Initiate payment (M-Pesa/Bank)
+- `POST /api/v1/payments/webhook` — Payment webhook
+- `POST /api/v1/payments/{id}/refund` — Refund payment
+- `PUT /api/v1/payments/{id}/status` — Update payment status
+
+### Ecommerce — Cart & Checkout
+- `GET /api/v1/cart` — Get cart
+- `POST /api/v1/cart/items` — Add item to cart
+- `PUT /api/v1/cart/items/{itemId}` — Update cart item
+- `DELETE /api/v1/cart/items/{itemId}` — Remove item
+- `DELETE /api/v1/carts/{cartId}` — Delete cart
+- `GET /api/v1/carts/buyer/{buyerId}` — Cart by buyer
+- `POST /api/v1/carts/{cartId}/items` — Add item (alternate)
+- `POST /api/v1/carts/{cartId}/checkout` — Checkout from cart
+- `PUT /api/v1/carts/{cartId}/items/{productId}` — Update item (alternate)
+- `POST /api/v1/checkout` — Checkout
+- `POST /api/v1/checkout/validate` — Validate checkout
+
+### Ecommerce — Disputes
+- `POST /api/v1/disputes` — Create dispute
+- `GET /api/v1/disputes/{id}` — Get dispute
+- `GET /api/v1/disputes/order/{orderId}` — Disputes by order
+- `GET /api/v1/disputes/user/{userId}` — Disputes by user
+- `PUT /api/v1/disputes/{id}/status` — Update dispute status
+- `PUT /api/v1/disputes/{id}/resolution` — Set resolution
+
+### Logistics — Delivery Jobs
+- `GET /api/v1/logistics/jobs` — List jobs
+- `POST /api/v1/logistics/jobs` — Create delivery job
+- `GET /api/v1/logistics/jobs/{id}` — Get job
+- `GET /api/v1/logistics/jobs/{jobId}/tracking` — Tracking info
+- `GET /api/v1/logistics/jobs/driver/{driverId}` — Jobs by driver
+- `GET /api/v1/logistics/jobs/order/{orderId}` — Jobs by order
+- `GET /api/v1/logistics/jobs/status/{status}` — Jobs by status
+- `POST /api/v1/logistics/jobs/{id}/assign` — Assign driver
+- `PUT /api/v1/logistics/jobs/{id}/assign` — Assign driver (PUT)
+- `POST /api/v1/logistics/jobs/{id}/accept` — Accept job
+- `PUT /api/v1/logistics/jobs/{id}/accept` — Accept job (PUT)
+- `POST /api/v1/logistics/jobs/{id}/status` — Update job status
+- `POST /api/v1/logistics/jobs/{id}/cancel` — Cancel job
+- `PUT /api/v1/logistics/jobs/{id}/cancel` — Cancel job (PUT)
+- `POST /api/v1/logistics/jobs/{jobId}/proof-of-delivery` — Upload POD
+- `POST /api/v1/logistics/jobs/{jobId}/location` — Update location
+- `POST /api/v1/logistics/jobs/{id}/otp/verify` — Verify OTP
+
+### Logistics — Proof of Delivery
+- `GET /api/v1/logistics/proof-of-delivery/{id}` — Get POD
+- `GET /api/v1/logistics/proof-of-delivery/job/{jobId}` — POD by job
+- `GET /api/v1/logistics/proof-of-delivery/driver/{driverId}` — POD by driver
+- `POST /api/v1/logistics/proof-of-delivery` — Create POD
+- `DELETE /api/v1/logistics/proof-of-delivery/{id}` — Delete POD
+
+### Logistics — Tracking Events
+- `GET /api/v1/logistics/tracking-events/{id}` — Get event
+- `GET /api/v1/logistics/tracking-events/job/{jobId}` — Events by job
+- `GET /api/v1/logistics/tracking-events/driver/{driverId}` — Events by driver
+- `POST /api/v1/logistics/tracking-events` — Create event
+
+### Profiles
+- `GET /api/v1/profiles/drivers/{userId}` — Driver profile
+- `POST /api/v1/profiles/drivers/{userId}` — Create driver profile
+- `PUT /api/v1/profiles/drivers/{userId}` — Update driver profile
+- `DELETE /api/v1/profiles/drivers/{userId}` — Delete driver profile
+- `POST /api/v1/profiles/drivers/{userId}/images` — Upload driver image
+- `GET /api/v1/profiles/drivers/{userId}/images` — List driver images
+- `DELETE /api/v1/profiles/drivers/{userId}/images/{imageId}` — Delete driver image
+- Similar endpoints for suppliers, farmers, inspectors, buyers
+
+### Addresses
+- `GET /api/v1/addresses` — List addresses
+- `POST /api/v1/addresses` — Create address
+- `GET /api/v1/users/{userId}/addresses` — Addresses by user
+- `PUT /api/v1/addresses/{id}` — Update address
+- `DELETE /api/v1/addresses/{id}` — Delete address
+
+### Public Reference Data
+- `GET /api/v1/crop-types` — List crop types (public)
+- `GET /api/v1/regions` — List Kenyan counties (public)
+- `GET /api/v1/regions/currency` — Currency info (public)
+
+### Image Serving
+- `GET /api/v1/images/{publicId}` — Serve stored image (database provider)
+- `GET /uploads/**` — Serve local files (local storage provider)
+
+### Health & System
+- `GET /` — Service health (public)
+- `GET /api/v1/health` — API health (public)
+- `GET /api/v1/admin/mail/test` — Send test email (admin only)
+
+## Key Patterns for Developers
+
+1. **API Response**: All responses wrapped in `{success, message, data, timestamp, error}`
+2. **Error handling**: `GlobalExceptionHandler` converts exceptions to proper `ApiResponse`
+3. **Validation**: `@Valid` on request bodies, returns field→message map on 400
+4. **Image upload**: Use `ImageStorage` interface (`cloudinaryService` bean), handles database/local/cloudinary
+5. **Roles**: `BUYER`, `FARMER`, `SUPPLIER`, `DRIVER`, `INSPECTOR`, `ADMIN`
+6. **Pagination**: Use `Pageable` parameter for list endpoints
+7. **Testing**: `./mvnw test` — H2 in-memory database for tests
+
+## Database Tables
+
+Core tables: `users`, `addresses`, `notifications`, `audit_logs`
+Product: `categories`, `products`, `product_images`
+Orders: `orders`, `order_items`, `order_events`
+Payments: `payments`
+Cart: `carts`, `cart_items`
+Disputes: `disputes`
+Profiles: `supplier_profiles`, `farmer_profiles`, `driver_profiles`, `buyer_profiles`, `inspector_profiles`
+Profile images: `supplier_profile_images`, `farmer_profile_images`, `driver_profile_images`, `buyer_profile_images`
+Farm: `farms`, `farm_images`, `crops`, `crop_types`
+KYC: `kyc_documents`
+Inspections: `inspections`, `inspection_evidence_images`
+Logistics: `logistics_jobs`, `tracking_events`, `proof_of_deliveries`
+Images (database storage): `images` table (BaseImageEntity: id, publicId, assetId, url, sortOrder, isPrimary)
