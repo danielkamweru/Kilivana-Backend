@@ -315,7 +315,7 @@ public class SeedDataRunner {
         created += category("Meat & Livestock", SellerType.FARMER);
         created += category("Honey & Beeswax", SellerType.FARMER);
 
-        // Supplier categories: farming inputs and supplies
+        // Supplier categories: farming inputs and agricultural supplies
         created += category("Fertilizers", SellerType.SUPPLIER);
         created += category("Seeds & Seedlings", SellerType.SUPPLIER);
         created += category("Animal Feeds", SellerType.SUPPLIER);
@@ -324,8 +324,6 @@ public class SeedDataRunner {
         created += category("Pesticides & Crop Protection", SellerType.SUPPLIER);
         created += category("Irrigation Supplies", SellerType.SUPPLIER);
         created += category("Packaging Materials", SellerType.SUPPLIER);
-        created += category("Groceries", SellerType.SUPPLIER);
-        created += category("Pantry Staples", SellerType.SUPPLIER);
         return created;
     }
 
@@ -399,12 +397,6 @@ public class SeedDataRunner {
                 "Complete drip irrigation for 0.1 acre", "kit", money("8000.00"), 30, 1);
         created += product("HDPE Grow Bags", supplier, "Packaging Materials",
                 "Black grow bags, 15L, pack of 10", "pack", money("1200.00"), 90, 2);
-        created += product("Maize Flour (Unga)", supplier, "Pantry Staples",
-                "Grade 1 sifted maize meal", "bag", money("180.00"), 120, 1);
-        created += product("Cooking Oil", supplier, "Groceries",
-                "Sunflower cooking oil", "litre", money("320.00"), 90, 1);
-        created += product("Sugar", supplier, "Groceries",
-                "White refined sugar", "kg", money("160.00"), 100, 1);
 
         return created;
     }
