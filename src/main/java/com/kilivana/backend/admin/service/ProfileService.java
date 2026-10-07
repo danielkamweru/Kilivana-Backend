@@ -576,6 +576,25 @@ public class ProfileService {
     }
 
     @Transactional
+    public void setPrimaryDriverProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
+        ensureOwnershipOrAdmin(authenticatedUserId, userId);
+        ensureRole(userId, UserRole.DRIVER);
+        DriverProfileImage image = driverProfileImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile image", imageId));
+        if (!image.getUserId().equals(userId)) {
+            throw new BadRequestException("Image does not belong to this driver");
+        }
+        driverProfileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+                .filter(existing -> !existing.getId().equals(imageId))
+                .ifPresent(existing -> {
+                    existing.setIsPrimary(false);
+                    driverProfileImageRepository.save(existing);
+                });
+        image.setIsPrimary(true);
+        driverProfileImageRepository.save(image);
+    }
+
+    @Transactional
     public void setPrimarySupplierProfileImage(Long authenticatedUserId, Long userId, Long imageId) {
         ensureOwnershipOrAdmin(authenticatedUserId, userId);
         ensureRole(userId, UserRole.SUPPLIER);
