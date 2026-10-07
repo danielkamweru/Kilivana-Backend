@@ -302,7 +302,6 @@ public class SeedDataRunner {
     private int seedCategories() {
         int created = 0;
         // Farmer categories: farm-produced goods
-        created += category("Fresh Produce", SellerType.FARMER);
         created += category("Fruits", SellerType.FARMER);
         created += category("Vegetables", SellerType.FARMER);
         created += category("Cereals", SellerType.FARMER);
@@ -460,16 +459,16 @@ public class SeedDataRunner {
         Address work = addressByLabel(buyer, "Work");
 
         Product tea = productRepository.findByNameAndSellerId("Green Tea", farmer.getId()).orElseThrow();
-        Product flour = productRepository.findByNameAndSellerId("Maize Flour (Unga)", supplier.getId()).orElseThrow();
-        Product avocados = productRepository.findByNameAndSellerId("Hass Avocados", farmer.getId()).orElseThrow();
+        Product fertilizer = productRepository.findByNameAndSellerId("DAP Fertilizer", supplier.getId()).orElseThrow();
+        Product avocados = productRepository.findByNameAndSellerId("Red Delicious Apples", farmer.getId()).orElseThrow();
         Product milk = productRepository.findByNameAndSellerId("Fresh Milk", farmer.getId()).orElseThrow();
         Product coffee = productRepository.findByNameAndSellerId("Roasted Coffee Beans", farmer.getId()).orElseThrow();
 
         int created = 0;
 
-        // Order one: a basket of farm and pantry goods, later disputed.
+        // Order one: a basket of farm goods, later disputed.
         created += order(ORDER_ONE, buyer, home, money("25.00"),
-                line(tea, 2), line(flour, 1));
+                line(tea, 2), line(fertilizer, 1));
         created += initiatedPayment(PAYMENT_ONE, ORDER_ONE, PaymentMethod.MPESA, money("280.00"));
 
         // Order two: fresh produce, confirmed and out for delivery.
@@ -588,7 +587,7 @@ public class SeedDataRunner {
                 .destinationAddress(work.getAddressText())
                 .destinationLatitude(work.getLatitude())
                 .destinationLongitude(work.getLongitude())
-                .cargoDescription("Hass Avocados, Fresh Milk")
+                .cargoDescription("Red Delicious Apples, Fresh Milk")
                 .quantity(5)
                 .distanceKm(24.5)
                 .estimatedMinutes(45)
