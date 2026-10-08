@@ -22,4 +22,6 @@ public class UserProfileUpdateRequest {
 
     @NotBlank
     private String phone;
+
+    private String region;
 }

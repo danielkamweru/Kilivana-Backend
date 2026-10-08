@@ -2,14 +2,17 @@ package com.kilivana.backend.admin.controller;
 
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.dto.UserResponse;
-import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.admin.service.UserService;
+import com.kilivana.backend.admin.service.ProfileService;
+import com.kilivana.backend.admin.dto.FarmerProfileRequest;
+import com.kilivana.backend.admin.dto.FarmerProfileResponse;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.farm.dto.FarmerListItem;
 import com.kilivana.backend.farm.dto.FarmerResponse;
 import com.kilivana.backend.farm.entity.Farm;
@@ -22,8 +25,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +41,7 @@ public class AdminFarmerController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
+    private final ProfileService profileService;
 
     @Operation(summary = "Suspend a farmer",
             description = "Suspends the farmer account. The account stays; the farmer cannot sell or interact with the platform.")
@@ -104,6 +110,16 @@ public class AdminFarmerController {
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
         return ResponseEntity.ok(ApiResponse.success(toFarmerResponse(user)));
+    }
+
+    @Operation(summary = "Update a farmer profile")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<FarmerProfileResponse>> updateFarmerProfile(
+            @AuthenticationPrincipal Long authenticatedUserId,
+            @PathVariable("id") Long userId,
+            @Valid @RequestBody FarmerProfileRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                profileService.updateFarmerProfile(authenticatedUserId, userId, request)));
     }
 
     @Operation(summary = "Approve a farmer")

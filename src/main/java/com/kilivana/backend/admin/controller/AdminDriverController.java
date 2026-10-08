@@ -55,6 +55,16 @@ public class AdminDriverController {
         return ResponseEntity.ok(ApiResponse.successMessage("Driver deleted successfully"));
     }
 
+    @Operation(summary = "Update a driver",
+            description = "Updates the driver account and profile. Password is optional — "
+                    + "omit it or send a blank value to leave the existing password unchanged.")
+    @PutMapping("/{userId}")
+    public ResponseEntity<ApiResponse<AdminDriverResponse>> updateDriver(
+            @PathVariable Long userId, @Valid @RequestBody DriverRegistrationRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminDriverService.updateDriver(userId, request)));
+    }
+
     @Operation(summary = "Suspend a driver",
             description = "Takes a driver off the road. The account stays; the "
                     + "roster reads them as suspended and the reason is kept on "

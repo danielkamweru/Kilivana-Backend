@@ -13,6 +13,7 @@ import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
@@ -114,6 +115,73 @@ public class AdminDriverService {
                 .build());
 
         return toResponse(user, profile, Map.of(user.getId(), 0L));
+    }
+
+    @Transactional
+    public AdminDriverResponse updateDriver(Long userId, DriverRegistrationRequest request) {
+        User user = driverUser(userId);
+        DriverProfile profile = driverProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new BadRequestException("Driver has no profile to edit"));
+
+        String email = normalizeEmail(request.getEmail());
+        String phone = normalizePhone(request.getPhone());
+
+        if (!user.getEmail().equalsIgnoreCase(email) && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new ConflictException("Email already registered to another account", "EMAIL_TAKEN");
+        }
+        if (!user.getPhone().equals(phone) && userRepository.existsByPhone(phone)) {
+            throw new ConflictException("Phone number already registered to another account", "PHONE_TAKEN");
+        }
+        if (request.getUsername() != null && !request.getUsername().isBlank()
+                && !request.getUsername().trim().equalsIgnoreCase(user.getUsername())
+                && userRepository.existsByUsernameIgnoreCase(request.getUsername().trim())) {
+            throw new ConflictException("Username already taken", "USERNAME_TAKEN");
+        }
+
+        if (request.getRegion() != null && !request.getRegion().isBlank()) {
+            String county = KenyaCounty.normalise(request.getRegion());
+            if (county == null) {
+                throw new BadRequestException("Region must be one of the 47 Kenyan counties");
+            }
+            user.setRegion(county);
+        }
+
+        user.setName(request.getFullName().trim());
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setUsername(request.getUsername() != null && !request.getUsername().isBlank()
+                ? request.getUsername().trim() : null);
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        }
+
+        String idType = KenyanIdType.normalise(request.getIdType());
+        if (idType == null) {
+            throw new BadRequestException("ID type must be one of: "
+                    + String.join(", ", KenyanIdType.all()));
+        }
+
+        profile.setAddress(request.getAddress());
+        profile.setLicenseNumber(request.getLicenceNumber());
+        profile.setVehicleType(request.getVehicleType());
+        profile.setVehicleNumber(request.getPlateNumber().trim().toUpperCase());
+        profile.setVehicleMake(request.getVehicleMake());
+        profile.setVehicleCapacityKg(DriverCapacityFormatter.toKilograms(request.getVehicleCapacity()));
+        profile.setVehicleDetails(request.getVehicleMake() == null || request.getVehicleMake().isBlank()
+                ? null
+                : request.getVehicleMake() + " " + request.getVehicleCapacity());
+        profile.setLicenseExpiryDate(request.getLicenceExpiry());
+        profile.setIdType(idType);
+        profile.setIdNumber(request.getIdNumber());
+        profile.setKycStatus(request.getKycStatus() == null ? KycStatus.PENDING : request.getKycStatus());
+        if (request.getAvailabilityStatus() != null) {
+            profile.setAvailabilityStatus(request.getAvailabilityStatus());
+        }
+
+        User savedUser = userRepository.save(user);
+        DriverProfile savedProfile = driverProfileRepository.save(profile);
+        return toResponse(savedUser, savedProfile, Map.of(savedUser.getId(), 0L));
     }
 
     private static String normalizeEmail(String email) {

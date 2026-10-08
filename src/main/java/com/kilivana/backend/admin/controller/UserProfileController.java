@@ -37,10 +37,11 @@ public class UserProfileController {
     public ResponseEntity<ApiResponse<UserResponse>> updateOwnProfile(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody UserProfileUpdateRequest request) {
-        UserRegistrationRequest serviceRequest = UserRegistrationRequest.builder()
+         UserRegistrationRequest serviceRequest = UserRegistrationRequest.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
+                .region(request.getRegion())
                 .build();
         return ResponseEntity.ok(ApiResponse.success(userService.updateUser(userId, serviceRequest)));
     }
