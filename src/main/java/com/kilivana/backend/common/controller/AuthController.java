@@ -55,6 +55,8 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
+    @Operation(summary = "Password reset (disabled)",
+            description = "Fails closed until a verified account recovery flow is available. Valid requests return HTTP 503.")
     public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
         String message = authService.resetPassword(request);
         return ResponseEntity.ok(ApiResponse.success(message));

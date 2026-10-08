@@ -13,6 +13,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.UnauthorizedException;
+import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.service.KenyaCounty;
 import com.kilivana.backend.security.JwtProperties;
@@ -150,14 +151,9 @@ public class AuthService {
         return "Password reset instructions have been sent if this account exists.";
     }
 
-    @Transactional
+    /** Disabled until account ownership can be verified with a secure recovery flow. */
     public String resetPassword(PasswordResetRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.getEmail()))
-                .orElseThrow(() -> new ResourceNotFoundException("User", 0L));
-
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-        return "Password reset successfully";
+        throw new ServiceUnavailableException("Password reset is currently unavailable.");
     }
 
     public AuthTokenResponse refreshToken(String refreshToken) {
