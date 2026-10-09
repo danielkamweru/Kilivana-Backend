@@ -18,8 +18,17 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
-public class CartService {
+    @RequiredArgsConstructor
+    public class CartService {
+
+    /**
+     * A buyer's active shopping cart.
+     *
+     * <p>One active cart per buyer; adding an item creates it if missing. The cart stores a
+     * price snapshot on each line so the buyer sees the price they agreed to at checkout even if
+     * the product price changes later. Checkout flips the cart to {@code CHECKOUT_PROCESSING}
+     * and the order service reads the lines from there.
+     */
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
@@ -111,6 +120,8 @@ public class CartService {
         if (items.isEmpty()) {
             throw new BadRequestException("Cart is empty");
         }
+        // Flipping the status blocks further mutations while the order service
+        // reads the lines and creates the order.
         cart.setStatus(Cart.CartStatus.CHECKOUT_PROCESSING);
         cartRepository.save(cart);
     }
@@ -120,6 +131,8 @@ public class CartService {
         cartItemRepository.findByCartId(cartId).forEach(cartItemRepository::delete);
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
+        // Abandoned is a terminal state: the cart is kept for analytics but
+        // will never be reactivated.
         cart.setStatus(Cart.CartStatus.ABANDONED);
         cartRepository.save(cart);
     }

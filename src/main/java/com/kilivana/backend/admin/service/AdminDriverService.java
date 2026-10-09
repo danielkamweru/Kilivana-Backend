@@ -153,6 +153,7 @@ public class AdminDriverService {
                 ? request.getUsername().trim() : null);
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            // Password is optional on update: omit it to leave the existing password unchanged.
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
 
@@ -205,11 +206,15 @@ public class AdminDriverService {
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("Driver", userId);
         }
+        // A driver with delivery history is not disposable: the logistics trail is
+        // part of the marketplace record. The administrator should deactivate instead.
         boolean hasHistory = !logisticsJobRepository.findByDriverId(userId).isEmpty();
         if (hasHistory) {
             throw new BadRequestException(
                     "This driver has delivery history and cannot be deleted. Set the account to INACTIVE instead.");
         }
+        // Profile table has no FK to users, so delete profile first to avoid an
+        // orphan row pointing at a user that no longer exists.
         driverProfileRepository.findByUserId(userId).ifPresent(driverProfileRepository::delete);
         userRepository.deleteById(userId);
     }

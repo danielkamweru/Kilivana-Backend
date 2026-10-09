@@ -75,6 +75,8 @@ public class LocalImageStorage implements ImageStorage {
     public Map<String, Object> replaceImage(String oldPublicId, MultipartFile newFile, String folder)
             throws IOException {
         Map<String, Object> result = uploadImage(newFile, folder);
+        // Delete old only after new upload succeeds so a failure leaves the
+        // original image intact.
         deleteImage(oldPublicId);
         return result;
     }

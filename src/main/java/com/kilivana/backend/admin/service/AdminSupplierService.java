@@ -158,6 +158,7 @@ public class AdminSupplierService {
         user.setRegion(county);
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            // Password is optional on update: omit it to leave the existing password unchanged.
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
 
@@ -202,6 +203,8 @@ public class AdminSupplierService {
     @Transactional
     public void deleteSupplier(Long userId) {
         supplierUser(userId);
+        // Refused while the supplier still has products listed, because those products are
+        // part of the marketplace and deleting the account would orphan them.
         var products = productRepository.findBySellerIdAndSellerType(userId, SellerType.SUPPLIER);
         if (!products.isEmpty()) {
             throw new BadRequestException(

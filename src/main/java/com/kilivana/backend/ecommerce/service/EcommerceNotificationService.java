@@ -12,9 +12,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-@Transactional
-public class EcommerceNotificationService {
+    @RequiredArgsConstructor
+    @Transactional
+    public class EcommerceNotificationService {
+
+    /**
+     * Convenience wrapper that posts typed e-commerce notifications to the shared
+     * {@link NotificationService}.
+     *
+     * <p>Each method builds a {@link Notification} with the appropriate type code, a default
+     * title/message from {@link EcommerceNotificationType}, and the relevant entity ID appended
+     * so the panel can deep-link. The underlying notification table is shared with admin and
+     * logistics notifications; this service only knows the e-commerce subset.
+     */
 
     private final NotificationRepository notificationRepository;
 

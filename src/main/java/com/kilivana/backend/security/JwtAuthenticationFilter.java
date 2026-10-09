@@ -16,6 +16,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Resolves the caller on every request from the stateless JWT carried in the
+ * {@code Authorization} header. Spring Security is configured as stateless,
+ * so there is no session to fall back on; this filter is what populates
+ * {@link SecurityContextHolder} so controllers and method security can see who
+ * is making the call.
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -29,6 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        // JWT is stateless: there is no session, so the caller is resolved from
+        // the Authorization header on every request.
         String token = resolveToken(request);
 
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -47,6 +56,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Builds the authentication object from the token's claims and stores it
+     * in the security context. The principal is the user id — a compact value
+     * that {@link CurrentUser} reads back without a DB hit.
+     */
     private void authenticate(String token, HttpServletRequest request) {
         Long userId = jwtService.extractUserId(token);
         var role = jwtService.extractRole(token);
@@ -61,6 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
+    /** Pulls the bearer token from the Authorization header, returning null when absent. */
     private String resolveToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith(BEARER_PREFIX)) {

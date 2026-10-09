@@ -136,6 +136,8 @@ public class CloudinaryService implements ImageStorage {
         Map<String, Object> uploadResult = uploadImage(newFile, folder);
 
         if (uploadResult != null && uploadResult.get("public_id") != null) {
+            // Delete old only after new upload succeeds so a failure leaves the
+            // original image intact.
             deleteImage(oldPublicId);
         }
 

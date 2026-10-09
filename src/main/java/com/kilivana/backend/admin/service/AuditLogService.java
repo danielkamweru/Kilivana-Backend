@@ -15,8 +15,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class AuditLogService {
+    @RequiredArgsConstructor
+    public class AuditLogService {
+
+    /**
+     * Read-only access to the immutable audit trail.
+     *
+     * <p>Audit logs are written by the {@code @EnableJpaAuditing} listener on every entity
+     * change; this service only exposes them. No write methods exist because the trail must
+     * never be altered.
+     */
 
     private final AuditLogRepository auditLogRepository;
 

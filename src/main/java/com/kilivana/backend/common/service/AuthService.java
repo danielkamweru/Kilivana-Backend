@@ -23,8 +23,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
-public class AuthService {
+    @RequiredArgsConstructor
+    public class AuthService {
+
+    /**
+     * Self-service registration, login, token refresh and password reset.
+     *
+     * <p>Staff roles (ADMIN, INSPECTOR) cannot self-register; they are created by an existing
+     * administrator through the admin panel. Passwords are never returned; only JWT access and
+     * refresh tokens are issued. The access token expiry is configurable; a non-positive value
+     * means the token carries no expiry and stays valid until the signing secret changes.
+     */
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -147,6 +156,8 @@ public class AuthService {
     public String forgotPassword(String email) {
         userRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .orElseThrow(() -> new ResourceNotFoundException("User with email not found"));
+        // Same message whether the account exists or not, so an attacker cannot
+        // enumerate registered emails.
         return "Password reset instructions have been sent if this account exists.";
     }
 

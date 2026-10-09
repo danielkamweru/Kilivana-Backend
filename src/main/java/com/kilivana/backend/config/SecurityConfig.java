@@ -75,11 +75,15 @@ public class SecurityConfig {
     };
 
     @Bean
+    /** BCrypt is the standard adaptive password hash; bcrypt's built-in salt
+     *  means the stored hash never needs a separate salt column. */
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
+    /** Declared here (rather than @Component-scanned) so the full auth graph is
+     *  wired by importing this config alone, keeping @WebMvcTest slices working. */
     public JwtService jwtService(JwtProperties jwtProperties) {
         return new JwtService(jwtProperties);
     }
@@ -94,6 +98,11 @@ public class SecurityConfig {
         return new RestAuthenticationErrorHandler(objectMapper);
     }
 
+    /**
+     * Assembles the stateless JWT security filter chain. CSRF is disabled
+     * because the API is consumed by non-browser clients that manage their
+     * own token storage; the JWT filter handles authentication instead.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtAuthenticationFilter,

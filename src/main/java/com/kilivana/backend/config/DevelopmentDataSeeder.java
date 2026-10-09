@@ -36,6 +36,11 @@ public class DevelopmentDataSeeder {
     @Value("${DEV_SUPPLIER_EMAIL:supplier@kilivana.demo}")
     private String supplierEmail;
 
+    /**
+     * Inserts buyer-facing demo products on top of {@link SeedDataRunner}'s
+     * data. Runs only behind the {@code DEV_SEED_ENABLED} flag and upserts by
+     * name so it is safe to re-run.
+     */
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seedDevelopmentData() {

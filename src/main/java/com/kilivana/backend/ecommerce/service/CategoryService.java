@@ -15,8 +15,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class CategoryService {
+    @RequiredArgsConstructor
+    public class CategoryService {
+
+    /**
+     * Product categories, partitioned by seller type (FARMER vs SUPPLIER).
+     *
+     * <p>Categories are created by administrators and can be toggled active/inactive. A category
+     * name is unique globally (not per type) so the buyer's filter dropdown never shows duplicates.
+     */
 
     private final CategoryRepository categoryRepository;
 

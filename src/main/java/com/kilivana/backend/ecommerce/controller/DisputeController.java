@@ -13,12 +13,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * Disputes live beside orders and payments, so the panel's short
+ * REST controller for managing order disputes: creation, retrieval,
+ * status transitions and resolution.
+ *
+ * <p>Disputes live beside orders and payments, so the panel's short
  * resource paths ({@code /api/v1/disputes}) answer alongside the
- * module-scoped ones.
+ * module-scoped ones.</p>
  */
 @Tag(name = "E-Commerce · Orders", description = "Order placement, status transitions, timeline and disputes")
 @RestController
@@ -28,39 +34,73 @@ public class DisputeController {
 
     private final DisputeService disputeService;
 
+    @Operation(summary = "Create dispute", description = "Creates a new dispute from the supplied request payload and returns the created dispute.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Dispute created successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Referenced order not found")
+    })
     @PostMapping
-    public ResponseEntity<ApiResponse<DisputeResponse>> createDispute(@RequestBody DisputeRequest request) {
+    public ResponseEntity<ApiResponse<DisputeResponse>> createDispute(@Parameter(description = "Dispute creation details") @RequestBody DisputeRequest request) {
         DisputeResponse dispute = disputeService.createDispute(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(dispute));
     }
 
+    @Operation(summary = "Get dispute by id", description = "Retrieves a single dispute by its identifier.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dispute found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Dispute not found")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<DisputeResponse>> getDisputeById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<DisputeResponse>> getDisputeById(@Parameter(description = "Dispute identifier") @PathVariable Long id) {
         DisputeResponse dispute = disputeService.getDisputeById(id);
         return ResponseEntity.ok(ApiResponse.success(dispute));
     }
 
+    @Operation(summary = "Get disputes by order", description = "Retrieves all disputes associated with a specific order.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Disputes retrieved successfully")
+    })
     @GetMapping("/order/{orderId}")
-    public ResponseEntity<ApiResponse<List<DisputeResponse>>> getDisputesByOrder(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse<List<DisputeResponse>>> getDisputesByOrder(@Parameter(description = "Order identifier") @PathVariable Long orderId) {
         List<DisputeResponse> disputes = disputeService.getDisputesByOrder(orderId);
         return ResponseEntity.ok(ApiResponse.success(disputes));
     }
 
+    @Operation(summary = "Get disputes by user", description = "Retrieves all disputes associated with a specific user.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Disputes retrieved successfully")
+    })
     @GetMapping("/user/{userId}")
-    public ResponseEntity<ApiResponse<List<DisputeResponse>>> getDisputesByUser(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<List<DisputeResponse>>> getDisputesByUser(@Parameter(description = "User identifier") @PathVariable Long userId) {
         List<DisputeResponse> disputes = disputeService.getDisputesByUser(userId);
         return ResponseEntity.ok(ApiResponse.success(disputes));
     }
 
+    @Operation(summary = "Update dispute status", description = "Transitions a dispute to a new status and returns the updated dispute.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dispute status updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid or unknown status value"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Dispute not found")
+    })
     @PutMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<DisputeResponse>> updateDisputeStatus(@PathVariable Long id, @RequestParam DisputeStatus status) {
+    public ResponseEntity<ApiResponse<DisputeResponse>> updateDisputeStatus(
+            @Parameter(description = "Dispute identifier") @PathVariable Long id,
+            @Parameter(description = "New dispute status") @RequestParam DisputeStatus status) {
         DisputeResponse dispute = disputeService.updateDisputeStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success(dispute));
     }
 
+    @Operation(summary = "Resolve dispute", description = "Resolves a dispute with the provided resolution details and returns the updated dispute.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dispute resolved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Dispute not found")
+    })
     @PutMapping("/{id}/resolution")
     public ResponseEntity<ApiResponse<DisputeResponse>> resolveDispute(
-            @PathVariable Long id, @RequestBody DisputeResolutionRequest request) {
+            @Parameter(description = "Dispute identifier") @PathVariable Long id,
+            @Parameter(description = "Dispute resolution details") @RequestBody DisputeResolutionRequest request) {
         DisputeResponse dispute = disputeService.resolveDispute(id, request);
         return ResponseEntity.ok(ApiResponse.success(dispute));
     }

@@ -1,5 +1,11 @@
 package com.kilivana.backend.common.enums;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/**
+ * Role a user holds on the platform, which decides what they may do.
+ */
+@Schema(description = "Role a user holds on the platform, which decides what they may do.")
 public enum UserRole {
     FARMER,
     BUYER,

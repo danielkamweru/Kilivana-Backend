@@ -1,7 +1,13 @@
 package com.kilivana.backend.ecommerce.enums;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
+/**
+ * Kinds of notification the ecommerce side can send a user, each with a code, a
+ * default title and a default message used when no override has been configured.
+ */
+@Schema(description = "Kinds of notification the ecommerce side can send a user, each with a code, a default title and a default message used when no override has been configured.")
 @Getter
 public enum EcommerceNotificationType {
 

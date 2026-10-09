@@ -11,6 +11,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Configures cross-origin requests. The allowed origins are driven by the
+ * {@code cors.allowed-origins} property so deployments can lock the API down
+ * to their own frontend, while local development always keeps the Angular dev
+ * server and ngrok preview tunnels accessible.
+ */
 @Configuration
 public class CorsConfig {
 
@@ -18,6 +24,8 @@ public class CorsConfig {
     private String corsAllowedOrigins;
 
     @Bean
+    /** Registers the CORS policy for every path so preflight and actual
+     *  cross-origin requests are accepted from the configured origins. */
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 

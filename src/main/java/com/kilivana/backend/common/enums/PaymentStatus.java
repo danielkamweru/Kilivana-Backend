@@ -3,6 +3,8 @@ package com.kilivana.backend.common.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Where a payment sits between the buyer paying and the seller being settled.
  *
@@ -13,6 +15,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * dropped because nothing set them, the panel has no display for any of them, and
  * the panel's own union has no FAILED either.
  */
+@Schema(description = "Where a payment sits between the buyer paying and the seller being settled.")
 public enum PaymentStatus {
     /** Initiated, not yet confirmed by the provider. */
     PENDING,

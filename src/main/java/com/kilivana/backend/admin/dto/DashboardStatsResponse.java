@@ -23,25 +23,25 @@ public class DashboardStatsResponse {
     @Schema(description = "Registered buyers", example = "76")
     private Long totalBuyers;
 
-    @Schema(description = "Orders that are neither cancelled nor failed")
+    @Schema(description = "Orders that are neither cancelled nor failed", example = "23")
     private Long activeOrders;
 
-    @Schema(description = "Sum of settled order totals for the current calendar month")
+    @Schema(description = "Sum of settled order totals for the current calendar month", example = "1250000.00")
     private BigDecimal monthlyRevenue;
 
-    @Schema(description = "Users still awaiting verification, any role")
+    @Schema(description = "Users still awaiting verification, any role", example = "12")
     private Long pendingVerifications;
 
-    @Schema(description = "Disputes in OPEN or IN_PROGRESS")
+    @Schema(description = "Disputes in OPEN or IN_PROGRESS", example = "5")
     private Long openDisputes;
 
-    @Schema(description = "Mean order total across settled orders")
+    @Schema(description = "Mean order total across settled orders", example = "18500.50")
     private BigDecimal averageOrderValue;
 
-    @Schema(description = "Settled orders placed in the current calendar month")
+    @Schema(description = "Settled orders placed in the current calendar month", example = "68")
     private Long monthlyOrders;
 
-    @Schema(description = "When these figures were computed")
+    @Schema(description = "When these figures were computed", example = "2026-09-30T23:59:59")
     private LocalDateTime updatedAt;
 
     @Schema(description = "Settled orders per day for the last 14 days, oldest first")

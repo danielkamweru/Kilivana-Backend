@@ -25,8 +25,15 @@ import java.util.Map;
  * across users, profiles, orders and disputes, and none of the other roles need that.
  */
 @Service
-@RequiredArgsConstructor
-public class AdminBuyerService {
+    @RequiredArgsConstructor
+    public class AdminBuyerService {
+
+    /**
+     * The administrator's buyer list.
+     *
+     * <p>Separate from {@link ProfileService} because this is an administration concern: it reads
+     * across users, profiles, orders and disputes, and none of the other roles need that.
+     */
 
     private final UserRepository userRepository;
     private final BuyerProfileRepository buyerProfileRepository;

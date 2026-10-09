@@ -13,8 +13,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-public class AddressService {
+    @RequiredArgsConstructor
+    public class AddressService {
+
+    /**
+     * Manages a buyer's saved delivery addresses.
+     *
+     * <p>Each address belongs to one buyer; the service enforces ownership on update and delete
+     * so a buyer cannot reach another buyer's addresses by guessing IDs.
+     */
 
     private final AddressRepository addressRepository;
 

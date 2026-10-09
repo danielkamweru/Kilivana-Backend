@@ -13,8 +13,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class NotificationService {
+    @RequiredArgsConstructor
+    public class NotificationService {
+
+    /**
+     * Manages in-app notifications for all roles.
+     *
+     * <p>Notifications are created by domain services (orders, payments, disputes, logistics)
+     * and consumed by the panel's bell icon. The read/unread state is a single timestamp:
+     * {@code readAt == null} means unread; a value means the user has opened the feed since
+     * that notification arrived.
+     */
 
     private final NotificationRepository notificationRepository;
 

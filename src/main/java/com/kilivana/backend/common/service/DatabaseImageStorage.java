@@ -71,6 +71,8 @@ public class DatabaseImageStorage {
     @Transactional
     public Map<String, Object> replaceImage(String oldPublicId, MultipartFile newFile, String folder)
             throws IOException {
+        // Upload the new image first, then delete the old one. If the upload fails
+        // the original stays; if the delete fails we have a duplicate but not a hole.
         Map<String, Object> result = uploadImage(newFile, folder);
         deleteImage(oldPublicId);
         return result;

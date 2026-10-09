@@ -26,8 +26,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class InspectionService {
+    @RequiredArgsConstructor
+    public class InspectionService {
+
+    /**
+     * Creates, queries and closes inspections, and manages their evidence images.
+     *
+     * <p>An inspection targets a farmer, supplier or driver and records the inspector's finding
+     * (PASS/FAIL) with optional notes and photos. Evidence URLs are also mirrored as a
+     * comma-separated string on the inspection row so the list view can show a thumbnail without
+     * joining the image table.
+     */
 
     private final InspectionRepository inspectionRepository;
     private final InspectionEvidenceImageRepository evidenceImageRepository;
@@ -109,6 +118,8 @@ public class InspectionService {
     public void deleteInspection(Long id) {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
+        // Delete evidence images from Cloudinary first, then the DB rows, then the
+        // inspection itself — so a partial failure leaves the inspection but not orphan blobs.
         evidenceImageRepository.findByInspectionIdOrderByCreatedAt(id).forEach(evidenceImageRepository::delete);
         inspectionRepository.delete(inspection);
     }

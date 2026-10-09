@@ -23,8 +23,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class AdminFarmerService {
+    @RequiredArgsConstructor
+    public class AdminFarmerService {
+
+    /**
+     * Administers farmer accounts: listing with filters, approval/rejection,
+     * suspension/reinstatement, and farm details.
+     *
+     * <p>Farmers are distinct from {@link AdminSupplierService} and {@link ProfileService} because
+     * they are the only role that owns farms and their verification gate is a manual review by an
+     * inspector, not an automatic document check.
+     */
 
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;

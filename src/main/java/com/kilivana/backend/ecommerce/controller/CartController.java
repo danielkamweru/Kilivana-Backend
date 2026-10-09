@@ -15,8 +15,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+/**
+ * REST controller for managing buyer shopping carts: retrieving cart contents,
+ * adding and updating items, checkout and clearing.
+ */
 @Tag(name = "E-Commerce · Cart & Checkout", description = "Buyer cart items and checkout")
 @RestController
 @RequestMapping("/api/v1/carts")
@@ -27,41 +34,79 @@ public class CartController {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
 
+    @Operation(summary = "Get cart by buyer", description = "Retrieves the active shopping cart for a specific buyer.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cart retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cart not found")
+    })
     @GetMapping("/buyer/{buyerId}")
-    public ResponseEntity<ApiResponse<CartResponse>> getCartByBuyer(@PathVariable Long buyerId) {
+    public ResponseEntity<ApiResponse<CartResponse>> getCartByBuyer(@Parameter(description = "Buyer identifier") @PathVariable Long buyerId) {
         Cart cart = cartService.getCartByBuyer(buyerId);
         CartResponse response = CartResponse.fromEntity(cart);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @Operation(summary = "Add item to cart", description = "Adds a product item to the buyer's shopping cart and returns the updated cart.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Item added to cart successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Buyer or product not found")
+    })
     @PostMapping("/buyer/{buyerId}/items")
-    public ResponseEntity<ApiResponse<CartResponse>> addItemToCart(@PathVariable Long buyerId, @RequestBody CartItemRequest request) {
+    public ResponseEntity<ApiResponse<CartResponse>> addItemToCart(@Parameter(description = "Buyer identifier") @PathVariable Long buyerId, @Parameter(description = "Cart item to add") @RequestBody CartItemRequest request) {
         Cart cart = cartService.addItemToCart(buyerId, request.getProductId(), request.getQuantity());
         CartResponse response = CartResponse.fromEntity(cart);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
+    @Operation(summary = "Update cart item quantity", description = "Updates the quantity of a specific product in a cart.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cart item updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid quantity value"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cart or product not found")
+    })
     @PutMapping("/{cartId}/items/{productId}")
-    public ResponseEntity<ApiResponse<CartResponse>> updateCartItem(@PathVariable Long cartId, @PathVariable Long productId, @RequestParam Integer quantity) {
+    public ResponseEntity<ApiResponse<CartResponse>> updateCartItem(
+            @Parameter(description = "Cart identifier") @PathVariable Long cartId,
+            @Parameter(description = "Product identifier") @PathVariable Long productId,
+            @Parameter(description = "New quantity for the cart item") @RequestParam Integer quantity) {
         Cart cart = cartService.updateCartItem(cartId, productId, quantity);
         CartResponse response = CartResponse.fromEntity(cart);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @Operation(summary = "Remove cart item", description = "Removes a specific product from a shopping cart.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Item removed from cart successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cart or product not found")
+    })
     @DeleteMapping("/{cartId}/items/{productId}")
-    public ResponseEntity<ApiResponse<Void>> removeCartItem(@PathVariable Long cartId, @PathVariable Long productId) {
+    public ResponseEntity<ApiResponse<Void>> removeCartItem(
+            @Parameter(description = "Cart identifier") @PathVariable Long cartId,
+            @Parameter(description = "Product identifier") @PathVariable Long productId) {
         cartService.removeCartItem(cartId, productId);
         return ResponseEntity.ok(ApiResponse.successMessage("Item removed from cart"));
     }
 
+    @Operation(summary = "Checkout cart", description = "Processes the checkout for the given shopping cart, converting it into an order.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Checkout successful"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Cart is empty or invalid"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cart not found")
+    })
     @PostMapping("/{cartId}/checkout")
-    public ResponseEntity<ApiResponse<Void>> checkout(@PathVariable Long cartId) {
+    public ResponseEntity<ApiResponse<Void>> checkout(@Parameter(description = "Cart identifier") @PathVariable Long cartId) {
         cartService.checkout(cartId);
         return ResponseEntity.ok(ApiResponse.successMessage("Checkout successful"));
     }
 
+    @Operation(summary = "Clear cart", description = "Removes all items from a shopping cart.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cart cleared successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Cart not found")
+    })
     @DeleteMapping("/{cartId}")
-    public ResponseEntity<ApiResponse<Void>> clearCart(@PathVariable Long cartId) {
+    public ResponseEntity<ApiResponse<Void>> clearCart(@Parameter(description = "Cart identifier") @PathVariable Long cartId) {
         cartService.clearCart(cartId);
         return ResponseEntity.ok(ApiResponse.successMessage("Cart cleared"));
     }

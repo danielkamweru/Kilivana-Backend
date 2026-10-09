@@ -112,6 +112,8 @@ public class DisputeService {
         dispute.setStatus(DisputeStatus.RESOLVED);
         disputeRepository.save(dispute);
 
+        // Buyer wins: cancel the order and refund the money (it was held in escrow).
+        // Farmer wins: complete the order and release the payment to the seller.
         if (request.getOutcome() == DisputeOutcome.BUYER) {
             order.setStatus(OrderStatus.CANCELLED);
             if (order.getPaymentStatus().isRefundable()) {
@@ -137,6 +139,8 @@ public class DisputeService {
     /** The order moves to disputed and its money to escrow. */
     private void holdOrder(Order order) {
         order.setStatus(OrderStatus.DISPUTED);
+        // Payment was PAID -> move to HELD (escrow) so it cannot be released
+        // until the dispute is resolved.
         if (order.getPaymentStatus() == PaymentStatus.PAID) {
             order.setPaymentStatus(PaymentStatus.HELD);
             setPaymentStatusForOrder(order.getId(), PaymentStatus.HELD);

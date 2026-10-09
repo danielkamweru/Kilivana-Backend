@@ -3,6 +3,8 @@ package com.kilivana.backend.common.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * The lifecycle of a product listing, as the panel draws it: a listing waits for
  * on-site verification, goes live, and can be rejected or suspended by an
@@ -14,6 +16,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * ACTIVE and the panel derives the out-of-stock state from the stock it already
  * receives.
  */
+@Schema(description = "The lifecycle of a product listing.")
 public enum ProductStatus {
     ACTIVE,
     PENDING_APPROVAL,

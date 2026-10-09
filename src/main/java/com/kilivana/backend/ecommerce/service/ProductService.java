@@ -30,8 +30,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class ProductService {
+    @RequiredArgsConstructor
+    public class ProductService {
+
+    /**
+     * Product catalogue for farmers and suppliers.
+     *
+     * <p>Products belong to a seller (farmer or supplier) and a category. A newly created product
+     * starts in {@code PENDING_APPROVAL} and must be activated by an administrator before it
+     * appears in the buyer's catalogue. Images are stored via the configured {@link ImageStorage}
+     * provider (Cloudinary, database or local filesystem) and the first uploaded image becomes the
+     * primary thumbnail.
+     */
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
@@ -169,6 +179,7 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
 
         if (Boolean.TRUE.equals(isPrimary)) {
+            // Demote the current primary so only one image wears the badge.
             productImageRepository.findPrimaryByProductId(productId)
                 .ifPresent(existingPrimary -> {
                     existingPrimary.setIsPrimary(false);

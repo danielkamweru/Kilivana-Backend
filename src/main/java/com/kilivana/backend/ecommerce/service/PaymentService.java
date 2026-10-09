@@ -20,8 +20,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class PaymentService {
+    @RequiredArgsConstructor
+    public class PaymentService {
+
+    /**
+     * Records payment attempts and mirrors their status onto the parent order.
+     *
+     * <p>The order's {@code paymentStatus} is a derived view of its payment rows — it is updated
+     * here so the two never drift. A payment method is validated against the panel's enum so a
+     * caller cannot store a provider string that nothing will ever read back.
+     */
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;

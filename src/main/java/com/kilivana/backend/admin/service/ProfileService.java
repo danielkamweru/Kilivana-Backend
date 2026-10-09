@@ -25,8 +25,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class ProfileService {
+    @RequiredArgsConstructor
+    public class ProfileService {
+
+    /**
+     * CRUD for every role's profile and its images.
+     *
+     * <p>One service instead of five so the ownership check, the image upload/delete flow and the
+     * primary-image logic are written once. The panel calls the typed endpoints (farmer, driver,
+     * etc.) but they all funnel through the same helpers.
+     */
 
     private final UserService userService;
     private final FarmerProfileRepository farmerProfileRepository;
@@ -214,6 +222,8 @@ public class ProfileService {
         ensureOwnershipOrAdmin(authenticatedUserId, userId);
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
+        // Remove the stored images from Cloudinary first so an orphan row does not point
+        // at a missing file; the DB rows are cleaned up after.
         driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
             cloudinaryService.deleteImage(image.getPublicId());
         });

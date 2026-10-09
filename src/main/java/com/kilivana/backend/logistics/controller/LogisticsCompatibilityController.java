@@ -10,8 +10,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+/**
+ * Compatibility endpoints mounted on the delivery job path: record a
+ * tracking event, read a job's tracking history, or file proof of
+ * delivery for a given job.
+ */
 @Tag(name = "Logistics · Delivery Jobs", description = "Delivery job creation, driver assignment and status")
 @RestController
 @RequestMapping("/api/v1/logistics/jobs")
@@ -20,23 +27,49 @@ public class LogisticsCompatibilityController {
 
     private final LogisticsService logisticsService;
 
+    @Operation(summary = "Record a tracking event for a job",
+            description = "Compatibility variant of POST /api/v1/logistics/tracking-events that addresses the delivery job by path.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Tracking event recorded"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Malformed request body"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping("/{jobId}/location")
     public ResponseEntity<ApiResponse<TrackingEvent>> submitLocation(
-            @PathVariable Long jobId, @RequestBody TrackingEvent event) {
+            @Parameter(description = "ID of the delivery job") @PathVariable Long jobId,
+            @RequestBody TrackingEvent event) {
         TrackingEvent created = logisticsService.addTrackingEvent(
                 jobId, event.getStatus(), event.getLatitude(), event.getLongitude(), event.getNote(), event.getDriverId());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
     }
 
+    @Operation(summary = "Get the tracking history of a job",
+            description = "Compatibility variant of GET /api/v1/logistics/tracking-events/job/{jobId}.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tracking history returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/{jobId}/tracking")
-    public ResponseEntity<ApiResponse<List<TrackingEvent>>> getTracking(@PathVariable Long jobId) {
+    public ResponseEntity<ApiResponse<List<TrackingEvent>>> getTracking(
+            @Parameter(description = "ID of the delivery job") @PathVariable Long jobId) {
         return ResponseEntity.ok(ApiResponse.success(logisticsService.getTrackingHistory(jobId)));
     }
 
+    @Operation(summary = "File proof of delivery for a job",
+            description = "Compatibility variant of POST /api/v1/logistics/proof-of-delivery that addresses the delivery job by path.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Proof of delivery filed"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Delivery code missing, expired or incorrect, or malformed request body"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Delivery job not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "This delivery has already been confirmed"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Too many incorrect delivery codes; the code is temporarily locked"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping("/{jobId}/proof-of-delivery")
     public ResponseEntity<ApiResponse<ProofOfDelivery>> submitProof(
-            @PathVariable Long jobId, @RequestBody ProofOfDelivery proof,
-            @RequestParam(required = false) String otp) {
+            @Parameter(description = "ID of the delivery job") @PathVariable Long jobId,
+            @RequestBody ProofOfDelivery proof,
+            @Parameter(description = "Six-digit delivery handover code sent to the buyer; required while the job still has an unverified delivery code", example = "123456") @RequestParam(required = false) String otp) {
         proof.setLogisticsJobId(jobId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(logisticsService.createProofOfDelivery(proof, otp)));

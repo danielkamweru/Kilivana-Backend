@@ -3,6 +3,8 @@ package com.kilivana.backend.common.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Whether a driver's licence and national ID have been checked by an administrator.
  *
@@ -10,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * been confirmed. A driver can have a confirmed email and an unverified licence, so the two
  * cannot share a column.
  */
+@Schema(description = "Whether a driver's licence and national ID have been checked by an administrator.")
 public enum KycStatus {
     PENDING,
     VERIFIED;

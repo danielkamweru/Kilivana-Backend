@@ -10,6 +10,7 @@ import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.CropStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Crop catalogue and crop record management.
+ * Provides endpoints for listing, summarizing, and managing crop records
+ * and the crop type reference data used across the farm module.
+ */
 @Tag(name = "Administration · Crops", description = "Crop catalogue and crop records")
 @RestController
 @RequestMapping("/api/v1/admin/crops")
@@ -30,7 +36,15 @@ public class CropController {
     private final CropRepository cropRepository;
     private final CropTypeRepository cropTypeRepository;
 
-    @Operation(summary = "List crops")
+    @Operation(summary = "List crops",
+            description = "Paginated search across crop records with optional filters for farmer, farm, crop type, category, status, and free-text search.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Page of crops returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid query parameter"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> listCrops(
             @RequestParam(required = false) Long farmerId,
@@ -56,7 +70,14 @@ public class CropController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    @Operation(summary = "Crop summary for donut chart")
+    @Operation(summary = "Crop summary for donut chart",
+            description = "Aggregates crop counts, planted area, and expected yield per crop type for charting.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Summary data returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<List<CropSummaryDto>>> getCropSummary() {
         List<Crop> crops = cropRepository.findAll();
@@ -81,7 +102,14 @@ public class CropController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
-    @Operation(summary = "Crop catalogue for dropdowns")
+    @Operation(summary = "Crop catalogue for dropdowns",
+            description = "Returns all active crop types ordered by name, suitable for populating dropdown controls.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Crop types returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/types")
     public ResponseEntity<ApiResponse<List<CropTypeDto>>> getCropTypes() {
         List<CropTypeDto> types = cropTypeRepository.findByActiveTrueOrderByName().stream()
@@ -95,10 +123,19 @@ public class CropController {
         return ResponseEntity.ok(ApiResponse.success(types));
     }
 
-    @Operation(summary = "Update a crop")
+    @Operation(summary = "Update a crop",
+            description = "Updates the mutable fields of an existing crop record. Returns 404 if the crop does not exist.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Crop updated"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Malformed request body"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Crop not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CropResponse>> updateCrop(
-            @PathVariable Long id, @RequestBody CropResponse request) {
+            @Parameter(description = "ID of the crop to update") @PathVariable Long id, @RequestBody CropResponse request) {
         Crop crop = cropRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Crop", id));
         crop.setVariety(request.getVariety());
@@ -111,10 +148,20 @@ public class CropController {
         return ResponseEntity.ok(ApiResponse.success(toResponse(saved)));
     }
 
-    @Operation(summary = "Update crop status")
+    @Operation(summary = "Update crop status",
+            description = "Changes the status of an existing crop record. Returns 404 if the crop does not exist.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Crop status updated"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Malformed request body or invalid status"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Crop not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<CropResponse>> updateCropStatus(
-            @PathVariable Long id, @RequestParam CropStatus status) {
+            @Parameter(description = "ID of the crop to update") @PathVariable Long id,
+            @Parameter(description = "New status for the crop") @RequestParam CropStatus status) {
         Crop crop = cropRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Crop", id));
         crop.setStatus(status);
@@ -122,8 +169,17 @@ public class CropController {
         return ResponseEntity.ok(ApiResponse.success(toResponse(saved)));
     }
 
+    @Operation(summary = "Delete a crop",
+            description = "Permanently removes a crop record. Returns 404 if the crop does not exist.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Crop deleted"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Crop not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteCrop(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteCrop(@Parameter(description = "ID of the crop to delete") @PathVariable Long id) {
         cropRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Crop", id));
         cropRepository.deleteById(id);

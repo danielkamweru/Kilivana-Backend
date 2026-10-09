@@ -195,6 +195,8 @@ public class OrderService {
         if (reason != null && !reason.isBlank()) {
             order.setCancellationReason(reason.trim());
         }
+        // Release the reserved stock back to available inventory so other buyers
+        // can purchase it.
         releaseStock(order);
         if (order.getPaymentStatus().isRefundable()) {
             order.setPaymentStatus(PaymentStatus.REFUNDED);
