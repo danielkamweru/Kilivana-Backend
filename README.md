@@ -110,7 +110,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `DATABASE_URL` | *(empty)* | Full `postgres://user:password@host:port/database` URL, set by Render's attached PostgreSQL service. Takes precedence over `DB_URL`/`DB_USERNAME`/`DB_PASSWORD`. |
 | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | local defaults | Datasource settings for local development. |
 | `JWT_SECRET` | *(empty)* | HS512 signing key. **Set this in any shared environment** — if unset, every restart invalidates all issued tokens. |
-| `JWT_EXPIRATION` | `0` | Access-token lifetime in ms. `0` means no expiry. |
+| `JWT_EXPIRATION` | `1800000` | Access-token lifetime in ms (default: 30 minutes). `0` means no expiry. |
 | `JWT_REFRESH_EXPIRATION` | `0` | Refresh-token lifetime in ms. |
 | `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins; wildcard patterns allowed, so `*` permits every origin (the default). Restrict to the KilivanaAdmin2 origin for a locked deployment. |
 | `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs and the OpenAPI server entry, e.g. `https://kilivana-backend-a44w.onrender.com`. |
@@ -552,7 +552,7 @@ This project is currently configured for internal development use. Add a license
 | `DB_USERNAME` | (empty) | Database username |
 | `DB_PASSWORD` | (empty) | Database password |
 | `JWT_SECRET` | (generated) | JWT signing secret (min 32 bytes) |
-| `JWT_EXPIRATION` | `0` | Access token expiry in ms (0 = no expiry) |
+| `JWT_EXPIRATION` | `1800000` | Access token expiry in ms (default: 30 minutes; `0` = no expiry) |
 | `JWT_REFRESH_EXPIRATION` | `604800000` | Refresh token expiry (7 days) |
 | `SEED_DATA` | `false` | Seed database with demo data on startup |
 | `SEED_ADMIN_EMAIL` | (none) | Initial admin user email |

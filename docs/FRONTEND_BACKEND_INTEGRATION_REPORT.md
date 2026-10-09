@@ -45,10 +45,10 @@ Response (`data`):
 }
 ```
 
-> **`expiresIn` is `null`, not a number.** Tokens are configured to never expire
-> (`JWT_EXPIRATION=0`), which is convenient for local testing but means a client must
-> declare this field nullable. If the backend is later given a real expiry it becomes a
-> millisecond count.
+> **`expiresIn` is a millisecond count, default 30 minutes.** Tokens are configured to expire
+> after 1,800,000 ms by default; override with `JWT_EXPIRATION`. A value of `0` issues tokens
+> with no expiry, which is convenient for local testing but means a client must declare this
+> field nullable.
 
 ### 1.2 What each app does instead
 
@@ -522,8 +522,9 @@ needed per hostname.
 startup, so every token issued before a restart is rejected — a page refresh after a
 restart then looks like the data "disappeared" (it is a 401, not missing data). The
 local run command should include a stable value, e.g.
-`JWT_SECRET=<base64 string of 32+ bytes> mvn spring-boot:run`. Tokens also never expire
-(`JWT_EXPIRATION=0`); set a finite duration for anything shared.
+`JWT_SECRET=<base64 string of 32+ bytes> mvn spring-boot:run`. Access tokens expire after
+30 minutes by default (`JWT_EXPIRATION=1800000`); set `JWT_EXPIRATION=0` for a never-expiring
+token, useful for local testing.
 
 Seeded accounts, password `Kilivana#2026`:
 `admin`, `farmer`, `buyer`, `supplier`, `driver`, `inspector`, each at `@kilivana.local`
@@ -531,9 +532,9 @@ Seeded accounts, password `Kilivana#2026`:
 deployment.
 
 Security note: with `JWT_SECRET` unset the backend generates a random signing key at startup,
-so every token is invalidated by a restart. Set `JWT_SECRET` to a stable value. Tokens also
-currently never expire (`JWT_EXPIRATION=0`); set it to a millisecond duration to restore
-expiry. Both warnings are logged at startup.
+so every token is invalidated by a restart. Set `JWT_SECRET` to a stable value. Access tokens
+expire after 30 minutes by default (`JWT_EXPIRATION=1800000`); set `JWT_EXPIRATION=0` to issue
+never-expiring tokens. Both warnings are logged at startup.
 
 Email note: `SENDGRID_API_KEY` must be supplied through the environment and must never be
 committed. Rotate the key if it is ever pasted into a chat, a log or a commit — that includes

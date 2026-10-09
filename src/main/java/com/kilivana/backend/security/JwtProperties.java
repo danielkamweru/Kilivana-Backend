@@ -17,8 +17,8 @@ public class JwtProperties {
 
     /** Signing secret for HS256. When blank, an ephemeral key is generated. */
     private String secret;
-    /** Access token lifetime in milliseconds (default: 24 hours). */
-    private long accessTokenExpiration = 86400000L;
+    /** Access token lifetime in milliseconds (default: 30 minutes). */
+    private long accessTokenExpiration = 1800000L;
     /** Refresh token lifetime in milliseconds (default: 7 days). */
     private long refreshTokenExpiration = 604800000L;
 }

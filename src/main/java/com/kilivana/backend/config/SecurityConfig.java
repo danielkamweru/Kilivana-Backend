@@ -1,6 +1,7 @@
 package com.kilivana.backend.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kilivana.backend.config.RequestLoggingFilter;
 import com.kilivana.backend.security.JwtAuthenticationFilter;
 import com.kilivana.backend.security.JwtProperties;
 import com.kilivana.backend.security.JwtService;
@@ -89,6 +90,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    public RequestLoggingFilter requestLoggingFilter() {
+        return new RequestLoggingFilter();
+    }
+
+    @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
         return new JwtAuthenticationFilter(jwtService);
     }
@@ -106,7 +112,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtAuthenticationFilter,
-                                                   RestAuthenticationErrorHandler authenticationErrorHandler)
+                                                   RestAuthenticationErrorHandler authenticationErrorHandler,
+                                                   RequestLoggingFilter requestLoggingFilter)
             throws Exception {
 
         http
@@ -131,6 +138,9 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(authenticationErrorHandler)
                 .accessDeniedHandler(authenticationErrorHandler))
+            // Runs before the JWT filter so a request that fails authentication is still
+            // logged with its final 401 status and duration.
+            .addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
