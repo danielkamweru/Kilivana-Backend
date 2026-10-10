@@ -48,6 +48,11 @@ public class SecurityConfig {
             "GET", "/api/v1/images/**",
             // Product catalogue browsing is public: categories, product listing, search, etc.
             "GET", "/api/v1/products/**",
+            // Live tracking WebSocket. The bearer token arrives in the query string and is
+            // validated by the handshake handler, so the endpoint itself is public while
+            // the channel interceptor rejects messages from unauthenticated sessions.
+            "GET", "/ws",
+            "GET", "/ws/**",
             "GET", "/api/v1/categories/**",
             // Crop types for farmer registration dropdown
             "GET", "/api/v1/crop-types/**",
@@ -130,6 +135,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/v1/logistics/jobs/{id}/assign").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs/{id}/assign").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/logistics/jobs/{id}").hasRole("ADMIN")
+                // Live tracking: only the assigned driver may push a fix; the buyer, the
+                // sellers on the order and an administrator may read. The service layer
+                // enforces the per-job relation, so the chain only gates the role.
+                .requestMatchers(HttpMethod.POST, "/api/v1/tracking/{id}/location").hasRole("DRIVER")
+                .requestMatchers(HttpMethod.GET, "/api/v1/tracking/{id}/location").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/tracking/{id}/status").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/logistics/jobs/{id}/status").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/orders/{id}/status").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/orders/{id}/status").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/orders/{id}/cancel").hasRole("ADMIN")

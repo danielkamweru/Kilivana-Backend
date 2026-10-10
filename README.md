@@ -455,6 +455,40 @@ X-User-Id: <user-id>
 
 The API documentation is available at `http://localhost:8080/api-docs`, and the interactive Swagger UI is at `http://localhost:8080/swagger-ui/index.html`.
 
+## Live Delivery Tracking
+
+While a driver is on an active delivery, their app pushes GPS fixes and subscribers see the marker move in real time. The driver pushes over REST or WebSocket; buyers, the sellers on the order and administrators read back the latest position, and the same events are broadcast over STOMP so clients do not have to poll.
+
+### REST
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/tracking/{jobId}/location` | `DRIVER` | Driver reports a GPS fix for the job they are assigned to |
+| `GET` | `/api/v1/tracking/{jobId}/location` | authenticated | Latest known position for the job |
+| `GET` | `/api/v1/tracking/{jobId}/status` | authenticated | Delivery status alongside the latest position |
+
+The driver is identified from the JWT, never from the request body, and must be the one assigned to the job. Updates are accepted only while the job is in an active state (`ACCEPTED`, `EN_ROUTE_TO_PICKUP`, `ARRIVED_AT_PICKUP`, `PICKED_UP`, `IN_TRANSIT`, `ARRIVED_AT_DESTINATION`); a delivered, cancelled or failed job refuses them. Coordinates, speed, bearing and accuracy are validated, a stale timestamp is refused, and a driver may send at most `TRACKING_RATE_LIMIT_MAX_PER_WINDOW` fixes per `TRACKING_RATE_LIMIT_WINDOW_MINUTES` minutes.
+
+### WebSocket
+
+Connect to `ws://host/ws?token=<accessToken>` (SockJS fallback included). The bearer token is validated by the handshake handler; the channel interceptor then refuses subscriptions and sends from sessions with no valid identity.
+
+- `SUBSCRIBE /user/{userId}/tracking` — receives every delivery that user may follow
+- `SUBSCRIBE /topic/tracking/{jobId}` — receive fixes for one delivery
+- `SEND /app/tracking/{jobId}` — driver pushes a `LocationUpdateRequest`
+
+A fix is broadcast as a `LocationEvent` containing `tripId`, `orderId`, `driverId`, `latitude`, `longitude`, `speedKmh`, `bearing`, `accuracyMetres`, `status`, `clientTimestamp` and `serverTimestamp`. When the job reaches a terminal state the server pushes a `TrackingStoppedEvent` so clients stop animating.
+
+### Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `TRACKING_MAX_CLOCK_SKEW_MINUTES` | `15` | A client timestamp further from server time is refused as stale |
+| `TRACKING_DUPLICATE_THRESHOLD_DEGREES` | `0.00005` | A fix within this distance of the previous one is treated as a duplicate |
+| `TRACKING_RATE_LIMIT_WINDOW_MINUTES` | `1` | Rolling window for the per-driver update rate limit |
+| `TRACKING_RATE_LIMIT_MAX_PER_WINDOW` | `10` | Maximum fixes a driver may send per rolling window |
+| `TRACKING_HISTORY_RETENTION_DAYS` | `30` | Fixes older than this are pruned; the delivery record itself is never deleted |
+
 ## Security and CORS
 
 Spring Security protects every endpoint that is not listed below. Authentication uses a Bearer access token (`Authorization: Bearer <token>`); `/api/v1/admin/**` additionally requires the `ADMIN` role.
@@ -568,6 +602,11 @@ This project is currently configured for internal development use. Add a license
 | `SENDGRID_ENABLED` | `false` | Enable/disable SendGrid email |
 | `SENDGRID_API_KEY` | (none) | SendGrid API key |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Sender email address |
+| `TRACKING_MAX_CLOCK_SKEW_MINUTES` | `15` | Client timestamps further from server time are refused as stale |
+| `TRACKING_DUPLICATE_THRESHOLD_DEGREES` | `0.00005` | Fixes within this distance of the previous one are treated as duplicates |
+| `TRACKING_RATE_LIMIT_WINDOW_MINUTES` | `1` | Rolling window for the per-driver update rate limit |
+| `TRACKING_RATE_LIMIT_MAX_PER_WINDOW` | `10` | Maximum fixes a driver may send per rolling window |
+| `TRACKING_HISTORY_RETENTION_DAYS` | `30` | Fixes older than this are pruned; the delivery record itself is never deleted |
 
 ## Complete API Endpoint Reference
 
@@ -786,6 +825,13 @@ This project is currently configured for internal development use. Add a license
 - `GET /api/v1/logistics/tracking-events/job/{jobId}` — Events by job
 - `GET /api/v1/logistics/tracking-events/driver/{driverId}` — Events by driver
 - `POST /api/v1/logistics/tracking-events` — Create event
+
+### Logistics — Live Tracking
+- `POST /api/v1/tracking/{jobId}/location` — Driver reports a GPS fix (`DRIVER` role)
+- `GET /api/v1/tracking/{jobId}/location` — Latest known position for the job
+- `GET /api/v1/tracking/{jobId}/status` — Delivery status alongside the latest position
+- `ws://host/ws?token=<accessToken>` — STOMP WebSocket; subscribe to
+  `/user/{userId}/tracking` or `/topic/tracking/{jobId}`, send fixes to `/app/tracking/{jobId}`
 
 ### Profiles
 - `GET /api/v1/profiles/drivers/{userId}` — Driver profile

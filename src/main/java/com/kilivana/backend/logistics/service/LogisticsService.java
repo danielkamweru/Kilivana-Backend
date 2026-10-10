@@ -19,6 +19,7 @@ import com.kilivana.backend.logistics.entity.TrackingEvent;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
+import com.kilivana.backend.logistics.service.TrackingStopService;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,6 +46,7 @@ public class LogisticsService {
     private final OrderRepository orderRepository;
     private final OrderEventRepository orderEventRepository;
     private final UserRepository userRepository;
+    private final TrackingStopService trackingStopService;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
@@ -292,6 +294,9 @@ public class LogisticsService {
         job.setStatus(status);
         LogisticsJob saved = logisticsJobRepository.save(job);
         syncOrderStatus(saved);
+        // Live tracking stops the moment the job reaches a terminal state, so subscribers
+        // are told to stop animating rather than waiting for a fix that will never come.
+        trackingStopService.maybeStopTracking(saved.getId());
         return saved;
     }
 
@@ -329,7 +334,9 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
         job.setStatus(DeliveryStatus.CANCELLED);
         job.setCancellationReason(cancellationReason);
-        return logisticsJobRepository.save(job);
+        LogisticsJob saved = logisticsJobRepository.save(job);
+        trackingStopService.maybeStopTracking(saved.getId());
+        return saved;
     }
 
     @Transactional

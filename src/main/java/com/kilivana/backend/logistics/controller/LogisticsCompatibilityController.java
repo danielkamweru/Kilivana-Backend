@@ -27,22 +27,6 @@ public class LogisticsCompatibilityController {
 
     private final LogisticsService logisticsService;
 
-    @Operation(summary = "Record a tracking event for a job",
-            description = "Compatibility variant of POST /api/v1/logistics/tracking-events that addresses the delivery job by path.")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Tracking event recorded"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Malformed request body"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/{jobId}/location")
-    public ResponseEntity<ApiResponse<TrackingEvent>> submitLocation(
-            @Parameter(description = "ID of the delivery job") @PathVariable Long jobId,
-            @RequestBody TrackingEvent event) {
-        TrackingEvent created = logisticsService.addTrackingEvent(
-                jobId, event.getStatus(), event.getLatitude(), event.getLongitude(), event.getNote(), event.getDriverId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(created));
-    }
-
     @Operation(summary = "Get the tracking history of a job",
             description = "Compatibility variant of GET /api/v1/logistics/tracking-events/job/{jobId}.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
