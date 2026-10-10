@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 /**
  * Response DTO representing a user notification.
  */
+/**
+ * Response DTO for a notification. The read state is a single timestamp: {@code readAt == null}
+ * means the user has not opened it yet.
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -24,6 +24,16 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Translates exceptions into the API's {@link ApiResponse} error envelope, so every
+ * failure a client can see uses one shape: a {@code success:false} body with a stable
+ * error code in {@code error}.
+ *
+ * <p>Each handler maps one exception family to its HTTP status. Handlers for expected
+ * failures (validation, integrity violations, malformed bodies) surface the message the
+ * caller needs to fix their request; the catch-all logs the exception and returns a
+ * generic message so internal details never leak.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -63,6 +73,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        // Field name to message, so the client can highlight exactly the fields that failed.
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
@@ -274,6 +285,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         log.warn("Data integrity violation", ex);
+        // The request broke a database constraint (duplicate value, bad foreign key),
+        // so it is a client error, not a server fault.
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
                 .code("DATA_INTEGRITY_VIOLATION")
                 .details(rootMessage(ex))
@@ -283,6 +296,10 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("The request violates a data constraint: " + rootMessage(ex), error));
     }
 
+    /**
+     * Walks to the deepest cause, because the useful constraint message (which column,
+     * which unique key) lives at the bottom of Spring's exception chain.
+     */
     private String rootMessage(Throwable ex) {
         Throwable cause = ex;
         while (cause.getCause() != null && cause.getCause() != cause) {
@@ -294,6 +311,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unhandled exception", ex);
+        // Deliberately vague: the log keeps the detail, the client only learns that
+        // something unexpected happened.
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
                 .code("INTERNAL_SERVER_ERROR")
                 .details("An unexpected error occurred")

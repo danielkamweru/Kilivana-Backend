@@ -20,6 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * User account CRUD and lifecycle. This is the only place a user is created, updated, suspended
+ * or deleted, and the only place the role-specific reference code (e.g. "F-014") is handed out.
+ *
+ * <p>Profile tables have no foreign key to users, so ownership and role checks live here and in
+ * {@link ProfileService} rather than in the database.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {

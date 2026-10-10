@@ -15,7 +15,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Suspend and activate inspector accounts, mirroring the driver roster pattern.
+ * Suspend and activate inspector accounts, mirroring the driver roster pattern. Inspectors are
+ * the quality gate for the marketplace, so suspension is the main lifecycle action here — an
+ * inspector who is suspended cannot be assigned to inspections. Profile edits (specialization,
+ * assigned area) go through {@link ProfileService} and are exposed here for the admin panel.
  */
 @Tag(name = "Administration", description = "User management, audit trail and administration reporting")
 @RestController

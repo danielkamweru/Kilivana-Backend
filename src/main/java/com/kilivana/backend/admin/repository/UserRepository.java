@@ -11,6 +11,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Access to the {@link User} table. Every query here is case-insensitive on the searchable fields
+ * because the values are normalised (lowercased email, trimmed phone) at write time, so a
+ * case-sensitive comparison would miss matches that the normalisation made equivalent.
+ */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     

@@ -22,8 +22,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * REST controller for managing purchase orders: placement, retrieval,
- * status transitions, timeline, cancellation and deletion.
+ * REST controller for managing purchase orders.
+ * Supports placement, retrieval, status transitions, timeline, cancellation and deletion.
+ * Orders contain line items with product details at the time of purchase.
  */
 @Tag(name = "E-Commerce · Orders", description = "Order placement, status transitions, timeline and disputes")
 @RestController
@@ -33,6 +34,14 @@ public class OrderController {
 
     private final OrderService orderService;
 
+    /**
+     * Creates a new purchase order from the supplied request payload.
+     * The subtotal and total are computed server-side from line items; the
+     * values in the request are used only for reconciliation.
+     *
+     * @param request the order details (buyer, address, items, delivery fee, reconciliation totals)
+     * @return the created order
+     */
     @Operation(summary = "Create order", description = "Creates a new purchase order from the supplied request payload and returns the created order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Order created successfully"),
@@ -47,6 +56,12 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(orderService.toResponse(order)));
     }
 
+    /**
+     * Retrieves a single order by its identifier.
+     *
+     * @param id the order identifier
+     * @return the order with all details
+     */
     @Operation(summary = "Get order by id", description = "Retrieves a single order by its identifier.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order found"),
@@ -58,6 +73,14 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
+    /**
+     * Returns a paginated list of orders, optionally filtered by buyer and/or status.
+     *
+     * @param buyerId optional buyer ID filter
+     * @param status optional status filter (e.g., CONFIRMED, SHIPPED)
+     * @param pageable pagination and sorting parameters
+     * @return paginated orders
+     */
     @Operation(summary = "List orders", description = "Returns a paginated list of orders, optionally filtered by buyer and/or status.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Orders retrieved successfully")
@@ -72,6 +95,12 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
+    /**
+     * Retrieves all orders placed by a specific buyer.
+     *
+     * @param buyerId the buyer identifier
+     * @return list of orders for that buyer
+     */
     @Operation(summary = "Get orders by buyer", description = "Retrieves all orders placed by a specific buyer.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
@@ -83,6 +112,15 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orders.stream().map(orderService::toResponse).toList()));
     }
 
+    /**
+     * Searches orders with optional buyer and status filters, paginated.
+     * Alias for the main list endpoint with identical behavior.
+     *
+     * @param buyerId optional buyer ID filter
+     * @param status optional status filter
+     * @param pageable pagination and sorting parameters
+     * @return paginated orders
+     */
     @Operation(summary = "Search orders", description = "Searches orders with optional buyer and status filters, paginated.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
@@ -97,6 +135,14 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
+    /**
+     * Transitions an order to a new status.
+     * Valid statuses: PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED.
+     *
+     * @param id the order identifier
+     * @param status the new order status
+     * @return the updated order
+     */
     @Operation(summary = "Update order status", description = "Transitions an order to a new status and returns the updated order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order status updated successfully"),
@@ -111,6 +157,13 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
+    /**
+     * Cancels an order with an optional reason.
+     *
+     * @param id the order identifier
+     * @param reason optional cancellation reason
+     * @return the updated (cancelled) order
+     */
     @Operation(summary = "Cancel order", description = "Cancels an order with an optional reason and returns the updated order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order cancelled successfully"),
@@ -124,6 +177,12 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
+    /**
+     * Marks an order as received by the buyer (confirms receipt).
+     *
+     * @param id the order identifier
+     * @return the updated order
+     */
     @Operation(summary = "Confirm receipt", description = "Marks an order as received by the buyer and returns the updated order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order confirmed and receipt acknowledged"),
@@ -135,6 +194,14 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.toResponse(order)));
     }
 
+    /**
+     * Accepts a status transition request body and delegates to the status update workflow.
+     * Alternative POST-based endpoint for clients that cannot use PUT.
+     *
+     * @param id the order identifier
+     * @param status the new order status
+     * @return the updated order
+     */
     @Operation(summary = "Post order status", description = "Accepts a status transition request body and delegates to the status update workflow.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order status updated successfully"),
@@ -148,6 +215,12 @@ public class OrderController {
         return updateOrderStatus(id, status);
     }
 
+    /**
+     * Retrieves the event history (timeline) for a given order.
+     *
+     * @param id the order identifier
+     * @return list of order events (status changes, payments, etc.)
+     */
     @Operation(summary = "Get order timeline", description = "Retrieves the event history for a given order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Timeline retrieved successfully"),
@@ -158,6 +231,12 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrderTimeline(id)));
     }
 
+    /**
+     * Deletes an order by its identifier.
+     *
+     * @param id the order identifier
+     * @return success message
+     */
     @Operation(summary = "Delete order", description = "Deletes an order by its identifier and returns a confirmation message.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order deleted successfully"),

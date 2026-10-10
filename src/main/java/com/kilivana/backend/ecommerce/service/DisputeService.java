@@ -44,8 +44,10 @@ public class DisputeService {
     private final PaymentRepository paymentRepository;
 
     /**
-     * @throws BadRequestException when the order the dispute is
-     *     raised against does not exist
+     * Creates a new dispute for an order. Marks the order as DISPUTED and
+     * moves its payment to HELD (escrow).
+     *
+     * @throws ResourceNotFoundException if the order does not exist
      */
     @Transactional
     public DisputeResponse createDispute(DisputeRequest request) {
@@ -65,24 +67,36 @@ public class DisputeService {
         return mapToResponse(saved);
     }
 
+    /**
+     * Retrieves a dispute by its ID.
+     *
+     * @throws ResourceNotFoundException if the dispute does not exist
+     */
     public DisputeResponse getDisputeById(Long id) {
         Dispute dispute = disputeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dispute", id));
         return mapToResponse(dispute);
     }
 
+    /** Returns all disputes for a specific order. */
     public List<DisputeResponse> getDisputesByOrder(Long orderId) {
         return disputeRepository.findByOrderId(orderId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    /** Returns all disputes raised by a specific user. */
     public List<DisputeResponse> getDisputesByUser(Long userId) {
         return disputeRepository.findByRaisedBy(userId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Updates a dispute's status (e.g., OPEN -> IN_REVIEW).
+     *
+     * @throws ResourceNotFoundException if the dispute does not exist
+     */
     @Transactional
     public DisputeResponse updateDisputeStatus(Long id, DisputeStatus status) {
         Dispute dispute = disputeRepository.findById(id)
@@ -92,10 +106,11 @@ public class DisputeService {
     }
 
     /**
-     * Closes the dispute and carries the outcome to the order and
-     * its payment.
+     * Resolves a dispute with an outcome (BUYER or FARMER) and explanation.
+     * Buyer win: cancels order, refunds payment. Farmer win: completes order, settles payment.
      *
-     * @throws BadRequestException when the dispute is already resolved
+     * @throws ResourceNotFoundException if dispute or its order does not exist
+     * @throws BadRequestException if the dispute is already resolved
      */
     @Transactional
     public DisputeResponse resolveDispute(Long id, DisputeResolutionRequest request) {
@@ -136,7 +151,10 @@ public class DisputeService {
         return mapToResponse(dispute);
     }
 
-    /** The order moves to disputed and its money to escrow. */
+    /**
+     * Moves the order to DISPUTED and its payment to HELD (escrow) so it
+     * cannot be released until the dispute is resolved.
+     */
     private void holdOrder(Order order) {
         order.setStatus(OrderStatus.DISPUTED);
         // Payment was PAID -> move to HELD (escrow) so it cannot be released
@@ -150,7 +168,7 @@ public class DisputeService {
                 .orderId(order.getId()).status(OrderStatus.DISPUTED).build());
     }
 
-    /** Moves every payment row of the order to the given status. */
+    /** Updates all payment rows of an order to the given status. */
     private void setPaymentStatusForOrder(Long orderId, PaymentStatus status) {
         paymentRepository.findByOrderId(orderId).forEach(payment -> {
             payment.setStatus(status);

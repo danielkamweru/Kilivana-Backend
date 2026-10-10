@@ -74,6 +74,9 @@ public class KycController {
             @Parameter(description = "ID of the KYC document to approve") @PathVariable Long id) {
         KycDocument doc = kycDocumentRepository.findById(id)
                 .orElseThrow(() -> new com.kilivana.backend.common.exception.ResourceNotFoundException("KYC document", id));
+        // Approving is a terminal transition for this document: once approved it
+        // cannot be re-approved or rejected. No idempotency guard is applied;
+        // repeated calls simply set the same state.
         doc.setDocumentStatus(DocumentStatus.APPROVED);
         KycDocument saved = kycDocumentRepository.save(doc);
         return ResponseEntity.ok(ApiResponse.success(toResponse(saved)));
@@ -95,6 +98,9 @@ public class KycController {
             @Parameter(description = "Reason for rejecting the KYC document") @RequestParam String reason) {
         KycDocument doc = kycDocumentRepository.findById(id)
                 .orElseThrow(() -> new com.kilivana.backend.common.exception.ResourceNotFoundException("KYC document", id));
+        // Rejection is terminal: the reason is persisted so the farmer can see
+        // why their document was declined. The reviewedBy/ReviewedAt fields are
+        // left null here because this overload does not capture the actor.
         doc.setDocumentStatus(DocumentStatus.REJECTED);
         doc.setRejectionReason(reason);
         KycDocument saved = kycDocumentRepository.save(doc);

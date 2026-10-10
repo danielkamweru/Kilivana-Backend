@@ -11,6 +11,19 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Represents a crop planted on a specific farm.
+ * <p>
+ * A crop record ties together a {@link Farm}, the {@link com.kilivana.backend.admin.entity.User farmer}
+ * who owns it, and a {@link CropType} catalog entry. The crop tracks its
+ * planted area, expected yield, and lifecycle status (PLANTED -> GROWN ->
+ * HARVESTED). The {@code status} defaults to PLANNED so a crop can be
+ * registered before planting actually occurs.
+ * <p>
+ * {@code cropTypeId} is stored as a plain identifier rather than a JPA
+ * relationship so the crop record remains stable even if the referenced crop
+ * type is later renamed or deactivated.
+ */
 @Entity
 @Table(name = "crops")
 @Data
@@ -38,6 +51,11 @@ public class Crop {
     @Column(name = "area_acres", nullable = false)
     private Double areaAcres;
 
+    /**
+     * Lifecycle state of the crop. Defaults to PLANNED so a crop can be
+     * registered before planting actually occurs. Transitions are performed
+     * via dedicated status endpoints to keep the lifecycle rules centralized.
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private com.kilivana.backend.common.enums.CropStatus status = com.kilivana.backend.common.enums.CropStatus.PLANNED;

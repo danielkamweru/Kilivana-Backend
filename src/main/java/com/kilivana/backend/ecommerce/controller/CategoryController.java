@@ -18,8 +18,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * REST controller for managing product categories: creation, retrieval,
- * updates, status toggling and deletion.
+ * REST controller for managing product categories.
+ * Supports creation, retrieval, updates, status toggling and deletion.
+ * Categories are scoped to seller types (e.g., FARMER, SHOP).
  */
 @Tag(name = "E-Commerce · Catalog", description = "Product category management")
 @RestController
@@ -29,6 +30,12 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
+    /**
+     * Creates a new product category.
+     *
+     * @param request the category name and seller type
+     * @return the created category
+     */
     @Operation(summary = "Create category", description = "Creates a new product category and returns the created category.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Category created successfully"),
@@ -40,6 +47,12 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(category));
     }
 
+    /**
+     * Retrieves a single product category by its identifier.
+     *
+     * @param id the category identifier
+     * @return the category
+     */
     @Operation(summary = "Get category by id", description = "Retrieves a single product category by its identifier.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Category found"),
@@ -51,6 +64,13 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(category));
     }
 
+    /**
+     * Returns all product categories.
+     * Note: pagination parameters are accepted but not currently applied to the result.
+     *
+     * @param pageable pagination and sorting parameters
+     * @return list of all categories
+     */
     @Operation(summary = "List all categories", description = "Returns all product categories.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Categories retrieved successfully")
@@ -61,6 +81,12 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
+    /**
+     * Returns all categories associated with a specific seller type.
+     *
+     * @param type the seller type to filter by (e.g., FARMER, SHOP)
+     * @return list of categories for that seller type
+     */
     @Operation(summary = "Get categories by type", description = "Returns all categories associated with a specific seller type.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Categories retrieved successfully"),
@@ -72,6 +98,11 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
+    /**
+     * Returns all categories that are currently active.
+     *
+     * @return list of active categories
+     */
     @Operation(summary = "Get active categories", description = "Returns all categories that are currently active.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Active categories retrieved successfully")
@@ -82,6 +113,13 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
+    /**
+     * Updates an existing product category by its identifier.
+     *
+     * @param id the category identifier
+     * @param request the updated category details
+     * @return the updated category
+     */
     @Operation(summary = "Update category", description = "Updates an existing product category by its identifier and returns the updated category.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Category updated successfully"),
@@ -96,6 +134,13 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(category));
     }
 
+    /**
+     * Toggles the active status of a product category.
+     *
+     * @param id the category identifier
+     * @param active the new active status (true = active, false = inactive)
+     * @return the updated category
+     */
     @Operation(summary = "Update category status", description = "Toggles the active status of a product category and returns the updated category.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Category status updated successfully"),
@@ -110,6 +155,12 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(category));
     }
 
+    /**
+     * Deletes a product category by its identifier.
+     *
+     * @param id the category identifier
+     * @return success message
+     */
     @Operation(summary = "Delete category", description = "Deletes a product category by its identifier and returns a confirmation message.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Category deleted successfully"),

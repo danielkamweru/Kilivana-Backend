@@ -11,6 +11,10 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * A photograph attached to a driver profile — licence, vehicle, ID. Extends
+ * {@link BaseImageEntity} for the shared storage fields and adds only the owner link.
+ */
 @Entity
 @Table(name = "driver_profile_images", indexes = {
     @Index(name = "idx_driver_profile_images_user_id", columnList = "userId")

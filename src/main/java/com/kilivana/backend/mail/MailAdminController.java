@@ -14,6 +14,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Admin-only mail diagnostics: sends a real test message so an operator can
+ * confirm the SendGrid key, the verified sender and the DNS records all work
+ * end to end.
+ */
 @Tag(name = "Administration · Email", description = "SendGrid integration and delivery checks")
 @RestController
 @RequestMapping("/api/v1/admin/mail")
@@ -23,6 +28,7 @@ public class MailAdminController {
     private final SendGridMailService mailService;
     private final SendGridProperties properties;
 
+    /** Body of a test-mail request: recipient is required, subject and body fall back to defaults. */
     public record TestEmailRequest(String to, String subject, String body) {
     }
 

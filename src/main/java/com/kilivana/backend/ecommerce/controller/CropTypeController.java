@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
  * Public crop type catalogue.
  * Exposes read-only reference data for crop types, used to populate
  * dropdowns and filters across the farm and e-commerce modules.
+ * Only active crop types are returned, ordered by name.
  */
 @Tag(name = "Public Catalogue", description = "Public reference data for crop types")
 @RestController
@@ -28,6 +29,12 @@ public class CropTypeController {
 
     private final CropTypeRepository cropTypeRepository;
 
+    /**
+     * Returns all active crop types ordered by name.
+     * Suitable for populating dropdown controls in the UI.
+     *
+     * @return list of active crop type DTOs
+     */
     @Operation(summary = "List active crop types",
             description = "Returns all active crop types ordered by name, suitable for populating dropdown controls.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({

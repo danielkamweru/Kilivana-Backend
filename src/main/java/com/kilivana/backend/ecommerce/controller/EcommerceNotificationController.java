@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REST controller for e-commerce notification delivery.
+ * Handles order, payment, dispute and inventory notifications for buyers,
+ * sellers and couriers. Uses the authenticated user's ID to scope notifications.
+ */
 @Tag(name = "Ecommerce · Notifications", description = "Order, payment, dispute and inventory notification delivery for buyers, sellers and couriers")
 @RestController
 @RequestMapping("/api/v1/ecommerce/notifications")
@@ -25,6 +30,18 @@ public class EcommerceNotificationController {
     private final EcommerceNotificationService ecommerceNotificationService;
     private final NotificationService notificationService;
 
+    /**
+     * Creates an order-related notification for the given user.
+     * Supports types like ORDER_PLACED, ORDER_STATUS_CHANGED, ORDER_CANCELLED, ORDER_DISPUTE.
+     * If title and message are provided, they override the defaults for the type.
+     *
+     * @param authenticatedUserId the authenticated user's ID
+     * @param orderId the order identifier
+     * @param type the notification type (must be an order-related type)
+     * @param title optional custom title
+     * @param message optional custom message
+     * @return the created notification
+     */
     @Operation(summary = "Send an order notification",
             description = "Creates an order-related notification (e.g. ORDER_PLACED, ORDER_STATUS_CHANGED) for the given user.")
     @PostMapping("/orders/{orderId}")
@@ -43,6 +60,18 @@ public class EcommerceNotificationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
     }
 
+    /**
+     * Creates a payment-related notification for the given user.
+     * Supports types like PAYMENT_RECEIVED, PAYMENT_FAILED, PAYMENT_REFUNDED.
+     * If title and message are provided, they override the defaults for the type.
+     *
+     * @param authenticatedUserId the authenticated user's ID
+     * @param paymentId the payment identifier
+     * @param type the notification type (must be a payment-related type)
+     * @param title optional custom title
+     * @param message optional custom message
+     * @return the created notification
+     */
     @Operation(summary = "Send a payment notification",
             description = "Creates a payment-related notification (e.g. PAYMENT_RECEIVED, PAYMENT_FAILED) for the given user.")
     @PostMapping("/payments/{paymentId}")
@@ -61,6 +90,18 @@ public class EcommerceNotificationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
     }
 
+    /**
+     * Creates a dispute-related notification for the given user.
+     * Supports types like DISPUTE_RAISED, DISPUTE_RESOLVED.
+     * If title and message are provided, they override the defaults for the type.
+     *
+     * @param authenticatedUserId the authenticated user's ID
+     * @param disputeId the dispute identifier
+     * @param type the notification type (must be a dispute-related type)
+     * @param title optional custom title
+     * @param message optional custom message
+     * @return the created notification
+     */
     @Operation(summary = "Send a dispute notification",
             description = "Creates a dispute-related notification (e.g. DISPUTE_RAISED, DISPUTE_RESOLVED) for the given user.")
     @PostMapping("/disputes/{disputeId}")
@@ -79,6 +120,16 @@ public class EcommerceNotificationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
     }
 
+    /**
+     * Creates an inventory notification (e.g., INVENTORY_LOW) for the supplier/admin user.
+     * Requires product name for the notification content.
+     *
+     * @param authenticatedUserId the authenticated user's ID
+     * @param productId the product identifier
+     * @param productName the product name (required for notification content)
+     * @param type the notification type (must be INVENTORY_LOW)
+     * @return the created notification
+     */
     @Operation(summary = "Send an inventory notification",
             description = "Creates an inventory notification (e.g. INVENTORY_LOW) for the supplier/admin user.")
     @PostMapping("/inventory/{productId}")
@@ -91,6 +142,14 @@ public class EcommerceNotificationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result));
     }
 
+    /**
+     * Returns all ecommerce-related notifications for the authenticated user, newest first.
+     * Can optionally filter to unread only.
+     *
+     * @param authenticatedUserId the authenticated user's ID
+     * @param unread if true, returns only unread notifications
+     * @return list of notifications
+     */
     @Operation(summary = "List user's ecommerce notifications",
             description = "Returns all ecommerce-related notifications for the authenticated user, newest first. " +
                     "Optionally filter to unread only.")
@@ -104,6 +163,12 @@ public class EcommerceNotificationController {
         return ResponseEntity.ok(ApiResponse.success(notifications));
     }
 
+    /**
+     * Returns a single notification by its ID.
+     *
+     * @param id the notification identifier
+     * @return the notification
+     */
     @Operation(summary = "Get a notification by id",
             description = "Returns a single notification by its id.")
     @GetMapping("/{id}")
@@ -112,6 +177,12 @@ public class EcommerceNotificationController {
         return ResponseEntity.ok(ApiResponse.success(notification));
     }
 
+    /**
+     * Marks a notification as read.
+     *
+     * @param id the notification identifier
+     * @return the updated notification
+     */
     @Operation(summary = "Mark a notification as read")
     @PostMapping("/{id}/read")
     public ResponseEntity<ApiResponse<NotificationResponse>> markAsRead(@PathVariable Long id) {
@@ -119,6 +190,13 @@ public class EcommerceNotificationController {
         return ResponseEntity.ok(ApiResponse.success(notification));
     }
 
+    /**
+     * Marks all unread ecommerce notifications for the authenticated user as read.
+     * Silently ignores notifications that no longer exist.
+     *
+     * @param authenticatedUserId the authenticated user's ID
+     * @return success message
+     */
     @Operation(summary = "Mark all ecommerce notifications as read",
             description = "Marks all unread ecommerce notifications for the authenticated user as read.")
     @PostMapping("/read-all")
@@ -133,6 +211,12 @@ public class EcommerceNotificationController {
         return ResponseEntity.ok(ApiResponse.successMessage("All ecommerce notifications marked as read"));
     }
 
+    /**
+     * Deletes a notification by its ID.
+     *
+     * @param id the notification identifier
+     * @return success message
+     */
     @Operation(summary = "Delete a notification")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable Long id) {

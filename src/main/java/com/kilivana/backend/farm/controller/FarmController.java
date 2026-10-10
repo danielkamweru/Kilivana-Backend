@@ -50,6 +50,8 @@ public class FarmController {
             @RequestParam(required = false) String search,
             Pageable pageable) {
 
+        // Delegated to the repository's flexible search query; null params are
+        // treated as "no filter" so the same query handles broad and narrow searches.
         Page<Farm> page = farmRepository.searchFarms(search, county, status, farmerId, pageable);
         Map<String, Object> result = Map.of(
                 "items", page.getContent().stream().map(this::toResponse).collect(Collectors.toList()),
@@ -92,6 +94,9 @@ public class FarmController {
             @Parameter(description = "ID of the farm to update") @PathVariable Long id, @RequestBody FarmResponse request) {
         Farm farm = farmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm", id));
+        // Copy all mutable fields from the request DTO onto the managed entity.
+        // status and createdAt are intentionally excluded: status is changed via
+        // the dedicated status endpoint and createdAt is updatable=false.
         farm.setName(request.getName());
         farm.setCounty(request.getCounty());
         farm.setSubCounty(request.getSubCounty());
@@ -121,6 +126,10 @@ public class FarmController {
             @Parameter(description = "New status for the farm") @RequestParam FarmStatus status) {
         Farm farm = farmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm", id));
+        // Status transitions are centralized here so lifecycle rules (e.g. which
+        // statuses are terminal) stay in one place instead of being scattered
+        // across callers. No validation is performed beyond existence; the enum
+        // itself constrains the allowed values.
         farm.setStatus(status);
         Farm saved = farmRepository.save(farm);
         return ResponseEntity.ok(ApiResponse.success(toFullResponse(saved)));

@@ -14,19 +14,23 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Product categories, partitioned by seller type (FARMER vs SUPPLIER).
+ *
+ * <p>Categories are created by administrators and can be toggled active/inactive. A category
+ * name is unique globally (not per type) so the buyer's filter dropdown never shows duplicates.
+ */
 @Service
-    @RequiredArgsConstructor
-    public class CategoryService {
-
-    /**
-     * Product categories, partitioned by seller type (FARMER vs SUPPLIER).
-     *
-     * <p>Categories are created by administrators and can be toggled active/inactive. A category
-     * name is unique globally (not per type) so the buyer's filter dropdown never shows duplicates.
-     */
+@RequiredArgsConstructor
+public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
+    /**
+     * Creates a new category. Names must be globally unique.
+     *
+     * @throws BadRequestException if a category with the same name already exists
+     */
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
@@ -43,18 +47,25 @@ import java.util.stream.Collectors;
         return mapToResponse(savedCategory);
     }
 
+    /**
+     * Retrieves a category by its ID.
+     *
+     * @throws ResourceNotFoundException if the category does not exist
+     */
     public CategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
         return mapToResponse(category);
     }
 
+    /** Returns all categories (active and inactive). */
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    /** Returns categories filtered by seller type (FARMER or SUPPLIER). */
     public List<CategoryResponse> getCategoriesByType(SellerType type) {
         return categoryRepository.findByType(type)
                 .stream()
@@ -62,12 +73,18 @@ import java.util.stream.Collectors;
                 .collect(Collectors.toList());
     }
 
+    /** Returns only active categories for the buyer's filter dropdown. */
     public List<CategoryResponse> getActiveCategories() {
         return categoryRepository.findByActiveTrue().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Updates a category's name and type.
+     *
+     * @throws ResourceNotFoundException if the category does not exist
+     */
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
@@ -80,6 +97,11 @@ import java.util.stream.Collectors;
         return mapToResponse(updatedCategory);
     }
 
+    /**
+     * Toggles a category's active status.
+     *
+     * @throws ResourceNotFoundException if the category does not exist
+     */
     @Transactional
     public CategoryResponse updateCategoryStatus(Long id, Boolean active) {
         Category category = categoryRepository.findById(id)
@@ -89,6 +111,11 @@ import java.util.stream.Collectors;
         return mapToResponse(updatedCategory);
     }
 
+    /**
+     * Deletes a category.
+     *
+     * @throws ResourceNotFoundException if the category does not exist
+     */
     @Transactional
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)

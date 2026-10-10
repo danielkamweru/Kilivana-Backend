@@ -10,6 +10,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Aggregated figures for the admin dashboard home screen. Every count is computed in the
+ * database; the trend series is dense (every day in the window appears exactly once, with zero
+ * on empty days) so the app can plot a straight line without gap-filling.
+ */
 @Data
 @Builder
 @NoArgsConstructor

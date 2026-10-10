@@ -178,6 +178,9 @@ public class AdminSupplierService {
     }
 
     private static void validateSupplierRequest(SupplierRegistrationRequest request, boolean isCreate) {
+        // On create the password is mandatory; on update it is optional so an admin can edit a
+        // supplier without being forced to retype the password. The DTO's own @Size(min=8)
+        // annotation still applies whenever a value is present.
         if (isCreate && (request.getPassword() == null || request.getPassword().isBlank())) {
             throw new BadRequestException("Password is required when creating a supplier");
         }

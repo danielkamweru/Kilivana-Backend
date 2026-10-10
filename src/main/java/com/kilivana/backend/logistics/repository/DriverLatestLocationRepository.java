@@ -13,5 +13,6 @@ import java.util.Optional;
  */
 public interface DriverLatestLocationRepository extends JpaRepository<DriverLatestLocation, Long> {
 
+    /** The cached latest fix for a delivery job, or empty when none has been recorded yet. */
     Optional<DriverLatestLocation> findByLogisticsJobId(Long logisticsJobId);
 }

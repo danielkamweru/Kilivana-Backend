@@ -9,15 +9,24 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Delivery jobs: the core entity of the logistics domain. Queries here are read-only
+ * apart from the retention prune; the state machine and the order/payout logic live in
+ * {@code LogisticsService}, so the repository is a thin persistence layer.
+ */
 @Repository
 public interface LogisticsJobRepository extends JpaRepository<LogisticsJob, Long> {
-    
+
+    /** Every delivery job for one order. */
     List<LogisticsJob> findByOrderId(Long orderId);
-    
+
+    /** Every delivery job assigned to one driver. */
     List<LogisticsJob> findByDriverId(Long driverId);
-    
+
+    /** Every delivery job in one status. */
     List<LogisticsJob> findByStatus(DeliveryStatus status);
-    
+
+    /** The jobs of one driver that are currently in one status. */
     List<LogisticsJob> findByDriverIdAndStatus(Long driverId, DeliveryStatus status);
 
     /**
@@ -30,7 +39,10 @@ public interface LogisticsJobRepository extends JpaRepository<LogisticsJob, Long
             + "GROUP BY j.driverId")
     List<Object[]> countDeliveredByDriver();
 
-    /** The order a driver is currently running, if any. At most one job is in flight. */
+    /**
+     * The order a driver is currently running, if any. At most one job is in flight per
+     * driver at a time, so this returns at most one row.
+     */
     @Query("SELECT j FROM LogisticsJob j WHERE j.driverId = :driverId "
             + "AND j.status <> com.kilivana.backend.common.enums.DeliveryStatus.DELIVERED "
             + "AND j.status <> com.kilivana.backend.common.enums.DeliveryStatus.CANCELLED "

@@ -47,6 +47,10 @@ public class LocalImageStorage implements ImageStorage {
         this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.replaceAll("/+$", "");
     }
 
+    /**
+     * Copies the file to a randomly named path under the upload root and returns a
+     * Cloudinary-shaped result map, so callers can treat every provider uniformly.
+     */
     @Override
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
         validate(file);
@@ -127,6 +131,7 @@ public class LocalImageStorage implements ImageStorage {
         return resolved;
     }
 
+    /** Enforces the shared image contract: a non-empty file, an allowed image type, at most 10MB. */
     private void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Image file is required");
@@ -200,6 +205,7 @@ public class LocalImageStorage implements ImageStorage {
         return sb + extension;
     }
 
+    /** Prefers the configured public base URL; falls back to the current request's context so local development needs no configuration. */
     private String urlFor(String relative) {
         if (!publicBaseUrl.isBlank()) {
             return publicBaseUrl + "/uploads/" + relative;

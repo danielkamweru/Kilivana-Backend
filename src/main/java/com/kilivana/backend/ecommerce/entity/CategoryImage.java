@@ -11,6 +11,10 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * An image attached to a product category, inheriting common image fields
+ * (URL, asset manager IDs, sort order, primary flag) from {@link BaseImageEntity}.
+ */
 @Entity
 @Table(name = "category_images", indexes = {
     @Index(name = "idx_category_images_category_id", columnList = "categoryId")

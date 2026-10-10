@@ -12,6 +12,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * A quality inspection targeting a farmer, supplier, product or driver. The target is referenced
+ * generically through {@link #targetType} and {@link #targetId} rather than a foreign key, so the
+ * same inspection table can serve every role without a column per role.
+ */
 @Entity
 @Table(name = "inspections")
 @Data

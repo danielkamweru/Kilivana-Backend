@@ -17,6 +17,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /**
  * Proof of delivery: capturing the recipient, signature and photo evidence
  * that a delivery was handed over, and retrieving or deleting that evidence.
+ *
+ * <p>Proof is filed once per job, after the driver has confirmed the customer's
+ * handover code. The service enforces the one-proof-per-job rule and the OTP
+ * check; this controller only maps HTTP to service calls.
  */
 @Tag(name = "Logistics · Proof of Delivery", description = "Proof of delivery capture")
 @RestController

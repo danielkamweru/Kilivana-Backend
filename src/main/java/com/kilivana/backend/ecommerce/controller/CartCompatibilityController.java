@@ -18,11 +18,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * Buyer cart and checkout.
- * Provides endpoints for managing a buyer's cart items and validating
- * or completing a checkout.
+ * Buyer cart and checkout compatibility endpoints.
+ * Provides legacy-compatible paths under {@code /api/v1} for managing a buyer's cart
+ * items and validating or completing a checkout. New implementations should use
+ * {@link CartController} under {@code /api/v1/carts}.
  */
-@Tag(name = "E-Commerce · Cart & Checkout", description = "Buyer cart items and checkout")
+@Tag(name = "E-Commerce · Cart & Checkout", description = "Buyer cart items and checkout (compatibility)")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -31,6 +32,12 @@ public class CartCompatibilityController {
     private final CartService cartService;
     private final CartItemRepository cartItemRepository;
 
+    /**
+     * Retrieves the current cart for the authenticated buyer.
+     *
+     * @param buyerId the authenticated buyer's user ID (injected via {@code @AuthenticationPrincipal})
+     * @return the cart with all items and computed totals
+     */
     @Operation(summary = "Get the buyer's cart",
             description = "Returns the current cart for the authenticated buyer, including all items and totals.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -44,6 +51,14 @@ public class CartCompatibilityController {
         return ResponseEntity.ok(ApiResponse.success(toResponse(cartService.getCartByBuyer(buyerId))));
     }
 
+    /**
+     * Adds a product to the authenticated buyer's cart.
+     * Creates the cart if it does not yet exist.
+     *
+     * @param buyerId the authenticated buyer's user ID
+     * @param request the product ID and quantity to add
+     * @return the updated cart
+     */
     @Operation(summary = "Add an item to the cart",
             description = "Adds a product to the authenticated buyer's cart, creating the cart if it does not yet exist.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -64,6 +79,15 @@ public class CartCompatibilityController {
                 .body(ApiResponse.success(toResponse(cartService.addItemToCart(buyerId, request.getProductId(), request.getQuantity()))));
     }
 
+    /**
+     * Updates the quantity of an existing cart item.
+     * The cart item is identified by its item ID (not product ID).
+     *
+     * @param itemId the cart item ID
+     * @param quantity the new quantity (must be positive)
+     * @return the updated cart
+     * @throws ResourceNotFoundException if the cart item does not exist
+     */
     @Operation(summary = "Update a cart item quantity",
             description = "Changes the quantity of an existing cart item. Returns 404 if the item does not exist.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -84,6 +108,13 @@ public class CartCompatibilityController {
                 cartService.updateCartItem(item.getCartId(), item.getProductId(), quantity))));
     }
 
+    /**
+     * Removes a cart item by its item ID.
+     *
+     * @param itemId the cart item ID to remove
+     * @return success message
+     * @throws ResourceNotFoundException if the cart item does not exist
+     */
     @Operation(summary = "Remove an item from the cart",
             description = "Removes a cart item by its ID. Returns 404 if the item does not exist.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -101,6 +132,13 @@ public class CartCompatibilityController {
         return ResponseEntity.ok(ApiResponse.successMessage("Item removed from cart"));
     }
 
+    /**
+     * Validates the cart before checkout.
+     * Returns the current cart state so the client can review totals.
+     *
+     * @param buyerId the authenticated buyer's user ID
+     * @return the validated cart
+     */
     @Operation(summary = "Validate checkout",
             description = "Validates the authenticated buyer's cart before checkout, returning the current cart state.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -114,6 +152,13 @@ public class CartCompatibilityController {
         return ResponseEntity.ok(ApiResponse.success(toResponse(cartService.getCartByBuyer(buyerId))));
     }
 
+    /**
+     * Completes the checkout for the authenticated buyer's cart.
+     * Converts the cart into an order and clears the cart.
+     *
+     * @param buyerId the authenticated buyer's user ID
+     * @return success message
+     */
     @Operation(summary = "Checkout",
             description = "Completes the checkout for the authenticated buyer's cart.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -131,6 +176,7 @@ public class CartCompatibilityController {
         return ResponseEntity.ok(ApiResponse.successMessage("Checkout successful"));
     }
 
+    /** Converts a Cart entity to its DTO representation. */
     private CartResponse toResponse(Cart cart) {
         return CartResponse.fromEntity(cart);
     }

@@ -10,6 +10,11 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * A photo uploaded as evidence for an inspection. Extends {@link BaseImageEntity} for the shared
+ * storage fields (url, public id, asset id, sort order, primary flag) and adds only the link back
+ * to its inspection.
+ */
 @Entity
 @Table(name = "inspection_evidence_images", indexes = {
         @Index(name = "idx_inspection_evidence_inspection_id", columnList = "inspectionId")

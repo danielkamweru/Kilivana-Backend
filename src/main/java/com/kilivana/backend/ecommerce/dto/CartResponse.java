@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 
 /**
  * Response representing a shopping cart.
+ *
+ * <p>Contains the cart identity, the buyer who owns it, its current lifecycle
+ * status, and timestamps. The items themselves are fetched separately via the
+ * cart item endpoints to keep this response lightweight for list views.
  */
 @Schema(description = "Shopping cart response")
 @Data
@@ -34,6 +38,12 @@ public class CartResponse {
     @Schema(description = "Last update timestamp", example = "2024-01-15T11:45:00")
     private LocalDateTime updatedAt;
 
+    /**
+     * Maps a {@link Cart} entity to this DTO.
+     *
+     * @param cart the cart entity to convert
+     * @return a populated CartResponse
+     */
     public static CartResponse fromEntity(Cart cart) {
         return CartResponse.builder()
                 .id(cart.getId())

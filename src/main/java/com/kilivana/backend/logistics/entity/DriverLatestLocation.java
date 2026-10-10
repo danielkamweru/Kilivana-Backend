@@ -24,23 +24,31 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DriverLatestLocation {
 
+    /** Primary key: the delivery job this row is the cache for. */
     @Id
     @Column(nullable = false)
     private Long logisticsJobId;
 
+    /** ID of the driver who reported the cached fix. */
     @Column(nullable = false)
     private Long driverId;
 
+    /** Latitude of the cached fix, in decimal degrees, WGS84. */
     @Column(nullable = false)
     private Double latitude;
 
+    /** Longitude of the cached fix, in decimal degrees, WGS84. */
     @Column(nullable = false)
     private Double longitude;
 
+    /** Speed over ground in km/h, when the device reported it. */
     private Double speedKmh;
+    /** Direction of travel in degrees, when the device reported it. */
     private Double bearing;
+    /** Accuracy radius in metres, when the device reported it. */
     private Double accuracyMetres;
 
+    /** ID of the DriverLocation row this cache entry mirrors. */
     private Long locationId;
 
     /** The instant the server accepted the fix that is cached here. */

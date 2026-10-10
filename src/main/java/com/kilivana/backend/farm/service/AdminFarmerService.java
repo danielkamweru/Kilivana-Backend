@@ -104,6 +104,9 @@ import java.util.stream.Collectors;
     public FarmerResponse approveFarmer(Long id) {
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
+        // A suspended account cannot be approved: suspension and verification are
+        // separate concerns, so the caller must reinstate the account first.
+        // This prevents a farmer from being verified while their account is locked.
         if (user.getStatus() == UserStatus.SUSPENDED) {
             throw new BadRequestException("Cannot approve a suspended farmer. Reinstate the account first.");
         }
@@ -116,6 +119,9 @@ import java.util.stream.Collectors;
     public FarmerResponse rejectFarmer(Long id, String reason) {
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
+        // A rejection reason is mandatory so administrators can explain the
+        // decision to the farmer. Rejection also deactivates the account so the
+        // farmer cannot continue using it until they re-apply.
         if (reason == null || reason.isBlank()) {
             throw new BadRequestException("A rejection reason is required");
         }
@@ -129,6 +135,8 @@ import java.util.stream.Collectors;
     public FarmerResponse suspendFarmer(Long id, String reason) {
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
+        // Suspension is an account-level action separate from verification.
+        // The reason is mandatory for audit purposes.
         if (reason == null || reason.isBlank()) {
             throw new BadRequestException("A suspension reason is required");
         }
@@ -141,6 +149,9 @@ import java.util.stream.Collectors;
     public FarmerResponse reinstateFarmer(Long id) {
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
+        // Reinstate only resets the account status to ACTIVE. Verification status
+        // is left unchanged so a previously rejected farmer stays rejected until
+        // they are explicitly approved.
         user.setStatus(UserStatus.ACTIVE);
         User saved = userRepository.save(user);
         return toFarmerResponse(saved);

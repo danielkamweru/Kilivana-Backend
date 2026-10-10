@@ -9,6 +9,11 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * One immutable record of an administrator's action. Written by the JPA auditing listener on
+ * every state change; the service layer only exposes them, never writes through the API, so the
+ * trail cannot be altered after the fact.
+ */
 @Entity
 @Table(name = "audit_logs")
 @Data

@@ -12,8 +12,12 @@ import lombok.Data;
 @Data
 public class LocationUpdateResponse {
 
+    /** ID of the delivery job the fix was recorded for. */
     private Long tripId;
+    /** Latitude of the accepted fix, in decimal degrees, WGS84. */
     private Double latitude;
+    /** Longitude of the accepted fix, in decimal degrees, WGS84. */
     private Double longitude;
+    /** The instant the server accepted the fix, ISO-8601; lets the client reconcile its clock. */
     private String serverTimestamp;
 }

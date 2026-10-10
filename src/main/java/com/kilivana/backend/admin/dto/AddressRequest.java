@@ -7,6 +7,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Request payload for creating or updating a user address. The {@code userId} is supplied by
+ * the caller rather than the path, so the same body works for both the scoped and the
+ * "my address" endpoints.
+ */
 @Data
 @Builder
 @NoArgsConstructor

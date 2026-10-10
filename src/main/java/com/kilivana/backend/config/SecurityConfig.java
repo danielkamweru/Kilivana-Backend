@@ -128,6 +128,7 @@ public class SecurityConfig {
                     .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                // CORS preflight requests carry no credentials, so they need no token.
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 // Ordering and the order lifecycle are administrator powers.

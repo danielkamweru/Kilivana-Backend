@@ -18,6 +18,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * Compatibility endpoints mounted on the delivery job path: record a
  * tracking event, read a job's tracking history, or file proof of
  * delivery for a given job.
+ *
+ * <p>These exist alongside the dedicated controllers ({@code TrackingEventController},
+ * {@code ProofOfDeliveryController}) because some clients address resources by job id in
+ * the path. They delegate to the same {@code LogisticsService} methods, so there is one
+ * implementation of the business rules and two ways to reach it.
  */
 @Tag(name = "Logistics · Delivery Jobs", description = "Delivery job creation, driver assignment and status")
 @RestController

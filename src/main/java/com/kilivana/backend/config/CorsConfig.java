@@ -50,8 +50,12 @@ public class CorsConfig {
         }
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        // ngrok-skip-browser-warning lets tunneled browsers skip ngrok's interstitial.
         config.setAllowedHeaders(Arrays.asList("*", "ngrok-skip-browser-warning"));
+        // Browsers reject credentialed requests when the allowed origin is a literal "*",
+        // which is why the wildcard case above uses patterns instead.
         config.setAllowCredentials(true);
+        // Cache the preflight response so repeat cross-origin calls skip the OPTIONS round trip.
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

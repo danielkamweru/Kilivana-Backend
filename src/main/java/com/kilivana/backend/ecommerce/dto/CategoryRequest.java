@@ -12,6 +12,10 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request to create or update a product category.
+ *
+ * <p>Categories are scoped to a {@link SellerType} (e.g. FARMER, SUPPLIER)
+ * so that each seller type can have its own taxonomy. Name length is
+ * constrained to keep UI displays consistent.
  */
 @Schema(description = "Request to create or update a product category")
 @Data

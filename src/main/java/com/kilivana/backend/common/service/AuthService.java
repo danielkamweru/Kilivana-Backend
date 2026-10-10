@@ -22,18 +22,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Self-service registration, login, token refresh and password reset.
+ *
+ * <p>Staff roles (ADMIN, INSPECTOR) cannot self-register; they are created by an existing
+ * administrator through the admin panel. Passwords are never returned; only JWT access and
+ * refresh tokens are issued. The access token expiry is configurable; a non-positive value
+ * means the token carries no expiry and stays valid until the signing secret changes.
+ */
 @Service
     @RequiredArgsConstructor
     public class AuthService {
-
-    /**
-     * Self-service registration, login, token refresh and password reset.
-     *
-     * <p>Staff roles (ADMIN, INSPECTOR) cannot self-register; they are created by an existing
-     * administrator through the admin panel. Passwords are never returned; only JWT access and
-     * refresh tokens are issued. The access token expiry is configurable; a non-positive value
-     * means the token carries no expiry and stays valid until the signing secret changes.
-     */
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -41,6 +40,10 @@ import org.springframework.transaction.annotation.Transactional;
     private final JwtProperties jwtProperties;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
 
+    /**
+     * Self-service registration. Refuses staff roles, rejects an email or phone already
+     * taken, and normalizes the email, phone and county before the row is written.
+     */
     @Transactional
     public UserResponse register(UserRegistrationRequest request) {
         if (request.getRole() != null && request.getRole().isStaff()) {
@@ -72,6 +75,11 @@ import org.springframework.transaction.annotation.Transactional;
         return mapToResponse(userRepository.save(user));
     }
 
+    /**
+     * Authenticates with email and password. A wrong password and an unknown email produce
+     * the same failure so accounts cannot be enumerated; suspended and inactive accounts
+     * are refused.
+     */
     public AuthTokenResponse login(AuthLoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
@@ -100,12 +108,14 @@ import org.springframework.transaction.annotation.Transactional;
                 .build();
     }
 
+    /** Returns the profile of the user the bearer token identifies. */
     public UserResponse getCurrentUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         return mapToResponse(user);
     }
 
+    /** Updates the caller's own contact details, refusing an email or phone now used by a different account. */
     @Transactional
     public UserResponse updateCurrentUser(Long userId, UserRegistrationRequest request) {
         User user = userRepository.findById(userId)
@@ -152,6 +162,7 @@ import org.springframework.transaction.annotation.Transactional;
         return county;
     }
 
+    /** Sends reset instructions for the account behind {@code email}, if it exists. */
     @Transactional
     public String forgotPassword(String email) {
         userRepository.findByEmailIgnoreCase(normalizeEmail(email))
@@ -161,6 +172,7 @@ import org.springframework.transaction.annotation.Transactional;
         return "Password reset instructions have been sent if this account exists.";
     }
 
+    /** Replaces the password of the account the request's email belongs to. */
     @Transactional
     public String resetPassword(PasswordResetRequest request) {
         User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.getEmail()))
@@ -171,6 +183,10 @@ import org.springframework.transaction.annotation.Transactional;
         return "Password reset successfully";
     }
 
+    /**
+     * Issues a new token pair from a refresh token. Refuses tokens of the wrong type,
+     * unknown users, and accounts that are suspended or inactive.
+     */
     public AuthTokenResponse refreshToken(String refreshToken) {
         if (!jwtService.isTokenType(refreshToken, JwtService.TYPE_REFRESH)) {
             throw new UnauthorizedException("Invalid refresh token");

@@ -5,6 +5,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
+/**
+ * Persistence for the order timeline: one row per status transition so the
+ * panel can render the history chronologically.
+ */
 public interface OrderEventRepository extends JpaRepository<OrderEvent, Long> {
 
     List<OrderEvent> findByOrderIdOrderByCreatedAtAsc(Long orderId);

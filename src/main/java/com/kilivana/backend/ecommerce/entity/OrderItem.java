@@ -10,6 +10,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * A single line of an order: what was bought, at the price it was bought at.
+ *
+ * <p>The {@code productName} and {@code unit} are copied from the product at
+ * purchase time so the order remains readable even if the product is later
+ * renamed or removed. {@code subtotal} is {@code quantity * unitPrice}.
+ */
 @Entity
 @Table(name = "order_items")
 @Data

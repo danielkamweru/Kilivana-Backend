@@ -81,6 +81,9 @@ public class CropController {
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<List<CropSummaryDto>>> getCropSummary() {
         List<Crop> crops = cropRepository.findAll();
+        // Aggregate per crop type in three passes: count of crop records,
+        // total planted area, and total expected yield. Null yield values are
+        // treated as 0 to avoid corrupting the sum.
         Map<Long, Long> countsByCropType = crops.stream()
                 .collect(Collectors.groupingBy(Crop::getCropTypeId, Collectors.counting()));
         Map<Long, Double> areaByCropType = crops.stream()
@@ -89,6 +92,9 @@ public class CropController {
                 .collect(Collectors.groupingBy(Crop::getCropTypeId,
                         Collectors.summingLong(c -> c.getExpectedYieldKg() != null ? c.getExpectedYieldKg() : 0)));
 
+        // Iterate over the crop type catalog (not the crops themselves) so that
+        // crop types with zero crops still appear in the summary with zeroed
+        // aggregates — useful for rendering empty chart slices.
         List<CropSummaryDto> result = cropTypeRepository.findAll().stream()
                 .map(ct -> CropSummaryDto.builder()
                         .cropTypeId(ct.getId())

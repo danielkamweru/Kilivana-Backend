@@ -8,6 +8,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Access to the {@link Notification} table. Notifications are ordered by creation date in the
+ * database rather than in memory, so the ordering does not depend on insertion order. The
+ * paginated variant exists for the admin feed, which can grow large.
+ */
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     

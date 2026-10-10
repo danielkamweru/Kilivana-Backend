@@ -19,8 +19,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * REST controller for managing payments: initiation, retrieval,
- * status transitions and refunds.
+ * REST controller for managing payments.
+ * Supports initiation, retrieval, status transitions and refunds.
+ * Payments are linked to orders and track payment method, provider reference and amount.
  */
 @Tag(name = "E-Commerce · Payments", description = "Payment initiation, webhooks, refunds and status")
 @RestController
@@ -30,6 +31,14 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    /**
+     * Creates a new payment record from the supplied request payload.
+     * The payment method can be provided via either the {@code method} or {@code provider}
+     * field for backward compatibility.
+     *
+     * @param request the payment details (order ID, method, reference, amount)
+     * @return the created payment
+     */
     @Operation(summary = "Create payment", description = "Creates a new payment record from the supplied request payload and returns the created payment.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Payment created successfully"),
@@ -44,6 +53,13 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
+    /**
+     * Initiates a payment by delegating to the create-payment workflow.
+     * Alternative endpoint name for clients expecting an "initiate" action.
+     *
+     * @param request the payment details
+     * @return the created payment
+     */
     @Operation(summary = "Initiate payment", description = "Initiates a payment by delegating to the create-payment workflow.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Payment initiated successfully"),
@@ -55,6 +71,13 @@ public class PaymentController {
         return createPayment(request);
     }
 
+    /**
+     * Receives an asynchronous payment notification (webhook) and processes it
+     * as a new payment record. Accepts the same payload as the create endpoint.
+     *
+     * @param request the webhook notification payload
+     * @return the created payment
+     */
     @Operation(summary = "Payment webhook", description = "Receives an asynchronous payment notification and processes it as a new payment record.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Webhook processed successfully"),
@@ -66,6 +89,12 @@ public class PaymentController {
         return createPayment(request);
     }
 
+    /**
+     * Retrieves a single payment by its identifier.
+     *
+     * @param id the payment identifier
+     * @return the payment
+     */
     @Operation(summary = "Get payment by id", description = "Retrieves a single payment by its identifier.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payment found"),
@@ -78,6 +107,12 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    /**
+     * Retrieves all payments associated with a given order.
+     *
+     * @param orderId the order identifier
+     * @return list of payments for that order
+     */
     @Operation(summary = "Get payments by order", description = "Retrieves all payments associated with a given order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payments retrieved successfully"),
@@ -90,6 +125,14 @@ public class PaymentController {
                 payments.stream().map(paymentService::mapToResponse).toList()));
     }
 
+    /**
+     * Transitions a payment to a new status.
+     * Valid statuses: PENDING, COMPLETED, FAILED, REFUNDED, HELD.
+     *
+     * @param id the payment identifier
+     * @param status the new payment status
+     * @return the updated payment
+     */
     @Operation(summary = "Update payment status", description = "Transitions a payment to a new status and returns the updated payment.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payment status updated successfully"),
@@ -105,6 +148,13 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    /**
+     * Refunds a payment by setting its status to REFUNDED.
+     * This is a convenience endpoint that delegates to the status update workflow.
+     *
+     * @param id the payment identifier
+     * @return the refunded payment
+     */
     @Operation(summary = "Refund payment", description = "Refunds a payment by setting its status to REFUNDED and returns the updated payment.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payment refunded successfully"),

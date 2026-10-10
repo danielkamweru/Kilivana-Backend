@@ -12,9 +12,14 @@ import lombok.Data;
 @Data
 public class TrackingStoppedEvent {
 
+    /** ID of the delivery job whose tracking has ended. */
     private Long tripId;
+    /** ID of the order this delivery job is fulfilling. */
     private Long orderId;
+    /** ID of the driver who was running the delivery. */
     private Long driverId;
+    /** Terminal delivery status, e.g. "delivered", "cancelled" or "failed". */
     private String status;
+    /** Human-readable notice for the client to render. */
     private String message;
 }

@@ -13,6 +13,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * A product listing owned by a seller (farmer or supplier).
+ *
+ * <p>Products are created in {@code PENDING_APPROVAL} and must be activated by
+ * an administrator before appearing in the buyer's catalogue. Stock is tracked
+ * via {@code stockQty}; {@code reservedQty} holds units committed to open orders
+ * so they are not double-sold. The minimum order quantity enforces the seller's
+ * preferred lot size.
+ */
 @Entity
 @Table(name = "products")
 @Data

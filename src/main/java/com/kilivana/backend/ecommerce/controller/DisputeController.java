@@ -19,12 +19,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * REST controller for managing order disputes: creation, retrieval,
- * status transitions and resolution.
- *
- * <p>Disputes live beside orders and payments, so the panel's short
- * resource paths ({@code /api/v1/disputes}) answer alongside the
- * module-scoped ones.</p>
+ * REST controller for managing order disputes.
+ * Supports creation, retrieval, status transitions and resolution.
+ * Disputes are associated with orders and can be raised by users.
  */
 @Tag(name = "E-Commerce · Orders", description = "Order placement, status transitions, timeline and disputes")
 @RestController
@@ -34,6 +31,12 @@ public class DisputeController {
 
     private final DisputeService disputeService;
 
+    /**
+     * Creates a new dispute from the supplied request payload.
+     *
+     * @param request the dispute details (order ID, raised by user ID, reason, description, initial status)
+     * @return the created dispute
+     */
     @Operation(summary = "Create dispute", description = "Creates a new dispute from the supplied request payload and returns the created dispute.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Dispute created successfully"),
@@ -46,6 +49,12 @@ public class DisputeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(dispute));
     }
 
+    /**
+     * Retrieves a single dispute by its identifier.
+     *
+     * @param id the dispute identifier
+     * @return the dispute
+     */
     @Operation(summary = "Get dispute by id", description = "Retrieves a single dispute by its identifier.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dispute found"),
@@ -57,6 +66,12 @@ public class DisputeController {
         return ResponseEntity.ok(ApiResponse.success(dispute));
     }
 
+    /**
+     * Retrieves all disputes associated with a specific order.
+     *
+     * @param orderId the order identifier
+     * @return list of disputes for that order
+     */
     @Operation(summary = "Get disputes by order", description = "Retrieves all disputes associated with a specific order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Disputes retrieved successfully")
@@ -67,6 +82,12 @@ public class DisputeController {
         return ResponseEntity.ok(ApiResponse.success(disputes));
     }
 
+    /**
+     * Retrieves all disputes associated with a specific user.
+     *
+     * @param userId the user identifier
+     * @return list of disputes for that user
+     */
     @Operation(summary = "Get disputes by user", description = "Retrieves all disputes associated with a specific user.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Disputes retrieved successfully")
@@ -77,6 +98,13 @@ public class DisputeController {
         return ResponseEntity.ok(ApiResponse.success(disputes));
     }
 
+    /**
+     * Transitions a dispute to a new status.
+     *
+     * @param id the dispute identifier
+     * @param status the new dispute status (e.g., OPEN, IN_REVIEW, RESOLVED)
+     * @return the updated dispute
+     */
     @Operation(summary = "Update dispute status", description = "Transitions a dispute to a new status and returns the updated dispute.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dispute status updated successfully"),
@@ -91,6 +119,15 @@ public class DisputeController {
         return ResponseEntity.ok(ApiResponse.success(dispute));
     }
 
+    /**
+     * Resolves a dispute with the provided resolution details.
+     * The outcome determines whether the order is cancelled/refunded (BUYER)
+     * or completed with payment released to the seller (FARMER).
+     *
+     * @param id the dispute identifier
+     * @param request the resolution outcome and explanation
+     * @return the resolved dispute
+     */
     @Operation(summary = "Resolve dispute", description = "Resolves a dispute with the provided resolution details and returns the updated dispute.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dispute resolved successfully"),

@@ -16,8 +16,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * Delivery job management: creation, retrieval, driver assignment,
- * status transitions, delivery-code verification, cancellation and deletion.
+ * Delivery job management: creation, retrieval, driver assignment, status transitions,
+ * delivery-code verification, cancellation and deletion.
+ *
+ * <p>Every mutating action is delegated to {@code LogisticsService}, which owns the
+ * state machine and the order/payout arithmetic. This controller is a thin wrapper
+ * that only maps HTTP to service calls and wraps results in {@link ApiResponse}.
+ *
+ * <p>PUT/POST aliases exist because some clients prefer idempotent PUTs while others
+ * post to the same URL; both delegate to the same service method.
  */
 @Tag(name = "Logistics · Delivery Jobs", description = "Delivery job creation, driver assignment and status")
 @RestController

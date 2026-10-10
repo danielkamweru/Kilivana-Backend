@@ -14,6 +14,11 @@ import java.time.LocalDateTime;
 /**
  * Request payload for creating or updating an inspection.
  */
+/**
+ * Request payload for creating or updating an inspection. The {@code result} is optional on
+ * create and filled in when the inspector records their finding; {@code evidenceUrls} is the
+ * comma-separated mirror of the evidence images table.
+ */
 @Data
 @Builder
 @NoArgsConstructor

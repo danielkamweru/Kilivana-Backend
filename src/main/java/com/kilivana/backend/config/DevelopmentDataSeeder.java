@@ -20,6 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
+/**
+ * Adds buyer-facing demo products on top of {@link SeedDataRunner}'s seed.
+ *
+ * <p>Gated behind {@code DEV_SEED_ENABLED} so it only runs where the full demo
+ * dataset is wanted, and upserts by name so re-running it is safe.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor

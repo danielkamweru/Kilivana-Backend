@@ -10,10 +10,11 @@ import java.util.Optional;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
-    
+
     List<Payment> findByOrderId(Long orderId);
-    
+
+    /** Finds a payment by the provider's transaction reference (e.g. M-Pesa confirmation code). */
     Optional<Payment> findByReference(String reference);
-    
+
     List<Payment> findByStatus(PaymentStatus status);
 }

@@ -13,6 +13,14 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * A payment attempt recorded against an order.
+ *
+ * <p>The order's {@code paymentStatus} is a derived view of its payment rows
+ * and is kept in sync by the payment service. {@code paidAt} records when the
+ * money actually arrived (escrow steps must not re-stamp it). The {@code reference}
+ * is the provider's transaction ID (e.g. M-Pesa confirmation code).
+ */
 @Entity
 @Table(name = "payments")
 @Data

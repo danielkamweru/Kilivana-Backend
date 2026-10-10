@@ -32,6 +32,10 @@ import java.util.List;
  * Driver accounts are part of the logistics workforce, so these endpoints sit under
  * Logistics rather than Administration. A driver manages their own profile and
  * images; an admin may manage any driver's.
+ *
+ * <p>ProfileService is reused from the admin module rather than duplicated here, which
+ * keeps the driver domain thin: this controller is purely about mounting the service
+ * under the logistics path and enforcing the "own profile or admin" rule.
  */
 @Tag(name = "Logistics · Driver Profiles",
         description = "Driver profile and vehicle details, including licence and vehicle images. "

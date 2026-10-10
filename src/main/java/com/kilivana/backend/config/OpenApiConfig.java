@@ -13,6 +13,10 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+/**
+ * Builds the OpenAPI document the Swagger UI serves: API metadata, the
+ * bearer-JWT security scheme and the deployed server URL.
+ */
 @Configuration
 public class OpenApiConfig {
 

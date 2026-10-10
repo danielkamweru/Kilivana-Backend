@@ -9,8 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-    
+
     List<CartItem> findByCartId(Long cartId);
-    
+
+    /** Finds a specific line in a cart by its product. */
     Optional<CartItem> findByCartIdAndProductId(Long cartId, Long productId);
 }

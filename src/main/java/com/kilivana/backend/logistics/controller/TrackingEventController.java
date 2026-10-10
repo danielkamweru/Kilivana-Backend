@@ -18,6 +18,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /**
  * Delivery tracking: recording tracking events and reading tracking
  * history for a delivery job or a driver.
+ *
+ * <p>Tracking events are the low-frequency status history (one per status change, with
+ * an optional position), distinct from the high-frequency position stream served by
+ * {@code DriverLocationController}. A client wanting to redraw a journey reads the
+ * tracking events; a client wanting live animation subscribes to the WebSocket topic.
  */
 @Tag(name = "Logistics · Tracking", description = "Delivery tracking events and history")
 @RestController

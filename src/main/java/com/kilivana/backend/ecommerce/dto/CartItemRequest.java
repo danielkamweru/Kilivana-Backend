@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request to add or update a cart item.
+ *
+ * <p>Used when a buyer adds a product to their cart or changes the quantity
+ * of an existing cart line. The product must exist and be purchasable.
  */
 @Schema(description = "Request to add or update a cart item")
 @Data

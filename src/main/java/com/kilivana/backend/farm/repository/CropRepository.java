@@ -10,6 +10,15 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Data access layer for {@link Crop} entities.
+ * <p>
+ * Exposes both derived queries (by farm, by farmer) and a flexible
+ * {@link #searchCrops(String, Long, Long, Long, com.kilivana.backend.common.enums.CropStatus, Pageable)}
+ * query that supports optional free-text, farmer, farm, crop type, and status
+ * filters. Null parameters are treated as "no filter" so the same query can
+ * be reused for both broad and narrow searches.
+ */
 @Repository
 public interface CropRepository extends JpaRepository<Crop, Long> {
     List<Crop> findByFarmId(Long farmId);

@@ -21,8 +21,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * REST controller for managing buyer shopping carts: retrieving cart contents,
- * adding and updating items, checkout and clearing.
+ * REST controller for managing buyer shopping carts.
+ * Provides endpoints for retrieving cart contents, adding and updating items,
+ * checkout and clearing. All operations are scoped to a specific buyer.
  */
 @Tag(name = "E-Commerce · Cart & Checkout", description = "Buyer cart items and checkout")
 @RestController
@@ -34,6 +35,12 @@ public class CartController {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
 
+    /**
+     * Retrieves the active shopping cart for a specific buyer.
+     *
+     * @param buyerId the buyer's user ID
+     * @return the cart with items and totals
+     */
     @Operation(summary = "Get cart by buyer", description = "Retrieves the active shopping cart for a specific buyer.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cart retrieved successfully"),
@@ -46,6 +53,14 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    /**
+     * Adds a product item to the buyer's shopping cart.
+     * Creates the cart if it does not exist.
+     *
+     * @param buyerId the buyer's user ID
+     * @param request the product ID and quantity to add
+     * @return the updated cart
+     */
     @Operation(summary = "Add item to cart", description = "Adds a product item to the buyer's shopping cart and returns the updated cart.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Item added to cart successfully"),
@@ -59,6 +74,15 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
+    /**
+     * Updates the quantity of a specific product in a cart.
+     * The cart is identified by cartId, the product by productId.
+     *
+     * @param cartId the cart identifier
+     * @param productId the product identifier
+     * @param quantity the new quantity (must be positive)
+     * @return the updated cart
+     */
     @Operation(summary = "Update cart item quantity", description = "Updates the quantity of a specific product in a cart.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cart item updated successfully"),
@@ -75,6 +99,13 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    /**
+     * Removes a specific product from a shopping cart.
+     *
+     * @param cartId the cart identifier
+     * @param productId the product identifier to remove
+     * @return success message
+     */
     @Operation(summary = "Remove cart item", description = "Removes a specific product from a shopping cart.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Item removed from cart successfully"),
@@ -88,6 +119,12 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.successMessage("Item removed from cart"));
     }
 
+    /**
+     * Processes the checkout for the given shopping cart, converting it into an order.
+     *
+     * @param cartId the cart identifier
+     * @return success message
+     */
     @Operation(summary = "Checkout cart", description = "Processes the checkout for the given shopping cart, converting it into an order.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Checkout successful"),
@@ -100,6 +137,12 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.successMessage("Checkout successful"));
     }
 
+    /**
+     * Removes all items from a shopping cart.
+     *
+     * @param cartId the cart identifier
+     * @return success message
+     */
     @Operation(summary = "Clear cart", description = "Removes all items from a shopping cart.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cart cleared successfully"),

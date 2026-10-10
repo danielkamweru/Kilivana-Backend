@@ -9,11 +9,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Persistence for order line items.
+ */
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
+    /** Returns all line items for a specific order. */
     List<OrderItem> findByOrderId(Long orderId);
 
+    /** Returns all line items for a specific seller (across all their orders). */
     List<OrderItem> findBySellerId(Long sellerId);
 
     /**

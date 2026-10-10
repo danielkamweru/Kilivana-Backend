@@ -6,6 +6,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * Access to the {@link BuyerProfile} table. A buyer profile is optional — a registered buyer may
+ * never have onboarded one — so reads return {@link Optional} rather than assuming the row exists.
+ */
 @Repository
 public interface BuyerProfileRepository extends JpaRepository<BuyerProfile, Long> {
     

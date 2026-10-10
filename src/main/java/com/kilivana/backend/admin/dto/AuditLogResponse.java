@@ -11,6 +11,11 @@ import java.time.LocalDateTime;
 /**
  * Response DTO representing an audit log entry.
  */
+/**
+ * Response DTO for one audit log entry. The {@code metadata} field is a free JSON string that
+ * explains what happened — the suspension reason, the before/after values, whatever the action
+ * needed to record.
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -53,6 +53,7 @@ public class ProductController {
             @Parameter(description = "Product details (multipart part named \"product\")") @Valid @RequestPart("product") ProductRequest request,
             @Parameter(description = "Product images (multipart part named \"images\")") @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
         ProductResponse product;
+        // Use image-aware creation when files are provided; otherwise fall back to JSON-only path
         if (images != null && !images.isEmpty()) {
             product = productService.createProductWithImages(request, images, userId);
         } else {
@@ -154,6 +155,7 @@ public class ProductController {
             @Parameter(description = "Product identifier") @PathVariable Long id,
             @Parameter(description = "Updated product details (multipart part named \"product\")") @Valid @RequestPart("product") ProductRequest request,
             @Parameter(description = "Additional or replacement images (multipart part named \"images\")") @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
+        // Verify ownership before any modification to prevent unauthorized updates
         productService.ensureProductOwnership(id, userId);
         ProductResponse product;
         if (images != null && !images.isEmpty()) {
@@ -177,6 +179,7 @@ public class ProductController {
             @Parameter(description = "Authenticated seller or buyer identifier") @AuthenticationPrincipal Long userId,
             @Parameter(description = "Product identifier") @PathVariable Long id,
             @Parameter(description = "Updated product details") @Valid @RequestBody ProductRequest request) {
+        // Verify ownership before any modification to prevent unauthorized updates
         productService.ensureProductOwnership(id, userId);
         ProductResponse product = productService.updateProduct(id, request);
         return ResponseEntity.ok(ApiResponse.success(product));
@@ -194,6 +197,7 @@ public class ProductController {
             @Parameter(description = "Authenticated seller or buyer identifier") @AuthenticationPrincipal Long userId,
             @Parameter(description = "Product identifier") @PathVariable Long id,
             @Parameter(description = "New product status") @RequestParam ProductStatus status) {
+        // Verify ownership before status change to prevent unauthorized status transitions
         productService.ensureProductOwnership(id, userId);
         ProductResponse product = productService.updateProductStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success(product));
@@ -210,6 +214,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             @Parameter(description = "Authenticated seller or buyer identifier") @AuthenticationPrincipal Long userId,
             @Parameter(description = "Product identifier") @PathVariable Long id) throws IOException {
+        // Verify ownership before deletion to prevent unauthorized removal
         productService.ensureProductOwnership(id, userId);
         productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.successMessage("Product deleted successfully"));
@@ -229,6 +234,7 @@ public class ProductController {
             @Parameter(description = "Image file to upload") @RequestPart("image") MultipartFile image,
             @Parameter(description = "Display order of the image") @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
             @Parameter(description = "Whether this image should be the primary image") @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
+        // Verify ownership before allowing image upload
         productService.ensureProductOwnership(id, userId);
         ProductImageResponse imageResponse = productService.uploadProductImage(id, image, sortOrder, isPrimary);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(imageResponse));
@@ -260,6 +266,7 @@ public class ProductController {
             @Parameter(description = "Updated image file") @RequestPart("image") MultipartFile image,
             @Parameter(description = "Display order of the image") @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
             @Parameter(description = "Whether this image should be the primary image") @RequestParam(value = "isPrimary", required = false) Boolean isPrimary) throws IOException {
+        // Verify ownership before allowing image update
         productService.ensureProductOwnership(productId, userId);
         ProductImageResponse imageResponse = productService.updateProductImage(productId, imageId, image, sortOrder, isPrimary);
         return ResponseEntity.ok(ApiResponse.success(imageResponse));
@@ -277,6 +284,7 @@ public class ProductController {
             @Parameter(description = "Authenticated seller or buyer identifier") @AuthenticationPrincipal Long userId,
             @Parameter(description = "Product identifier") @PathVariable Long productId,
             @Parameter(description = "Image identifier") @PathVariable Long imageId) {
+        // Verify ownership before changing primary image
         productService.ensureProductOwnership(productId, userId);
         productService.setPrimaryImage(productId, imageId);
         return ResponseEntity.ok(ApiResponse.successMessage("Primary image updated successfully"));
@@ -294,12 +302,13 @@ public class ProductController {
             @Parameter(description = "Authenticated seller or buyer identifier") @AuthenticationPrincipal Long userId,
             @Parameter(description = "Product identifier") @PathVariable Long productId,
             @Parameter(description = "Image IDs in the desired order") @RequestBody List<Long> imageIdsInOrder) {
+        // Verify ownership before reordering images
         productService.ensureProductOwnership(productId, userId);
         productService.reorderImages(productId, imageIdsInOrder);
         return ResponseEntity.ok(ApiResponse.successMessage("Images reordered successfully"));
     }
 
-    @Operation(summary = "Delete product image", description = "Deletes an image from a product. Only the product owner may perform this operation.")
+@Operation(summary = "Delete product image", description = "Deletes an image from a product. Only the product owner may perform this operation.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Image deleted successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -311,6 +320,7 @@ public class ProductController {
             @Parameter(description = "Authenticated seller or buyer identifier") @AuthenticationPrincipal Long userId,
             @Parameter(description = "Product identifier") @PathVariable Long productId,
             @Parameter(description = "Image identifier") @PathVariable Long imageId) throws IOException {
+        // Verify ownership before allowing image deletion
         productService.ensureProductOwnership(productId, userId);
         productService.deleteProductImage(productId, imageId);
         return ResponseEntity.ok(ApiResponse.successMessage("Image deleted successfully"));

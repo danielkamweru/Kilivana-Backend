@@ -23,6 +23,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The aggregated figures for the admin dashboard home screen. Every count is computed in the
+ * database; the trend series is dense (every day in the window appears exactly once, with zero
+ * on empty days) so the app can plot a straight line without gap-filling.
+ *
+ * <p>"Settled" means DELIVERED or COMPLETED — the orders that represent money the platform
+ * actually handled. Cancelled and failed orders never count as turnover.
+ */
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
