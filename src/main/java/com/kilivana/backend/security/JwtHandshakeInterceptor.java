@@ -8,9 +8,9 @@ import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
-import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
-import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +28,7 @@ import java.util.Map;
  */
 @Slf4j
 @RequiredArgsConstructor
+@Component
 public class JwtHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
 
     static final String TOKEN_QUERY_PARAM = "token";
@@ -35,6 +36,10 @@ public class JwtHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
 
     private final JwtService jwtService;
 
+    /**
+     * Reads the token out of the handshake query string before the handshake completes and
+     * stashes the resolved user id where the channel interceptor can pick it up.
+     */
     @Override
     public boolean beforeHandshake(@NonNull ServerHttpRequest request,
                                    @Nullable ServerHttpResponse response,
