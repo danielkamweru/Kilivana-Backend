@@ -21,7 +21,7 @@ public class AuthLoginRequest {
     @Email(message = "Invalid email format")
     private String email;
 
-    /** Plain-text password, compared against the stored bcrypt hash. Never echoed back. */
+    /** Important: The plain-text password should never be stored in the database. Only its BCrypt hash should be stored.. */
     @NotBlank(message = "Password is required")
     private String password;
 }
