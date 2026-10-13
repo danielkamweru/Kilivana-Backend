@@ -21,4 +21,12 @@ public class JwtProperties {
     private long accessTokenExpiration = 1800000L;
     /** Refresh token lifetime in milliseconds (default: 7 days). */
     private long refreshTokenExpiration = 604800000L;
+
+    // Explicit getters and setters for Lombok compatibility
+    public String getSecret() { return secret; }
+    public void setSecret(String secret) { this.secret = secret; }
+    public long getAccessTokenExpiration() { return accessTokenExpiration; }
+    public void setAccessTokenExpiration(long accessTokenExpiration) { this.accessTokenExpiration = accessTokenExpiration; }
+    public long getRefreshTokenExpiration() { return refreshTokenExpiration; }
+    public void setRefreshTokenExpiration(long refreshTokenExpiration) { this.refreshTokenExpiration = refreshTokenExpiration; }
 }

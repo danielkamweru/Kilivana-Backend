@@ -257,25 +257,25 @@ public class AdminSupplierService {
                 ? 0
                 : productRepository.findBySellerIdAndSellerType(user.getId(), SellerType.SUPPLIER).size();
 
-        return AdminSupplierResponse.builder()
-                .userId(user.getId())
-                .profileId(profile == null ? null : profile.getId())
-                .code(user.getReferenceCode())
-                .companyName(profile == null ? null : profile.getBusinessName())
-                .contactPerson(user.getName())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .region(user.getRegion())
-                .address(profile == null ? null : profile.getAddress())
-                .category(profile == null ? null : profile.getCategory())
-                .contractEndDate(profile == null ? null : profile.getContractEndDate())
-                .status(AdminSupplierResponse.mapStatus(user.getStatus(), user.getVerificationStatus()))
-                .suspensionReason(user.getSuspensionReason())
-                .productsCount(productsCount)
-                .rating(null)
-                .createdAt(user.getCreatedAt())
-                .build();
+        return AdminSupplierResponse.of(
+                user.getId(),
+                profile == null ? null : profile.getId(),
+                user.getReferenceCode(),
+                profile == null ? null : profile.getBusinessName(),
+                user.getName(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getRegion(),
+                profile == null ? null : profile.getAddress(),
+                profile == null ? null : profile.getCategory(),
+                profile == null ? null : profile.getContractEndDate(),
+                AdminSupplierResponse.mapStatus(user.getStatus(), user.getVerificationStatus()),
+                user.getSuspensionReason(),
+                productsCount,
+                null,
+                user.getCreatedAt()
+        );
     }
 
     private static String normalizeEmail(String email) {

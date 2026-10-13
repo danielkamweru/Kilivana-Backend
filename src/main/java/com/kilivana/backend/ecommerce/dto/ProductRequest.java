@@ -1,5 +1,6 @@
 package com.kilivana.backend.ecommerce.dto;
 
+import com.kilivana.backend.common.enums.QualityGrade;
 import com.kilivana.backend.common.enums.SellerType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -9,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Everything needed to create or update a product listing. The category can
@@ -61,4 +63,21 @@ public class ProductRequest {
     @Min(value = 1, message = "Minimum order quantity must be at least 1")
     @Schema(description = "Minimum quantity a buyer can order", example = "1")
     private Integer minimumOrderQty;
+
+    @Schema(description = "Quality grade of the product", example = "GRADE_A")
+    private QualityGrade qualityGrade;
+
+    @Schema(description = "Harvest date for fresh products", example = "2024-01-10")
+    private LocalDate harvestDate;
+
+    @Min(value = 0, message = "Low stock threshold cannot be negative")
+    @Schema(description = "Threshold for low stock warning", example = "10")
+    private Integer lowStockThreshold;
+
+    @Schema(description = "Farm ID if product is linked to a certified farm", example = "3")
+    private Long farmId;
+
+    @Size(max = 500, message = "Status reason must be at most 500 characters")
+    @Schema(description = "Reason for status change (suspended/rejected)", example = "Failed quality inspection")
+    private String statusReason;
 }

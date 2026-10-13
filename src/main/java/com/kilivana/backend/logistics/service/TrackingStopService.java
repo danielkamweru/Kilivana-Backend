@@ -3,8 +3,6 @@ package com.kilivana.backend.logistics.service;
 import com.kilivana.backend.logistics.dto.TrackingStoppedEvent;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Separated from LogisticsService so the logistics domain does not own a messaging
  * concern; LogisticsService calls it after it has already persisted the new state.
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class TrackingStopService {
 
     private final LogisticsJobRepository logisticsJobRepository;
     private final TrackingBroadcastService broadcastService;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TrackingStopService.class);
+
+    public TrackingStopService(LogisticsJobRepository logisticsJobRepository,
+                               TrackingBroadcastService broadcastService) {
+        this.logisticsJobRepository = logisticsJobRepository;
+        this.broadcastService = broadcastService;
+    }
 
     /**
      * Pushes a stop event for the job if it is now in a terminal state. Safe to call on a

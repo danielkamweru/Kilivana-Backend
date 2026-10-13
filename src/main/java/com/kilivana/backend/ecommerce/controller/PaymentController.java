@@ -2,10 +2,14 @@ package com.kilivana.backend.ecommerce.controller;
 
 import com.kilivana.backend.ecommerce.dto.PaymentRequest;
 import com.kilivana.backend.ecommerce.dto.PaymentResponse;
+import com.kilivana.backend.dto.StkPushInitiateRequest;
+import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.ecommerce.entity.Payment;
 import com.kilivana.backend.ecommerce.service.PaymentService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.PaymentStatus;
+import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -163,6 +167,79 @@ public class PaymentController {
     @PostMapping("/{id}/refund")
     public ResponseEntity<ApiResponse<PaymentResponse>> refundPayment(@Parameter(description = "Payment identifier") @PathVariable Long id) {
         Payment payment = paymentService.updatePaymentStatus(id, PaymentStatus.REFUNDED);
+        return ResponseEntity.ok(ApiResponse.success(paymentService.mapToResponse(payment)));
+    }
+
+    // ==================== DARAJA STK PUSH ENDPOINTS ====================
+
+    /**
+     * Initiates an M-PESA STK Push for an order (Farmer endpoint).
+     *
+     * <p>Only the farmer who owns items in the order may call this. The amount
+     * is calculated from the order's outstanding balance — the caller cannot
+     * supply an arbitrary amount. The buyer receives an STK prompt on their phone
+     * and enters their M-PESA PIN. The final result arrives via the callback.
+     *
+     * @param request order ID and optional buyer phone (falls back to registered phone)
+     * @return payment record ID and Daraja STK Push response
+     */
+    @Operation(summary = "Initiate STK Push for farmer-owned order",
+            description = "Farmer initiates M-PESA STK Push for the buyer on an order they own. " +
+                    "Amount is the outstanding balance; buyer phone is optional (uses registered phone). " +
+                    "Returns payment ID and Daraja response. Final outcome arrives via callback.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "STK Push initiated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request, no outstanding balance, or invalid phone"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Farmer does not own this order"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "M-PESA service unavailable")
+    })
+    @PostMapping("/stk-push/farmer")
+    public ResponseEntity<ApiResponse<StkPushInitiateResponse>> initiateStkPushFarmer(
+            @Parameter(description = "STK Push initiation details") @RequestBody StkPushInitiateRequest request) {
+        StkPushInitiateResponse response = paymentService.initiateStkPush(
+                CurrentUser.id(), UserRole.FARMER, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Initiates an M-PESA STK Push for an order (Supplier endpoint).
+     *
+     * <p>Only the supplier who owns items in the order may call this. Behaves
+     * identically to the farmer endpoint.
+     */
+    @Operation(summary = "Initiate STK Push for supplier-owned order",
+            description = "Supplier initiates M-PESA STK Push for the buyer on an order they own. " +
+                    "Amount is the outstanding balance; buyer phone is optional (uses registered phone). " +
+                    "Returns payment ID and Daraja response. Final outcome arrives via callback.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "STK Push initiated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request, no outstanding balance, or invalid phone"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Supplier does not own this order"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "M-PESA service unavailable")
+    })
+    @PostMapping("/stk-push/supplier")
+    public ResponseEntity<ApiResponse<StkPushInitiateResponse>> initiateStkPushSupplier(
+            @Parameter(description = "STK Push initiation details") @RequestBody StkPushInitiateRequest request) {
+        StkPushInitiateResponse response = paymentService.initiateStkPush(
+                CurrentUser.id(), UserRole.SUPPLIER, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Checks the status of a payment attempt (including STK Push attempts).
+     */
+    @Operation(summary = "Get payment status", description = "Returns the current status of a payment attempt. " +
+            "For STK Push, this shows PENDING until the callback updates it.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payment status returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Payment not found")
+    })
+    @GetMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<PaymentResponse>> getPaymentStatus(
+            @Parameter(description = "Payment identifier") @PathVariable Long id) {
+        Payment payment = paymentService.getPaymentById(id);
         return ResponseEntity.ok(ApiResponse.success(paymentService.mapToResponse(payment)));
     }
 }

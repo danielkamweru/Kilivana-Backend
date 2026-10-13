@@ -2,8 +2,9 @@ package com.kilivana.backend.admin.dto;
 
 import com.kilivana.backend.common.enums.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,7 +18,8 @@ import java.time.LocalDateTime;
  * and a job list, which meant a buyer without a profile either vanished or threw.
  */
 @Data
-@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Admin view of a buyer with profile and order summary")
 public class AdminBuyerResponse {
 
@@ -62,4 +64,27 @@ public class AdminBuyerResponse {
 
     @Schema(description = "Timestamp when the buyer account was created", example = "2026-01-15T10:30:00")
     private LocalDateTime createdAt;
+
+    // Static factory method to replace @Builder
+    public static AdminBuyerResponse of(Long userId, Long profileId, String code, String fullName, String email,
+                                        String phone, String region, String address, String status, String type,
+                                        long ordersCount, BigDecimal totalSpend, long disputesCount,
+                                        LocalDateTime createdAt) {
+        AdminBuyerResponse response = new AdminBuyerResponse();
+        response.userId = userId;
+        response.profileId = profileId;
+        response.code = code;
+        response.fullName = fullName;
+        response.email = email;
+        response.phone = phone;
+        response.region = region;
+        response.address = address;
+        response.status = status;
+        response.type = type;
+        response.ordersCount = ordersCount;
+        response.totalSpend = totalSpend;
+        response.disputesCount = disputesCount;
+        response.createdAt = createdAt;
+        return response;
+    }
 }

@@ -20,4 +20,14 @@ public class LocationUpdateResponse {
     private Double longitude;
     /** The instant the server accepted the fix, ISO-8601; lets the client reconcile its clock. */
     private String serverTimestamp;
+
+    // Explicit getters and setters for Lombok compatibility
+    public Long getTripId() { return tripId; }
+    public void setTripId(Long tripId) { this.tripId = tripId; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public String getServerTimestamp() { return serverTimestamp; }
+    public void setServerTimestamp(String serverTimestamp) { this.serverTimestamp = serverTimestamp; }
 }

@@ -175,57 +175,60 @@ public class AdminFarmerController {
     private FarmerResponse toFarmerResponse(User user) {
         List<Farm> farms = farmRepository.findByFarmerId(user.getId());
         List<FarmResponse> farmResponses = farms.stream()
-                .map(f -> FarmResponse.builder()
-                        .id(f.getId())
-                        .farmerId(f.getFarmerId())
-                        .name(f.getName())
-                        .county(f.getCounty())
-                        .subCounty(f.getSubCounty())
-                        .address(f.getAddress())
-                        .latitude(f.getLatitude())
-                        .longitude(f.getLongitude())
-                        .sizeAcres(f.getSizeAcres())
-                        .ownershipType(f.getOwnershipType())
-                        .status(f.getStatus())
-                        .description(f.getDescription())
-                        .createdAt(f.getCreatedAt())
-                        .build())
+                .map(f -> FarmResponse.of(
+                        f.getId(),
+                        f.getFarmerId(),
+                        f.getName(),
+                        f.getCounty(),
+                        f.getSubCounty(),
+                        f.getAddress(),
+                        f.getLatitude(),
+                        f.getLongitude(),
+                        f.getSizeAcres(),
+                        f.getOwnershipType(),
+                        f.getStatus(),
+                        f.getDescription(),
+                        null, // images - not fetched
+                        null, // crops - not fetched
+                        f.getCreatedAt()
+                ))
                 .collect(Collectors.toList());
 
-        return FarmerResponse.builder()
-                .id(user.getId())
-                .referenceCode(user.getReferenceCode())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .username(user.getUsername())
-                .county(user.getRegion())
-                .verificationStatus(user.getVerificationStatus())
-                .accountStatus(user.getStatus())
-                .createdAt(user.getCreatedAt())
-                .farms(farmResponses)
-                .build();
+        return FarmerResponse.of(
+                user.getId(),
+                user.getReferenceCode(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getUsername(),
+                user.getRegion(),
+                user.getVerificationStatus(),
+                user.getStatus(),
+                user.getCreatedAt(),
+                farmResponses
+        );
     }
 
-    private FarmerListItem toListItem(User user) {
+private FarmerListItem toListItem(User user) {
         List<Farm> farms = farmRepository.findByFarmerId(user.getId());
-        return FarmerListItem.builder()
-                .id(user.getId())
-                .referenceCode(user.getReferenceCode())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .county(user.getRegion())
-                .accountStatus(user.getStatus())
-                .verificationStatus(user.getVerificationStatus())
-                .statusReason(user.getSuspensionReason())
-                .statusChangedAt(user.getStatusChangedAt())
-                .statusChangedBy(user.getStatusChangedBy())
-                .farmCount(farms.size())
-                .createdAt(user.getCreatedAt())
-                .rating(null)
-                .ratingCount(0)
-                .totalRevenue(0.0)
-                .build();
+        return FarmerListItem.of(
+                user.getId(),
+                user.getReferenceCode(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getRegion(),
+                user.getStatus(),
+                user.getVerificationStatus(),
+                user.getSuspensionReason(),
+                user.getStatusChangedAt(),
+                user.getStatusChangedBy(),
+                null, // cropNames - not implemented
+                farms.size(),
+                null, // rating
+                0, // ratingCount
+                0.0, // totalRevenue
+                user.getCreatedAt()
+        );
     }
 }

@@ -12,8 +12,6 @@ import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.DriverLatestLocationRepository;
 import com.kilivana.backend.logistics.repository.DriverLocationRepository;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>The flow is deliberately linear and each step can reject the update:
  * <pre>
- *   load job -&gt; must be assigned to caller -&gt; must be in an active state
- *        -&gt; validate bounds -&gt; validate clock skew -&gt; rate limit
- *        -&gt; persist fix + upsert latest -&gt; broadcast -&gt; ack
+ *   load job -> must be assigned to caller -> must be in an active state
+ *        -> validate bounds -> validate clock skew -> rate limit
+ *        -> persist fix + upsert latest -> broadcast -> ack
  * </pre>
  * A failure at any step short-circuits the rest, so a rejected update costs only the
  * reads done before the point it failed.
@@ -34,9 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * the journey is over. ACCEPTED sits in the active set because the driver has committed to
  * the job and may be en route to the pickup.
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class DriverLocationService {
 
     private final LogisticsJobRepository logisticsJobRepository;
@@ -46,6 +42,23 @@ public class DriverLocationService {
     private final LocationRateLimiter rateLimiter;
     private final TrackingAuthorizationService authorizationService;
     private final TrackingBroadcastService broadcastService;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DriverLocationService.class);
+
+    public DriverLocationService(LogisticsJobRepository logisticsJobRepository,
+                                 DriverLocationRepository driverLocationRepository,
+                                 DriverLatestLocationRepository latestRepository,
+                                 LocationValidator validator,
+                                 LocationRateLimiter rateLimiter,
+                                 TrackingAuthorizationService authorizationService,
+                                 TrackingBroadcastService broadcastService) {
+        this.logisticsJobRepository = logisticsJobRepository;
+        this.driverLocationRepository = driverLocationRepository;
+        this.latestRepository = latestRepository;
+        this.validator = validator;
+        this.rateLimiter = rateLimiter;
+        this.authorizationService = authorizationService;
+        this.broadcastService = broadcastService;
+    }
 
     /** Jobs in these states accept location updates; everything else refuses them. */
     private static final java.util.Set<DeliveryStatus> ACTIVE_STATES = java.util.Set.of(

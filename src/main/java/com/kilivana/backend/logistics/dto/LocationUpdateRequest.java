@@ -69,4 +69,20 @@ public class LocationUpdateRequest {
     @Min(value = 0, message = "accuracyMetres must be at least 0")
     @Max(value = 500, message = "accuracyMetres must be at most 500")
     private Double accuracyMetres;
+
+    // Explicit getters and setters for Lombok compatibility
+    public Long getTripId() { return tripId; }
+    public void setTripId(Long tripId) { this.tripId = tripId; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Double getSpeedKmh() { return speedKmh; }
+    public void setSpeedKmh(Double speedKmh) { this.speedKmh = speedKmh; }
+    public Double getBearing() { return bearing; }
+    public void setBearing(Double bearing) { this.bearing = bearing; }
+    public String getClientTimestamp() { return clientTimestamp; }
+    public void setClientTimestamp(String clientTimestamp) { this.clientTimestamp = clientTimestamp; }
+    public Double getAccuracyMetres() { return accuracyMetres; }
+    public void setAccuracyMetres(Double accuracyMetres) { this.accuracyMetres = accuracyMetres; }
 }

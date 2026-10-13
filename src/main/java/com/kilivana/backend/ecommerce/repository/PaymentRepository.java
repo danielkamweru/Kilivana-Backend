@@ -17,4 +17,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByReference(String reference);
 
     List<Payment> findByStatus(PaymentStatus status);
+
+    /** Finds a payment by the Daraja CheckoutRequestID (primary key for callback reconciliation). */
+    Optional<Payment> findByCheckoutRequestId(String checkoutRequestId);
+
+    /** Finds a payment by the Daraja MerchantRequestID (fallback for callback reconciliation). */
+    Optional<Payment> findByMerchantRequestId(String merchantRequestId);
 }

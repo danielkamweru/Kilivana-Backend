@@ -4,10 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
@@ -16,10 +12,6 @@ import java.math.BigDecimal;
  * how the money moved, the provider's own reference, and the amount paid.
  */
 @Schema(description = "Payment request")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class PaymentRequest {
 
     @Schema(description = "Order ID this payment settles", example = "100")
@@ -50,4 +42,44 @@ public class PaymentRequest {
     @Schema(description = "Amount paid, in the order currency", example = "3751.50")
     @NotNull(message = "Amount is required")
     private BigDecimal amount;
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getReference() {
+        return reference;
+    }
+
+    public void setReference(String reference) {
+        this.reference = reference;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
 }

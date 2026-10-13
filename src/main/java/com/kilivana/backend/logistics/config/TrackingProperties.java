@@ -1,7 +1,5 @@
 package com.kilivana.backend.logistics.config;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +10,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @ConfigurationProperties(prefix = "app.tracking")
-@Getter
-@Setter
 public class TrackingProperties {
 
     /** Endpoint clients connect to with a bearer token in the query string. */
@@ -33,4 +29,52 @@ public class TrackingProperties {
 
     /** Fixes older than this are pruned by the retention job. */
     private int historyRetentionDays = 30;
+
+    public String getWebsocketEndpoint() {
+        return websocketEndpoint;
+    }
+
+    public void setWebsocketEndpoint(String websocketEndpoint) {
+        this.websocketEndpoint = websocketEndpoint;
+    }
+
+    public int getMaxClockSkewMinutes() {
+        return maxClockSkewMinutes;
+    }
+
+    public void setMaxClockSkewMinutes(int maxClockSkewMinutes) {
+        this.maxClockSkewMinutes = maxClockSkewMinutes;
+    }
+
+    public double getDuplicateThresholdDegrees() {
+        return duplicateThresholdDegrees;
+    }
+
+    public void setDuplicateThresholdDegrees(double duplicateThresholdDegrees) {
+        this.duplicateThresholdDegrees = duplicateThresholdDegrees;
+    }
+
+    public int getRateLimitWindowMinutes() {
+        return rateLimitWindowMinutes;
+    }
+
+    public void setRateLimitWindowMinutes(int rateLimitWindowMinutes) {
+        this.rateLimitWindowMinutes = rateLimitWindowMinutes;
+    }
+
+    public int getRateLimitMaxPerWindow() {
+        return rateLimitMaxPerWindow;
+    }
+
+    public void setRateLimitMaxPerWindow(int rateLimitMaxPerWindow) {
+        this.rateLimitMaxPerWindow = rateLimitMaxPerWindow;
+    }
+
+    public int getHistoryRetentionDays() {
+        return historyRetentionDays;
+    }
+
+    public void setHistoryRetentionDays(int historyRetentionDays) {
+        this.historyRetentionDays = historyRetentionDays;
+    }
 }

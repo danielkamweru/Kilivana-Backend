@@ -29,7 +29,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Finds a user by id and verifies the role in one query. */
     Optional<User> findByIdAndRole(Long id, UserRole role);
 
-    boolean existsByEmailIgnoreCase(String email);j
+    boolean existsByEmailIgnoreCase(String email);
 
     boolean existsByPhone(String phone);
 

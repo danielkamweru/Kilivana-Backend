@@ -3,7 +3,6 @@ package com.kilivana.backend.admin.dto;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -18,7 +17,6 @@ import java.time.LocalDateTime;
  * list and detail screens.
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Admin view of a supplier with profile and product summary")
@@ -83,5 +81,32 @@ public class AdminSupplierResponse {
             case SUSPENDED -> "suspended";
             case INACTIVE, PENDING_VERIFICATION -> "pending";
         };
+    }
+
+    // Static factory method to replace @Builder
+    public static AdminSupplierResponse of(Long userId, Long profileId, String code, String companyName,
+                                           String contactPerson, String username, String email, String phone,
+                                           String region, String address, String category, LocalDate contractEndDate,
+                                           String status, String suspensionReason, int productsCount, Double rating,
+                                           LocalDateTime createdAt) {
+        AdminSupplierResponse response = new AdminSupplierResponse();
+        response.userId = userId;
+        response.profileId = profileId;
+        response.code = code;
+        response.companyName = companyName;
+        response.contactPerson = contactPerson;
+        response.username = username;
+        response.email = email;
+        response.phone = phone;
+        response.region = region;
+        response.address = address;
+        response.category = category;
+        response.contractEndDate = contractEndDate;
+        response.status = status;
+        response.suspensionReason = suspensionReason;
+        response.productsCount = productsCount;
+        response.rating = rating;
+        response.createdAt = createdAt;
+        return response;
     }
 }

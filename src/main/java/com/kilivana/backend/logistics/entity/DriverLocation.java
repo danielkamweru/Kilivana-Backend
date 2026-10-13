@@ -67,4 +67,108 @@ public class DriverLocation {
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime recordedAt;
+
+    // Explicit getters and setters for Lombok compatibility
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getLogisticsJobId() { return logisticsJobId; }
+    public void setLogisticsJobId(Long logisticsJobId) { this.logisticsJobId = logisticsJobId; }
+    public Long getDriverId() { return driverId; }
+    public void setDriverId(Long driverId) { this.driverId = driverId; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Double getSpeedKmh() { return speedKmh; }
+    public void setSpeedKmh(Double speedKmh) { this.speedKmh = speedKmh; }
+    public Double getBearing() { return bearing; }
+    public void setBearing(Double bearing) { this.bearing = bearing; }
+    public Double getAccuracyMetres() { return accuracyMetres; }
+    public void setAccuracyMetres(Double accuracyMetres) { this.accuracyMetres = accuracyMetres; }
+    public LocalDateTime getClientTimestamp() { return clientTimestamp; }
+    public void setClientTimestamp(LocalDateTime clientTimestamp) { this.clientTimestamp = clientTimestamp; }
+    public LocalDateTime getRecordedAt() { return recordedAt; }
+    public void setRecordedAt(LocalDateTime recordedAt) { this.recordedAt = recordedAt; }
+
+    public static DriverLocationBuilder builder() {
+        return new DriverLocationBuilder();
+    }
+
+    public static class DriverLocationBuilder {
+        private Long id;
+        private Long logisticsJobId;
+        private Long driverId;
+        private Double latitude;
+        private Double longitude;
+        private Double speedKmh;
+        private Double bearing;
+        private Double accuracyMetres;
+        private LocalDateTime clientTimestamp;
+        private LocalDateTime recordedAt;
+
+        public DriverLocationBuilder id(Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public DriverLocationBuilder logisticsJobId(Long logisticsJobId) {
+            this.logisticsJobId = logisticsJobId;
+            return this;
+        }
+
+        public DriverLocationBuilder driverId(Long driverId) {
+            this.driverId = driverId;
+            return this;
+        }
+
+        public DriverLocationBuilder latitude(Double latitude) {
+            this.latitude = latitude;
+            return this;
+        }
+
+        public DriverLocationBuilder longitude(Double longitude) {
+            this.longitude = longitude;
+            return this;
+        }
+
+        public DriverLocationBuilder speedKmh(Double speedKmh) {
+            this.speedKmh = speedKmh;
+            return this;
+        }
+
+        public DriverLocationBuilder bearing(Double bearing) {
+            this.bearing = bearing;
+            return this;
+        }
+
+        public DriverLocationBuilder accuracyMetres(Double accuracyMetres) {
+            this.accuracyMetres = accuracyMetres;
+            return this;
+        }
+
+        public DriverLocationBuilder clientTimestamp(LocalDateTime clientTimestamp) {
+            this.clientTimestamp = clientTimestamp;
+            return this;
+        }
+
+        public DriverLocationBuilder recordedAt(LocalDateTime recordedAt) {
+            this.recordedAt = recordedAt;
+            return this;
+        }
+
+        public DriverLocation build() {
+            DriverLocation driverLocation = new DriverLocation();
+            driverLocation.id = this.id;
+            driverLocation.logisticsJobId = this.logisticsJobId;
+            driverLocation.driverId = this.driverId;
+            driverLocation.latitude = this.latitude;
+            driverLocation.longitude = this.longitude;
+            driverLocation.speedKmh = this.speedKmh;
+            driverLocation.bearing = this.bearing;
+            driverLocation.accuracyMetres = this.accuracyMetres;
+            driverLocation.clientTimestamp = this.clientTimestamp;
+            driverLocation.recordedAt = this.recordedAt;
+            return driverLocation;
+        }
+    }
 }

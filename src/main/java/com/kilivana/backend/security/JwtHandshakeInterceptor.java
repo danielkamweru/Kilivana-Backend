@@ -4,6 +4,8 @@ import com.kilivana.backend.common.exception.UnauthorizedException;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.lang.NonNull;
@@ -30,6 +32,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Component
 public class JwtHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtHandshakeInterceptor.class);
 
     static final String TOKEN_QUERY_PARAM = "token";
     public static final String USER_ID_PROPERTY = "jwtUserId";

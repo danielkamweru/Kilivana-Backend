@@ -25,6 +25,8 @@ public enum PaymentStatus {
     HELD,
     /** Released to the seller after delivery. */
     SETTLED,
+    /** Payment failed or was declined. */
+    FAILED,
     REFUNDED;
 
     @JsonCreator
