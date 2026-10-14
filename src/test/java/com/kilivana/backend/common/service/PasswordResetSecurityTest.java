@@ -16,6 +16,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 class PasswordResetSecurityTest {
     @ParameterizedTest
+    @ValueSource(strings = {"known@example.com", "unknown@example.com"})
+    void forgotResponseDoesNotRevealOrReadAccountExistence(String email) {
+        UserRepository repository = mock(UserRepository.class);
+        AuthService service = new AuthService(repository, mock(PasswordEncoder.class), mock(JwtService.class),
+                new JwtProperties(), mock(UserReferenceCodeGenerator.class));
+        org.assertj.core.api.Assertions.assertThat(service.forgotPassword(email))
+                .isEqualTo("Password reset instructions have been sent if this account exists.");
+        verifyNoInteractions(repository);
+    }
+    @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"daniel@example.com", "unknown@example.com", " DANIEL@EXAMPLE.COM ", ""})
     void resetIsDisabledWithoutReadingOrMutatingAccounts(String email) {

@@ -23,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final AccountAccessValidator accountAccessValidator;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -39,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("Rejected a non-access token presented as a bearer credential");
                 }
             } catch (Exception ex) {
-                log.debug("Bearer token was rejected: {}", ex.getMessage());
+                log.debug("Bearer credential was rejected");
                 SecurityContextHolder.clearContext();
             }
         }
@@ -50,6 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticate(String token, HttpServletRequest request) {
         Long userId = jwtService.extractUserId(token);
         var role = jwtService.extractRole(token);
+        accountAccessValidator.validate(userId, role);
 
         var authentication = new UsernamePasswordAuthenticationToken(
                 userId,

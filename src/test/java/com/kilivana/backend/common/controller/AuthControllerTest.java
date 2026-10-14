@@ -35,6 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfig.class)
 class AuthControllerTest {
 
+    @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
+
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/auth/reset-password", "/api/auth/reset-password"})
     void anonymousPasswordReset_shouldFailClosed(String route) throws Exception {

@@ -146,8 +146,7 @@ public class AuthService {
 
     @Transactional
     public String forgotPassword(String email) {
-        userRepository.findByEmailIgnoreCase(normalizeEmail(email))
-                .orElseThrow(() -> new ResourceNotFoundException("User with email not found"));
+        // Recovery remains disabled; identical response avoids disclosing account existence.
         return "Password reset instructions have been sent if this account exists.";
     }
 

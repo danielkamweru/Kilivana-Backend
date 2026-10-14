@@ -85,8 +85,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
-        return new JwtAuthenticationFilter(jwtService);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService,
+            com.kilivana.backend.security.AccountAccessValidator accountAccessValidator) {
+        return new JwtAuthenticationFilter(jwtService, accountAccessValidator);
     }
 
     @Bean
