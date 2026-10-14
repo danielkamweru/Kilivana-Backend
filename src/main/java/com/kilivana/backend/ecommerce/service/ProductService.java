@@ -18,6 +18,7 @@ import com.kilivana.backend.admin.service.UserService;
 import com.kilivana.backend.admin.dto.UserResponse;
 import com.kilivana.backend.common.enums.SellerType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class ProductService {
     private final UserService userService;
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.seller(#userId)")
     public ProductResponse createProduct(ProductRequest request, Long userId) {
         UserResponse user = userService.getUserById(userId);
         SellerType sellerType = user.getRole() == UserRole.SUPPLIER ? SellerType.SUPPLIER : SellerType.FARMER;
@@ -61,6 +63,7 @@ public class ProductService {
         return mapToResponse(saved);
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     public ProductResponse createProduct(ProductRequest request) {
         return createProduct(request, request.getSellerId());
     }
@@ -93,6 +96,7 @@ public class ProductService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.seller(#userId)")
     public ProductResponse createProductWithImages(ProductRequest request, List<MultipartFile> images, Long userId) throws IOException {
         ProductResponse productResponse = createProduct(request, userId);
         
@@ -135,12 +139,14 @@ public class ProductService {
 
     @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
         if (request.getCategoryId() != null
                 || (request.getCategory() != null && !request.getCategory().isBlank())) {
             product.setCategoryId(resolveCategoryId(request, product.getSellerType()));
         }
+        if (request.getStockQty() == null || request.getStockQty() < Math.max(0, product.getReservedQty() == null ? 0 : product.getReservedQty()))
+            throw new BadRequestException("Stock cannot be less than reserved quantity");
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setUnit(request.getUnit());
@@ -286,8 +292,9 @@ public class ProductService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public ProductResponse updateProductStatus(Long id, ProductStatus status) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
         product.setStatus(status);
         return mapToResponse(productRepository.save(product));

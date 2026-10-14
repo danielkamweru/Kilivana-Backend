@@ -5,6 +5,7 @@ import com.kilivana.backend.admin.entity.Notification;
 import com.kilivana.backend.admin.repository.NotificationRepository;
 import com.kilivana.backend.ecommerce.enums.EcommerceNotificationType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 @Transactional
 public class EcommerceNotificationService {
@@ -68,6 +70,7 @@ public class EcommerceNotificationService {
         return NotificationResponse.fromEntity(notificationRepository.save(notification));
     }
 
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public List<NotificationResponse> getEcommerceNotifications(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .filter(n -> isEcommerceType(n.getType()))
@@ -75,6 +78,7 @@ public class EcommerceNotificationService {
                 .collect(Collectors.toList());
     }
 
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public List<NotificationResponse> getUnreadEcommerceNotifications(Long userId) {
         return notificationRepository.findByUserIdAndReadAtIsNull(userId).stream()
                 .filter(n -> isEcommerceType(n.getType()))

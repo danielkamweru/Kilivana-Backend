@@ -14,6 +14,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.service.ImageStorage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class InspectionService {
 
@@ -48,6 +50,7 @@ public class InspectionService {
         return InspectionResponse.fromEntity(saved);
     }
 
+    @PreAuthorize("@resourceAuthorization.inspection(#id)")
     public InspectionResponse getInspectionById(Long id) {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
@@ -60,6 +63,7 @@ public class InspectionService {
                 .collect(Collectors.toList());
     }
 
+    @PreAuthorize("@resourceAuthorization.inspector(#inspectorId)")
     public List<InspectionResponse> getInspectionsByInspector(Long inspectorId) {
         return inspectionRepository.findByInspectorId(inspectorId).stream()
                 .map(InspectionResponse::fromEntity)
@@ -79,6 +83,7 @@ public class InspectionService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.inspection(#id)")
     public InspectionResponse updateInspectionStatus(Long id, InspectionStatus status) {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
@@ -87,6 +92,7 @@ public class InspectionService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.inspection(#id)")
     public InspectionResponse updateInspectionResult(Long id, String result, InspectionRequest request) {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
@@ -114,6 +120,7 @@ public class InspectionService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.inspection(#inspectionId)")
     public List<ImageResponse> uploadEvidenceImage(Long inspectionId, MultipartFile image, Boolean isPrimary) throws IOException {
         inspectionRepository.findById(inspectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", inspectionId));
@@ -144,6 +151,7 @@ public class InspectionService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.inspection(#inspectionId)")
     public List<ImageResponse> listEvidenceImages(Long inspectionId) {
         return evidenceImageRepository.findByInspectionIdOrderByCreatedAt(inspectionId).stream()
                 .map(this::toImageResponse)
@@ -151,6 +159,7 @@ public class InspectionService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.inspection(#inspectionId)")
     public void deleteEvidenceImage(Long inspectionId, Long imageId) throws IOException {
         InspectionEvidenceImage image = evidenceImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("InspectionEvidenceImage", imageId));

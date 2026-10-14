@@ -11,6 +11,7 @@ import com.kilivana.backend.common.enums.ProductStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class CartService {
     private final ProductRepository productRepository;
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
     public Cart getCartByBuyer(Long buyerId) {
         Optional<Cart> cart = cartRepository.findByBuyerIdAndStatus(buyerId, Cart.CartStatus.ACTIVE);
         if (cart.isEmpty()) {
@@ -39,6 +41,7 @@ public class CartService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
     public Cart addItemToCart(Long buyerId, Long productId, Integer quantity) {
         if (quantity == null || quantity < 1) {
             throw new BadRequestException("Quantity must be at least 1");
@@ -81,6 +84,7 @@ public class CartService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public Cart updateCartItem(Long cartId, Long productId, Integer quantity) {
         CartItem item = cartItemRepository.findByCartIdAndProductId(cartId, productId)
                 .orElseThrow(() -> new ResourceNotFoundException("CartItem", productId));
@@ -95,27 +99,21 @@ public class CartService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void removeCartItem(Long cartId, Long productId) {
         cartItemRepository.findByCartIdAndProductId(cartId, productId)
                 .ifPresent(cartItemRepository::delete);
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void checkout(Long cartId) {
-        Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
-        if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
-            throw new BadRequestException("Cart is not active");
-        }
-        List<CartItem> items = cartItemRepository.findByCartId(cartId);
-        if (items.isEmpty()) {
-            throw new BadRequestException("Cart is empty");
-        }
-        cart.setStatus(Cart.CartStatus.CHECKOUT_PROCESSING);
-        cartRepository.save(cart);
+        throw new com.kilivana.backend.common.exception.ServiceUnavailableException(
+                "Checkout is unavailable until transactional order placement and delivery pricing are approved.");
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void clearCart(Long cartId) {
         cartItemRepository.findByCartId(cartId).forEach(cartItemRepository::delete);
         Cart cart = cartRepository.findById(cartId)
