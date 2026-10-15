@@ -19,7 +19,7 @@ import java.time.Duration;
 
 /**
  * Serves images that live in PostgreSQL, which is where the {@code database} storage provider
- * and the Cloudinary fallback keep them.
+ * keeps them.
  *
  * <p>Public for the same reason {@code GET /uploads/**} is public: these URLs end up in
  * {@code <img>} tags and in mobile payloads that cannot attach a bearer token. The ids are

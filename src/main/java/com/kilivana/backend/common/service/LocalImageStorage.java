@@ -22,9 +22,9 @@ import java.util.Set;
 /**
  * Stores uploads on the local filesystem and serves them from the app itself.
  *
- * <p>This exists so image upload can be demonstrated and tested without provisioning a
- * Cloudinary account. It is not durable: a container restart loses the files, and nothing
- * is replicated. Switch to {@code app.storage.provider=cloudinary} for anything real.
+ * <p>This exists so image upload can be demonstrated and tested during development.
+ * It is not durable: a container restart loses the files, and nothing is replicated.
+ * Use {@code app.storage.provider=database} for production deployments.
  */
 @Slf4j
 @Service
@@ -49,7 +49,7 @@ public class LocalImageStorage implements ImageStorage {
 
     /**
      * Copies the file to a randomly named path under the upload root and returns a
-     * Cloudinary-shaped result map, so callers can treat every provider uniformly.
+     * standardized result map, so callers can treat every provider uniformly.
      */
     @Override
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
@@ -70,7 +70,7 @@ public class LocalImageStorage implements ImageStorage {
         Map<String, Object> result = new HashMap<>();
         result.put("public_id", relative);
         result.put("secure_url", urlFor(relative));
-        // No equivalent of a Cloudinary asset id; the filename identifies the object.
+        // No equivalent of an external provider asset id; the filename identifies the object.
         result.put("asset_id", null);
         return result;
     }

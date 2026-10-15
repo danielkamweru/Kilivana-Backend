@@ -25,7 +25,7 @@ public class ImageResponse {
     /** Client-facing identifier; the numeric row id when stored in the database. */
     private String publicId;
 
-    /** Storage provider's own id (e.g. Cloudinary's); {@code null} for other providers. */
+    /** Storage provider's own id (e.g. external provider's); {@code null} for other providers. */
     private String assetId;
 
     /** Display order within the owning entity's gallery. */

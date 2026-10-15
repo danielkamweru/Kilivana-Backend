@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
     private final SupplierProfileImageRepository supplierProfileImageRepository;
     private final DriverProfileImageRepository driverProfileImageRepository;
     private final InspectorProfileImageRepository inspectorProfileImageRepository;
-    private final ImageStorage cloudinaryService;
+    private final ImageStorage imageStorage;
 
     @Transactional(readOnly = true)
     public FarmerProfileResponse getFarmerProfile(Long authenticatedUserId, Long userId) {
@@ -222,10 +222,10 @@ import java.util.stream.Collectors;
         ensureOwnershipOrAdmin(authenticatedUserId, userId);
         DriverProfile profile = driverProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", userId));
-        // Remove the stored images from Cloudinary first so an orphan row does not point
+        // Remove the stored images from storage first so an orphan row does not point
         // at a missing file; the DB rows are cleaned up after.
         driverProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
-            cloudinaryService.deleteImage(image.getPublicId());
+            imageStorage.deleteImage(image.getPublicId());
         });
         driverProfileImageRepository.deleteByUserId(userId);
         driverProfileRepository.delete(profile);
@@ -279,7 +279,7 @@ import java.util.stream.Collectors;
         InspectorProfile profile = inspectorProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspector profile", userId));
         inspectorProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
-            cloudinaryService.deleteImage(image.getPublicId());
+            imageStorage.deleteImage(image.getPublicId());
         });
         inspectorProfileImageRepository.deleteByUserId(userId);
         inspectorProfileRepository.delete(profile);
@@ -333,7 +333,7 @@ import java.util.stream.Collectors;
         SupplierProfile profile = supplierProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier profile", userId));
         supplierProfileImageRepository.findByUserIdOrderBySortOrderAsc(userId).forEach(image -> {
-            cloudinaryService.deleteImage(image.getPublicId());
+            imageStorage.deleteImage(image.getPublicId());
         });
         supplierProfileImageRepository.deleteByUserId(userId);
         supplierProfileRepository.delete(profile);
@@ -355,14 +355,14 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/farmers/" + userId;
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+        Map<String, Object> uploadResult = imageStorage.uploadImage(image, folder);
 
         FarmerProfileImage profileImage = FarmerProfileImage.builder()
                 .userId(userId)
                 .resourceId(userId)
-                .url(cloudinaryService.getSecureUrl(uploadResult))
-                .publicId(cloudinaryService.getPublicId(uploadResult))
-                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .url(imageStorage.getSecureUrl(uploadResult))
+                .publicId(imageStorage.getPublicId(uploadResult))
+                .assetId(imageStorage.getAssetId(uploadResult))
                 .sortOrder(0)
                 .isPrimary(Boolean.TRUE.equals(isPrimary))
                 .build();
@@ -387,14 +387,14 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/suppliers/" + userId;
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+        Map<String, Object> uploadResult = imageStorage.uploadImage(image, folder);
 
         SupplierProfileImage profileImage = SupplierProfileImage.builder()
                 .userId(userId)
                 .resourceId(userId)
-                .url(cloudinaryService.getSecureUrl(uploadResult))
-                .publicId(cloudinaryService.getPublicId(uploadResult))
-                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .url(imageStorage.getSecureUrl(uploadResult))
+                .publicId(imageStorage.getPublicId(uploadResult))
+                .assetId(imageStorage.getAssetId(uploadResult))
                 .sortOrder(0)
                 .isPrimary(Boolean.TRUE.equals(isPrimary))
                 .build();
@@ -419,14 +419,14 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/drivers/" + userId;
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+        Map<String, Object> uploadResult = imageStorage.uploadImage(image, folder);
 
         DriverProfileImage profileImage = DriverProfileImage.builder()
                 .userId(userId)
                 .resourceId(userId)
-                .url(cloudinaryService.getSecureUrl(uploadResult))
-                .publicId(cloudinaryService.getPublicId(uploadResult))
-                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .url(imageStorage.getSecureUrl(uploadResult))
+                .publicId(imageStorage.getPublicId(uploadResult))
+                .assetId(imageStorage.getAssetId(uploadResult))
                 .sortOrder(0)
                 .isPrimary(Boolean.TRUE.equals(isPrimary))
                 .build();
@@ -465,7 +465,7 @@ import java.util.stream.Collectors;
         if (!image.getUserId().equals(userId)) {
             throw new BadRequestException("Image does not belong to this farmer");
         }
-        cloudinaryService.deleteImage(image.getPublicId());
+        imageStorage.deleteImage(image.getPublicId());
         farmerProfileImageRepository.delete(image);
     }
 
@@ -478,7 +478,7 @@ import java.util.stream.Collectors;
         if (!image.getUserId().equals(userId)) {
             throw new BadRequestException("Image does not belong to this supplier");
         }
-        cloudinaryService.deleteImage(image.getPublicId());
+        imageStorage.deleteImage(image.getPublicId());
         supplierProfileImageRepository.delete(image);
     }
 
@@ -491,7 +491,7 @@ import java.util.stream.Collectors;
         if (!image.getUserId().equals(userId)) {
             throw new BadRequestException("Image does not belong to this driver");
         }
-        cloudinaryService.deleteImage(image.getPublicId());
+        imageStorage.deleteImage(image.getPublicId());
         driverProfileImageRepository.delete(image);
     }
 
@@ -530,14 +530,14 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/inspectors/" + userId;
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+        Map<String, Object> uploadResult = imageStorage.uploadImage(image, folder);
 
         InspectorProfileImage profileImage = InspectorProfileImage.builder()
                 .userId(userId)
                 .resourceId(userId)
-                .url(cloudinaryService.getSecureUrl(uploadResult))
-                .publicId(cloudinaryService.getPublicId(uploadResult))
-                .assetId(cloudinaryService.getAssetId(uploadResult))
+                .url(imageStorage.getSecureUrl(uploadResult))
+                .publicId(imageStorage.getPublicId(uploadResult))
+                .assetId(imageStorage.getAssetId(uploadResult))
                 .sortOrder(0)
                 .isPrimary(Boolean.TRUE.equals(isPrimary))
                 .build();
@@ -562,7 +562,7 @@ import java.util.stream.Collectors;
         if (!image.getUserId().equals(userId)) {
             throw new BadRequestException("Image does not belong to this inspector");
         }
-        cloudinaryService.deleteImage(image.getPublicId());
+        imageStorage.deleteImage(image.getPublicId());
         inspectorProfileImageRepository.delete(image);
     }
 

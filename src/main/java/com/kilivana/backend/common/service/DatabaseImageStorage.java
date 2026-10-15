@@ -18,9 +18,7 @@ import java.util.Set;
  * Keeps image bytes in PostgreSQL rather than in an external provider.
  *
  * <p>Selected as the provider by {@code app.storage.provider=database} through
- * {@link DatabaseImageStorageProvider}. Deliberately <em>not</em> itself an {@link ImageStorage}
- * bean: it is also Cloudinary's fallback, so registering it as a provider left two candidates for
- * every {@code ImageStorage} injection point and the application refused to start.
+ * {@link DatabaseImageStorageProvider}.
  *
  * <p>The trade-off is size — every read pulls the bytes back through the application, and the
  * table grows without bound. Keep it for small images such as avatars, vehicle photos and
@@ -44,7 +42,7 @@ public class DatabaseImageStorage {
     }
 
     /**
-     * Persists the bytes in PostgreSQL and returns a Cloudinary-shaped result map, so
+     * Persists the bytes in PostgreSQL and returns a standardized result map, so
      * callers can treat every storage provider uniformly.
      */
     @Transactional

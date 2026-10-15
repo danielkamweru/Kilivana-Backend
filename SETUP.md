@@ -34,17 +34,9 @@ Required for startup:
 | `SEED_ADMIN_EMAIL` | - | Seeded admin email |
 | `SEED_ADMIN_PASSWORD` | - | Seeded admin password |
 | `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins |
-| `STORAGE_PROVIDER` | `database` | `database`, `local`, or `cloudinary` |
+| `STORAGE_PROVIDER` | `database` | `database` or `local` |
 | `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Local storage directory |
 | `PORT` | `8080` | Server port |
-
-## Optional: Cloudinary Configuration
-For production image storage:
-```
-cloudinary.cloud-name=YOUR_CLOUD_NAME
-cloudinary.api-key=YOUR_API_KEY
-cloudinary.api-secret=YOUR_API_SECRET
-```
 
 ## Startup Command
 ```bash
@@ -260,7 +252,6 @@ STORAGE_PROVIDER=database \
 - `src/main/resources/application.properties` - Main config
 - `src/main/java/com/kilivana/backend/config/CorsConfig.java` - CORS config
 - `src/main/java/com/kilivana/backend/config/SecurityConfig.java` - Security config
-- `src/main/java/com/kilivana/backend/config/CloudinaryConfig.java` - Cloudinary config
 
 ## Testing with ngrok
 To test with ngrok, set CORS allowed origins to include your ngrok URL or wildcard pattern:
