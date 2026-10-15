@@ -40,9 +40,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringJUnitConfig(ServiceAuthorizationTest.Config.class)
 class ServiceAuthorizationTest {
     @Configuration @EnableMethodSecurity
-    @Import({ResourceAuthorization.class, InspectionService.class, OrderService.class,
+    @Import({ResourceAuthorization.class, ProductVisibility.class, InspectionService.class, OrderService.class,
             PaymentService.class, DisputeService.class, CartService.class, AddressService.class,
-            NotificationService.class, ProductService.class, UserService.class, LogisticsService.class})
+            NotificationService.class, ProductService.class, CategoryService.class, UserService.class, LogisticsService.class})
     static class Config {
         @Bean com.kilivana.backend.logistics.service.TrackingStopService trackingStop() { return mock(com.kilivana.backend.logistics.service.TrackingStopService.class); }
         @Bean UserRepository users() { return mock(UserRepository.class); }
@@ -90,11 +90,13 @@ class ServiceAuthorizationTest {
     @Autowired NotificationService notificationService;
     @Autowired ProductService productService;
     @Autowired UserService userService;
+    @Autowired CategoryService categoryService;
+    @Autowired CategoryRepository categories;
     @Autowired LogisticsService logistics;
     @Autowired LogisticsJobRepository jobs;
 
     @BeforeEach void fixture() {
-        reset(users, inspections, orders, orderItems, payments, disputes, carts, notifications, addresses, products, jobs);
+        reset(users, inspections, orders, orderItems, payments, disputes, carts, notifications, addresses, products, jobs, categories);
         actor(1L, UserRole.BUYER);
         when(inspections.findById(20L)).thenReturn(Optional.of(Inspection.builder().id(20L).inspectorId(3L).build()));
         when(orders.findById(10L)).thenReturn(Optional.of(Order.builder().id(10L).buyerId(1L).build()));
@@ -110,6 +112,66 @@ class ServiceAuthorizationTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(id, null, List.of()));
     }
     void denied(org.junit.jupiter.api.function.Executable action) { assertThrows(AccessDeniedException.class, action); }
+
+    @ParameterizedTest @ValueSource(strings={"BUYER", "FARMER", "SUPPLIER", "INSPECTOR"})
+    void categoryMutationServicesRejectNonAdmins(String role) {
+        actor(4L, UserRole.valueOf(role));
+        denied(() -> categoryService.createCategory(CategoryRequest.builder().name("test").build()));
+        denied(() -> categoryService.updateCategory(1L, CategoryRequest.builder().name("test").build()));
+        denied(() -> categoryService.updateCategoryStatus(1L, false));
+        denied(() -> categoryService.deleteCategory(1L));
+        verifyNoInteractions(categories);
+    }
+
+    @Test void anonymousCannotMutateCategoriesAtServiceBoundary() {
+        SecurityContextHolder.clearContext();
+        denied(() -> categoryService.deleteCategory(1L));
+        verifyNoInteractions(categories);
+    }
+
+    @Test void administratorRetainsCategoryLifecycle() {
+        actor(9L, UserRole.ADMIN);
+        var category = Category.builder().id(1L).name("test").type(SellerType.FARMER).active(true).build();
+        when(categories.save(any())).thenReturn(category);
+        when(categories.findById(1L)).thenReturn(Optional.of(category));
+        var request = CategoryRequest.builder().name("test").type(SellerType.FARMER).build();
+        categoryService.createCategory(request);
+        categoryService.updateCategory(1L, request);
+        categoryService.updateCategoryStatus(1L, false);
+        categoryService.deleteCategory(1L);
+        verify(categories, times(3)).save(any());
+        verify(categories).delete(category);
+    }
+
+    @Test void pendingFarmerCanReadOwnPendingProductButUnrelatedFarmerCannot() {
+        actor(4L, UserRole.FARMER);
+        when(users.findById(4L)).thenReturn(Optional.of(User.builder().id(4L).role(UserRole.FARMER)
+                .status(UserStatus.PENDING_VERIFICATION).build()));
+        var product = Product.builder().id(40L).sellerId(4L).stockQty(1).status(ProductStatus.PENDING_APPROVAL).build();
+        when(products.findById(40L)).thenReturn(Optional.of(product));
+        assertEquals(40L, productService.getProductById(40L).getId());
+        actor(5L, UserRole.FARMER);
+        assertThrows(com.kilivana.backend.common.exception.ResourceNotFoundException.class,
+                () -> productService.getProductById(40L));
+    }
+
+    @Test void productCreationCannotCreateAnUnreviewedCategory() {
+        actor(4L, UserRole.FARMER);
+        assertThrows(com.kilivana.backend.common.exception.BadRequestException.class,
+                () -> productService.createProduct(ProductRequest.builder().category("Unknown category").build(), 4L));
+        verify(categories, never()).save(any());
+        verify(products, never()).save(any());
+    }
+
+    @Test void administratorCanReviewPendingProductAndBuyerCannotImpersonateSeller() {
+        var product = Product.builder().id(40L).sellerId(4L).stockQty(1).status(ProductStatus.PENDING_APPROVAL).build();
+        when(products.findById(40L)).thenReturn(Optional.of(product));
+        actor(9L, UserRole.ADMIN);
+        assertEquals(40L, productService.getProductById(40L).getId());
+        actor(4L, UserRole.BUYER);
+        assertThrows(com.kilivana.backend.common.exception.ResourceNotFoundException.class,
+                () -> productService.getProductById(40L));
+    }
 
     @Test void pendingFarmerKeepsOwnAccessButCannotEscalateProductStatus() {
         actor(4L, UserRole.FARMER);

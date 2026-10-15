@@ -15,6 +15,8 @@ import java.util.Optional;
 @Repository
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
 
+    List<ProductImage> findAllByPublicId(String publicId);
+
     /** Returns all images for a product, ordered by gallery sort order. */
     List<ProductImage> findByProductIdOrderBySortOrderAsc(Long productId);
 

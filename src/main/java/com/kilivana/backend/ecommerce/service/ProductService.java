@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
     private final CategoryRepository categoryRepository;
     private final ImageStorage cloudinaryService;
     private final UserService userService;
+    private final com.kilivana.backend.security.ProductVisibility visibility;
 
     @Transactional
     @PreAuthorize("@resourceAuthorization.seller(#userId)")
@@ -88,11 +89,7 @@ import java.util.stream.Collectors;
         if (request.getCategory() != null && !request.getCategory().isBlank()) {
             String name = request.getCategory().trim();
             return categoryRepository.findByNameIgnoreCase(name)
-                    .orElseGet(() -> categoryRepository.save(Category.builder()
-                            .name(name)
-                            .type(sellerType)
-                            .active(true)
-                            .build()))
+                    .orElseThrow(() -> new BadRequestException("Select an existing category; only administrators can create categories"))
                     .getId();
         }
         throw new BadRequestException("Category ID or category name is required");
@@ -124,6 +121,7 @@ import java.util.stream.Collectors;
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        visibility.requireReadable(product);
         return mapToResponse(product);
     }
 
@@ -135,7 +133,9 @@ import java.util.stream.Collectors;
     }
 
     public List<ProductResponse> getProductsBySeller(Long sellerId) {
+        boolean review = visibility.canReviewSeller(sellerId);
         return productRepository.findBySellerId(sellerId).stream()
+                .filter(p -> review || p.getStatus() == ProductStatus.ACTIVE)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

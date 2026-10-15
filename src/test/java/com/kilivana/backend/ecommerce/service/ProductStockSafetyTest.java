@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProductStockSafetyTest {
     final ProductRepository products = mock(ProductRepository.class);
     final ProductService service = new ProductService(products, mock(ProductImageRepository.class),
-            mock(CategoryRepository.class), mock(ImageStorage.class), mock(UserService.class));
+            mock(CategoryRepository.class), mock(ImageStorage.class), mock(UserService.class),
+            mock(com.kilivana.backend.security.ProductVisibility.class));
     @Test void editingCannotEraseReservations() {
         when(products.findByIdForUpdate(1L)).thenReturn(Optional.of(Product.builder().id(1L).stockQty(10).reservedQty(8).build()));
         assertThrows(BadRequestException.class, () -> service.updateProduct(1L, ProductRequest.builder().stockQty(7).build()));
