@@ -70,6 +70,14 @@ public class DriverLocationService {
             DeliveryStatus.ARRIVED_AT_DESTINATION);
 
     /**
+     * Get the set of delivery statuses that are considered active for tracking purposes.
+     * @return immutable set of active delivery statuses
+     */
+    public java.util.Set<DeliveryStatus> getActiveStates() {
+        return ACTIVE_STATES;
+    }
+
+    /**
      * Records a GPS fix from the driver identified by the JWT. The caller's id is supplied
      * by the controller from the security context, never from the request body.
      */

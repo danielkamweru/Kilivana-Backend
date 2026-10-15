@@ -159,7 +159,8 @@ public class AdminFarmerController {
 
     private boolean matchesCounty(User u, String county) {
         if (county == null || county.isBlank()) return true;
-        return county.equalsIgnoreCase(u.getRegion());
+        String region = u.getRegion();
+        return region != null && county.equalsIgnoreCase(region);
     }
 
     private boolean matchesStatus(User u, UserStatus status) {

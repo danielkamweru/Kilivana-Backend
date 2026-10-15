@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -29,5 +29,5 @@ public interface DriverLocationRepository extends JpaRepository<DriverLocation, 
     @Modifying
     @Transactional
     @Query("DELETE FROM DriverLocation d WHERE d.recordedAt < :cutoff")
-    int deleteByRecordedAtBefore(@Param("cutoff") Instant cutoff);
+    int deleteByRecordedAtBefore(@Param("cutoff") LocalDateTime cutoff);
 }

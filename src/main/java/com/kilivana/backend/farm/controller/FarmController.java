@@ -16,10 +16,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
-
 /**
  * Farm roster and details management.
  * Provides endpoints for listing, viewing, updating, and deleting farm records
@@ -30,6 +33,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/admin/farms")
 @RequiredArgsConstructor
 public class FarmController {
+
+    private static final Logger logger = LoggerFactory.getLogger(FarmController.class);
 
     private final FarmRepository farmRepository;
 
@@ -49,18 +54,26 @@ public class FarmController {
             @RequestParam(required = false) FarmStatus status,
             @RequestParam(required = false) String search,
             Pageable pageable) {
-
-        // Delegated to the repository's flexible search query; null params are
-        // treated as "no filter" so the same query handles broad and narrow searches.
-        Page<Farm> page = farmRepository.searchFarms(search, county, status, farmerId, pageable);
-        Map<String, Object> result = Map.of(
-                "items", page.getContent().stream().map(this::toResponse).collect(Collectors.toList()),
-                "page", page.getNumber() + 1,
-                "size", page.getSize(),
-                "totalItems", page.getTotalElements(),
-                "totalPages", page.getTotalPages()
-        );
-        return ResponseEntity.ok(ApiResponse.success(result));
+        try {
+            // Delegated to the repository's flexible search query; null params are
+            // treated as "no filter" so the same query handles broad and narrow searches.
+            Page<Farm> page = farmRepository.searchFarms(search, county, status, farmerId, pageable);
+            List<FarmResponse> farmResponses = page.getContent().stream()
+                    .filter(Objects::nonNull)
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+            Map<String, Object> result = Map.of(
+                    "items", farmResponses,
+                    "page", page.getNumber() + 1,
+                    "size", page.getSize(),
+                    "totalItems", page.getTotalElements(),
+                    "totalPages", page.getTotalPages()
+            );
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            logger.error("Error listing farms", e);
+            throw e;
+        }
     }
 
     @Operation(summary = "Get a farm by id",

@@ -28,6 +28,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final boolean DEBUG_LOGGING = true;
 
     private final JwtService jwtService;
 
@@ -78,6 +79,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     /** Pulls the bearer token from the Authorization header, returning null when absent. */
     private String resolveToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
+        if (DEBUG_LOGGING) {
+            log.debug("Authorization header from request: [{}]", header);
+            if (header != null) {
+                log.debug("Header length: {}, Starts with Bearer? {}", header.length(), header.startsWith("Bearer "));
+                if (header.startsWith(BEARER_PREFIX)) {
+                    String token = header.substring(BEARER_PREFIX.length()).trim();
+                    log.debug("Token after Bearer prefix removal: [{}], length: {}", token, token.length());
+                    log.debug("Token is empty: {}", token.isEmpty());
+                }
+            }
+        }
         if (header != null && header.startsWith(BEARER_PREFIX)) {
             String token = header.substring(BEARER_PREFIX.length()).trim();
             return token.isEmpty() ? null : token;

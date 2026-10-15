@@ -1,5 +1,7 @@
 package com.kilivana.backend.ecommerce.service;
 
+import com.kilivana.backend.admin.entity.User;
+import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.ecommerce.dto.PaymentResponse;
 import com.kilivana.backend.dto.StkPushInitiateRequest;
 import com.kilivana.backend.dto.StkPushInitiateResponse;
@@ -10,6 +12,7 @@ import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.common.enums.PaymentMethod;
 import com.kilivana.backend.common.enums.PaymentStatus;
+import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.service.DarajaService;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Records payment attempts and mirrors their status onto the parent order.
@@ -39,6 +43,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final DarajaService darajaService;
+    private final UserRepository userRepository;
 
     /**
      * Creates a new payment record for an order. Validates the payment method
@@ -82,7 +87,7 @@ public class PaymentService {
      * @throws BadRequestException if user not authorized, order not payable, or phone invalid
      */
     @Transactional
-    public StkPushInitiateResponse initiateStkPush(Long userId, com.kilivana.backend.common.enums.UserRole userRole,
+    public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole,
                                                    StkPushInitiateRequest request) {
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", request.getOrderId()));
@@ -115,8 +120,19 @@ public class PaymentService {
         // Determine buyer's phone number
         String phoneNumber = request.getPhoneNumber();
         if (phoneNumber == null || phoneNumber.isBlank()) {
-            // TODO: Fetch from buyer profile when phone field is available
-            throw new BadRequestException("Buyer phone number is required (not yet stored on buyer profile)");
+            // Fetch buyer phone from user profile
+            Long buyerId = order.getBuyerId();
+            if (buyerId == null) {
+                throw new BadRequestException("Buyer not found on order");
+            }
+            Optional<User> buyerOptional = userRepository.findById(buyerId);
+            if (!buyerOptional.isPresent()) {
+                throw new BadRequestException("Buyer user not found");
+            }
+            phoneNumber = buyerOptional.get().getPhone();
+            if (phoneNumber == null || phoneNumber.isBlank()) {
+                throw new BadRequestException("Buyer phone number is not set");
+            }
         }
 
         // Validate phone format (Kenyan Safaricom: 2547XXXXXXXX or 2541XXXXXXXX)

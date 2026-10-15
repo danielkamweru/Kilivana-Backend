@@ -57,11 +57,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT COALESCE(SUM(p.price * p.stockQty), 0) FROM Product p WHERE p.status = 'ACTIVE'")
     BigDecimal calculateLiveStockValue();
 
-    @Query("SELECT p FROM Product p WHERE " +
-           "(:status IS NULL OR p.status = :status) AND " +
-           "(:categoryId IS NULL OR p.categoryId = :categoryId) AND " +
-           "(:sellerId IS NULL OR p.sellerId = :sellerId) AND " +
-           "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+    /**
+     * Explicit casts keep PostgreSQL from receiving untyped null parameters
+     * when the admin list is requested with no filters.
+     */
+    @Query(value = "SELECT * FROM products p WHERE " +
+           "(CAST(:status AS VARCHAR) IS NULL OR p.status = CAST(:status AS VARCHAR)) AND " +
+           "(CAST(:categoryId AS BIGINT) IS NULL OR p.category_id = :categoryId) AND " +
+           "(CAST(:sellerId AS BIGINT) IS NULL OR p.seller_id = :sellerId) AND " +
+           "(CAST(:search AS VARCHAR) IS NULL OR p.name ILIKE '%' || :search || '%' OR p.description ILIKE '%' || :search || '%')",
+           countQuery = "SELECT COUNT(*) FROM products p WHERE " +
+           "(CAST(:status AS VARCHAR) IS NULL OR p.status = CAST(:status AS VARCHAR)) AND " +
+           "(CAST(:categoryId AS BIGINT) IS NULL OR p.category_id = :categoryId) AND " +
+           "(CAST(:sellerId AS BIGINT) IS NULL OR p.seller_id = :sellerId) AND " +
+           "(CAST(:search AS VARCHAR) IS NULL OR p.name ILIKE '%' || :search || '%' OR p.description ILIKE '%' || :search || '%')",
+           nativeQuery = true)
     Page<Product> findFilteredProducts(
             @Param("status") ProductStatus status,
             @Param("categoryId") Long categoryId,

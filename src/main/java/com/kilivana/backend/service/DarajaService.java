@@ -119,8 +119,9 @@ public class DarajaService {
     /**
      * Retrieves a valid OAuth access token, fetching a new one if the cached token
      * is missing or within 5 minutes of expiry.
+     * Package-private for testing.
      */
-    private String getValidAccessToken() {
+    String getValidAccessToken() {
         TokenHolder holder = tokenCache.get();
         if (holder != null && !holder.isExpired()) {
             return holder.token();

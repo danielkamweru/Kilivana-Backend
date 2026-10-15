@@ -110,4 +110,5 @@ public class AdminOperationsController {
         report.put("payments", (long) paymentService.getAllPayments().size());
         return ResponseEntity.ok(ApiResponse.success(report));
     }
+
 }

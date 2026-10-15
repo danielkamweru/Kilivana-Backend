@@ -95,6 +95,11 @@ public class DatabaseImageStorage {
         }
     }
 
+    /**
+     * Delete all images for farmers (folder starting with "kilivana/farmers/").
+     * This does not delete the farmer user accounts, only their associated images.
+     */
+    @Transactional
     public String getSecureUrl(Map<String, Object> uploadResult) {
         return (String) uploadResult.get("secure_url");
     }
