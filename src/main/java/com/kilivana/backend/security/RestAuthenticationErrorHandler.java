@@ -15,6 +15,13 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import java.io.IOException;
 import java.time.LocalDateTime;
 
+/**
+ * Translates Spring Security's authentication and authorization failures into
+ * the project's {@link com.kilivana.backend.common.dto.ApiResponse} shape.
+ * A failed authentication (no/invalid token) yields 401, while a valid token
+ * without the required role yields 403; both are emitted as JSON so API
+ * clients never receive Spring's default HTML error page.
+ */
 @RequiredArgsConstructor
 public class RestAuthenticationErrorHandler implements AuthenticationEntryPoint, AccessDeniedHandler {
 

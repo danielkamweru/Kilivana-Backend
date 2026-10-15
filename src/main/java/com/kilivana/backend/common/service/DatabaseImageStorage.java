@@ -43,6 +43,10 @@ public class DatabaseImageStorage {
         this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.replaceAll("/+$", "");
     }
 
+    /**
+     * Persists the bytes in PostgreSQL and returns a Cloudinary-shaped result map, so
+     * callers can treat every storage provider uniformly.
+     */
     @Transactional
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
         validate(file);
@@ -71,6 +75,8 @@ public class DatabaseImageStorage {
     @Transactional
     public Map<String, Object> replaceImage(String oldPublicId, MultipartFile newFile, String folder)
             throws IOException {
+        // Upload the new image first, then delete the old one. If the upload fails
+        // the original stays; if the delete fails we have a duplicate but not a hole.
         Map<String, Object> result = uploadImage(newFile, folder);
         deleteImage(oldPublicId);
         return result;
@@ -101,6 +107,7 @@ public class DatabaseImageStorage {
         return (String) uploadResult.get("asset_id");
     }
 
+    /** The application's own database is always reachable, so this provider never reports itself unconfigured. */
     public boolean isConfigured() {
         return true;
     }
@@ -109,6 +116,7 @@ public class DatabaseImageStorage {
         return "PostgreSQL bytea";
     }
 
+    /** Enforces the shared image contract: a non-empty file, an allowed image type, at most 10MB. */
     private void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Image file is required");
@@ -126,6 +134,7 @@ public class DatabaseImageStorage {
         }
     }
 
+    /** Restricts a folder name to filename-safe characters and collapses any {@code ..}, so a caller-supplied folder stays a plain label. */
     private static String sanitize(String value) {
         if (value == null || value.isBlank()) {
             return "misc";
@@ -137,6 +146,7 @@ public class DatabaseImageStorage {
         return cleaned.isBlank() ? "misc" : cleaned;
     }
 
+    /** Database images are served over HTTP by {@code StoredImageController} at this path. */
     private String urlFor(String publicId) {
         return publicBaseUrl + "/api/v1/images/" + publicId;
     }

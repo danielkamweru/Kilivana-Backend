@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,4 +52,24 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     @Query("SELECT p FROM Product p WHERE p.sellerId = :sellerId AND p.status = :status")
     List<Product> findBySellerIdAndStatus(@Param("sellerId") Long sellerId, @Param("status") ProductStatus status);
+
+    long countByStatus(ProductStatus status);
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.status = 'ACTIVE' AND (p.lowStockThreshold IS NULL AND p.stockQty < 10 OR p.lowStockThreshold IS NOT NULL AND p.stockQty <= p.lowStockThreshold)")
+    long countNeedsRestock();
+
+    @Query("SELECT COALESCE(SUM(p.price * p.stockQty), 0) FROM Product p WHERE p.status = 'ACTIVE'")
+    BigDecimal calculateLiveStockValue();
+
+    @Query("SELECT p FROM Product p WHERE " +
+           "(:status IS NULL OR p.status = :status) AND " +
+           "(:categoryId IS NULL OR p.categoryId = :categoryId) AND " +
+           "(:sellerId IS NULL OR p.sellerId = :sellerId) AND " +
+           "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Product> findFilteredProducts(
+            @Param("status") ProductStatus status,
+            @Param("categoryId") Long categoryId,
+            @Param("sellerId") Long sellerId,
+            @Param("search") String search,
+            Pageable pageable);
 }

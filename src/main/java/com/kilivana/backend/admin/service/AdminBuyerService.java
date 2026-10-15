@@ -25,8 +25,15 @@ import java.util.Map;
  * across users, profiles, orders and disputes, and none of the other roles need that.
  */
 @Service
-@RequiredArgsConstructor
-public class AdminBuyerService {
+    @RequiredArgsConstructor
+    public class AdminBuyerService {
+
+    /**
+     * The administrator's buyer list.
+     *
+     * <p>Separate from {@link ProfileService} because this is an administration concern: it reads
+     * across users, profiles, orders and disputes, and none of the other roles need that.
+     */
 
     private final UserRepository userRepository;
     private final BuyerProfileRepository buyerProfileRepository;
@@ -69,24 +76,24 @@ public class AdminBuyerService {
                 .toList();
     }
 
-    private AdminBuyerResponse toResponse(User user, BuyerProfile profile,
+private AdminBuyerResponse toResponse(User user, BuyerProfile profile,
                                           long ordersCount, BigDecimal totalSpend, long disputesCount) {
-        return AdminBuyerResponse.builder()
-                .userId(user.getId())
-                .profileId(profile == null ? null : profile.getId())
-                .code(user.getReferenceCode())
-                .fullName(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .region(user.getRegion())
-                .address(profile == null ? null : profile.getSavedAddresses())
-                .status(mapStatus(user.getStatus()))
-                .type(null)
-                .ordersCount(ordersCount)
-                .totalSpend(totalSpend)
-                .disputesCount(disputesCount)
-                .createdAt(user.getCreatedAt())
-                .build();
+        return AdminBuyerResponse.of(
+                user.getId(),
+                profile == null ? null : profile.getId(),
+                user.getReferenceCode(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getRegion(),
+                profile == null ? null : profile.getSavedAddresses(),
+                mapStatus(user.getStatus()),
+                null,
+                ordersCount,
+                totalSpend,
+                disputesCount,
+                user.getCreatedAt()
+        );
     }
 
     /**

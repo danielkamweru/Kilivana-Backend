@@ -12,6 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Convenience wrapper that posts typed e-commerce notifications to the shared
+ * {@link NotificationService}.
+ *
+ * <p>Each method builds a {@link Notification} with the appropriate type code, a default
+ * title/message from {@link EcommerceNotificationType}, and the relevant entity ID appended
+ * so the panel can deep-link. The underlying notification table is shared with admin and
+ * logistics notifications; this service only knows the e-commerce subset.
+ */
 @Service
 @PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
@@ -20,6 +29,9 @@ public class EcommerceNotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    /**
+     * Sends an order-related notification (e.g., ORDER_PLACED, ORDER_STATUS_CHANGED).
+     */
     public NotificationResponse sendOrderNotification(Long userId, Long orderId, EcommerceNotificationType type) {
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -30,6 +42,9 @@ public class EcommerceNotificationService {
         return NotificationResponse.fromEntity(notificationRepository.save(notification));
     }
 
+    /**
+     * Sends a payment-related notification (e.g., PAYMENT_RECEIVED, PAYMENT_FAILED).
+     */
     public NotificationResponse sendPaymentNotification(Long userId, Long paymentId, EcommerceNotificationType type) {
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -40,6 +55,9 @@ public class EcommerceNotificationService {
         return NotificationResponse.fromEntity(notificationRepository.save(notification));
     }
 
+    /**
+     * Sends a dispute-related notification (e.g., DISPUTE_RAISED, DISPUTE_RESOLVED).
+     */
     public NotificationResponse sendDisputeNotification(Long userId, Long disputeId, EcommerceNotificationType type) {
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -50,6 +68,9 @@ public class EcommerceNotificationService {
         return NotificationResponse.fromEntity(notificationRepository.save(notification));
     }
 
+    /**
+     * Sends an inventory notification (e.g., INVENTORY_LOW) for a product.
+     */
     public NotificationResponse sendInventoryNotification(Long userId, Long productId, String productName, EcommerceNotificationType type) {
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -60,6 +81,9 @@ public class EcommerceNotificationService {
         return NotificationResponse.fromEntity(notificationRepository.save(notification));
     }
 
+    /**
+     * Sends a custom notification with overridden title and/or message.
+     */
     public NotificationResponse sendCustomNotification(Long userId, EcommerceNotificationType type, String title, String message) {
         Notification notification = Notification.builder()
                 .userId(userId)
@@ -70,6 +94,7 @@ public class EcommerceNotificationService {
         return NotificationResponse.fromEntity(notificationRepository.save(notification));
     }
 
+    /** Returns all e-commerce notifications for a user, newest first. */
     @PreAuthorize("@resourceAuthorization.self(#userId)")
     public List<NotificationResponse> getEcommerceNotifications(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
@@ -78,6 +103,7 @@ public class EcommerceNotificationService {
                 .collect(Collectors.toList());
     }
 
+    /** Returns only unread e-commerce notifications for a user. */
     @PreAuthorize("@resourceAuthorization.self(#userId)")
     public List<NotificationResponse> getUnreadEcommerceNotifications(Long userId) {
         return notificationRepository.findByUserIdAndReadAtIsNull(userId).stream()
@@ -86,6 +112,7 @@ public class EcommerceNotificationService {
                 .collect(Collectors.toList());
     }
 
+    /** Checks if a notification type code belongs to the e-commerce subset. */
     private boolean isEcommerceType(String type) {
         for (EcommerceNotificationType t : EcommerceNotificationType.values()) {
             if (t.getCode().equals(type)) {

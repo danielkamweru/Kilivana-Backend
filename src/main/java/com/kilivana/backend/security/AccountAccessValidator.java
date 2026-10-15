@@ -13,9 +13,14 @@ import org.springframework.stereotype.Component;
 public class AccountAccessValidator {
     private final UserRepository users;
 
+    /** Match login/refresh: pending verification is not a disabled account. */
+    public static boolean permitsAuthentication(UserStatus status) {
+        return status == UserStatus.ACTIVE || status == UserStatus.PENDING_VERIFICATION;
+    }
+
     public void validate(Long id, UserRole tokenRole) {
         var user = users.findById(id).orElseThrow(() -> new UnauthorizedException("Invalid access token"));
-        if (user.getStatus() != UserStatus.ACTIVE || user.getRole() != tokenRole) {
+        if (!permitsAuthentication(user.getStatus()) || user.getRole() != tokenRole) {
             throw new UnauthorizedException("Invalid access token");
         }
     }

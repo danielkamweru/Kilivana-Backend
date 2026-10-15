@@ -8,11 +8,16 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Access to the {@link SupplierProfileImage} table, which extends the shared image fields defined
+ * in {@link ImageRepository}. Images are ordered by sort order so the panel can render them in a
+ * stable sequence, and one may be flagged primary for the profile avatar.
+ */
 @Repository
 public interface SupplierProfileImageRepository extends JpaRepository<SupplierProfileImage, Long>, ImageRepository<SupplierProfileImage> {
-    
+
     List<SupplierProfileImage> findByUserIdOrderBySortOrderAsc(Long userId);
-    
+
     Optional<SupplierProfileImage> findByUserIdAndIsPrimaryTrue(Long userId);
 
     void deleteByUserId(Long userId);

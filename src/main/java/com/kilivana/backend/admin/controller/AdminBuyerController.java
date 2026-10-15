@@ -2,13 +2,18 @@ package com.kilivana.backend.admin.controller;
 
 import com.kilivana.backend.admin.dto.AdminBuyerResponse;
 import com.kilivana.backend.admin.service.AdminBuyerService;
+import com.kilivana.backend.admin.service.ProfileService;
 import com.kilivana.backend.admin.service.UserService;
+import com.kilivana.backend.admin.dto.BuyerProfileRequest;
+import com.kilivana.backend.admin.dto.BuyerProfileResponse;
 import com.kilivana.backend.admin.dto.UserResponse;
 import com.kilivana.backend.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +32,7 @@ public class AdminBuyerController {
 
     private final AdminBuyerService adminBuyerService;
     private final UserService userService;
+    private final ProfileService profileService;
 
     @Operation(summary = "List buyers",
             description = "Every buyer account with its profile, order count, total spend and dispute count.")
@@ -48,5 +54,16 @@ public class AdminBuyerController {
     @PutMapping("/{userId}/unsuspend")
     public ResponseEntity<ApiResponse<UserResponse>> unsuspendBuyer(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.success(userService.activateUser(userId)));
+    }
+
+    @Operation(summary = "Update a buyer profile",
+            description = "Updates the buyer profile fields. Allowed for an administrator.")
+    @PutMapping("/{userId}")
+    public ResponseEntity<ApiResponse<BuyerProfileResponse>> updateBuyerProfile(
+            @AuthenticationPrincipal Long authenticatedUserId,
+            @PathVariable Long userId,
+            @Valid @RequestBody BuyerProfileRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                profileService.updateBuyerProfile(authenticatedUserId, userId, request)));
     }
 }

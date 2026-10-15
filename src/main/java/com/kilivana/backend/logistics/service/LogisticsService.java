@@ -19,6 +19,7 @@ import com.kilivana.backend.logistics.entity.TrackingEvent;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
+import com.kilivana.backend.logistics.service.TrackingStopService;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,6 +35,25 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The core of the logistics domain: delivery jobs, tracking events, proof of delivery,
+ * and the delivery handover code that gates them.
+ *
+ * <p>This service owns the delivery job state machine ({@code NEXT_STATUSES}), the
+ * OTP generation and verification logic, the payout arithmetic that links a job to its
+ * order, and the mirroring of delivery progress onto the order pipeline. It is the only
+ * place in the logistics package that talks to the ecommerce, admin and mail modules,
+ * which keeps the domain self-contained and makes the boundaries easy to follow.
+ *
+ * <p>Two patterns recur here and are worth knowing:
+ * <ul>
+ *   <li><b>Rebuild on write</b> — {@code createJob} and {@code createProofOfDelivery} build a
+ *       fresh entity from the submitted one rather than saving the submitted instance, so
+ *       a client-supplied {@code id} cannot merge into and overwrite a row it does not own.</li>
+ *   <li><b>noRollbackFor on OTP verify</b> — wrong guesses must increment the attempt counter
+ *       even when the method throws, so the lockout is reachable.</li>
+ * </ul>
+ */
 @Service
 @PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
@@ -47,6 +67,7 @@ public class LogisticsService {
     private final OrderRepository orderRepository;
     private final OrderEventRepository orderEventRepository;
     private final UserRepository userRepository;
+    private final TrackingStopService trackingStopService;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
@@ -300,6 +321,9 @@ public class LogisticsService {
         job.setStatus(status);
         LogisticsJob saved = logisticsJobRepository.save(job);
         syncOrderStatus(saved);
+        // Live tracking stops the moment the job reaches a terminal state, so subscribers
+        // are told to stop animating rather than waiting for a fix that will never come.
+        trackingStopService.maybeStopTracking(saved.getId());
         return saved;
     }
 
@@ -337,7 +361,9 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
         job.setStatus(DeliveryStatus.CANCELLED);
         job.setCancellationReason(cancellationReason);
-        return logisticsJobRepository.save(job);
+        LogisticsJob saved = logisticsJobRepository.save(job);
+        trackingStopService.maybeStopTracking(saved.getId());
+        return saved;
     }
 
     @Transactional

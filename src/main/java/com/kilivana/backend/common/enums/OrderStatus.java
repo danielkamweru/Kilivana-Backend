@@ -3,6 +3,8 @@ package com.kilivana.backend.common.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Where an order is between "placed" and "settled", exactly as the admin panel
  * draws its pipeline: Placed, Confirmed, In Transit, Delivered, Completed, with
@@ -16,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * an order into them (the fulfilment steps live on the logistics job's
  * {@link DeliveryStatus}), and the panel has no column to render them in.
  */
+@Schema(description = "Where an order is between placed and settled.")
 public enum OrderStatus {
     PLACED,
     CONFIRMED,

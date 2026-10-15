@@ -8,9 +8,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "E-Commerce · Products", description = "Product catalogue, pricing and product imagery")
+/**
+ * Seller product catalogue compatibility endpoints.
+ * Provides legacy-compatible paths under {@code /api/v1/sellers} for listing
+ * the products associated with a seller. New implementations should use
+ * {@link ProductController} under {@code /api/v1/products}.
+ */
+@Tag(name = "E-Commerce · Products", description = "Product catalogue, pricing and product imagery (compatibility)")
 @RestController
 @RequestMapping("/api/v1/sellers")
 @RequiredArgsConstructor
@@ -18,8 +26,23 @@ public class CatalogCompatibilityController {
 
     private final ProductService productService;
 
+    /**
+     * Returns all products listed by the given seller.
+     *
+     * @param sellerId the seller's user ID
+     * @return list of product DTOs
+     */
+    @Operation(summary = "List products for a seller",
+            description = "Returns all products listed by the given seller.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Products returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping("/{sellerId}/products")
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> getSellerProducts(@PathVariable Long sellerId) {
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getSellerProducts(
+            @Parameter(description = "ID of the seller") @PathVariable Long sellerId) {
         return ResponseEntity.ok(ApiResponse.success(productService.getProductsBySeller(sellerId)));
     }
 }

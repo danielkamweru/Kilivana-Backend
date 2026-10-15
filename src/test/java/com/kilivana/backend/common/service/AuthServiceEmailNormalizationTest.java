@@ -49,6 +49,24 @@ class AuthServiceEmailNormalizationTest {
                 new JwtProperties(), referenceCodeGenerator);
     }
 
+    @Test void pendingFarmerCanLoginAndRefreshWithoutChangingVerification() {
+        User user = User.builder().id(7L).email("pending@example.com").role(UserRole.FARMER)
+                .status(com.kilivana.backend.common.enums.UserStatus.PENDING_VERIFICATION)
+                .verificationStatus(com.kilivana.backend.common.enums.VerificationStatus.PENDING)
+                .passwordHash(new BCryptPasswordEncoder().encode("probe12345")).build();
+        when(userRepository.findByEmailIgnoreCase("pending@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(jwtService.isTokenType("refresh", JwtService.TYPE_REFRESH)).thenReturn(true);
+        when(jwtService.extractUserId("refresh")).thenReturn(7L);
+        when(jwtService.generateAccessToken(user)).thenReturn("access");
+        when(jwtService.generateRefreshToken(user)).thenReturn("refresh");
+        AuthLoginRequest login = new AuthLoginRequest();
+        login.setEmail("pending@example.com"); login.setPassword("probe12345");
+        assertThat(authService.login(login).getAccessToken()).isEqualTo("access");
+        assertThat(authService.refreshToken("refresh").getAccessToken()).isEqualTo("access");
+        assertThat(user.getVerificationStatus()).isEqualTo(com.kilivana.backend.common.enums.VerificationStatus.PENDING);
+    }
+
     private static UserRegistrationRequest request(String email, String phone) {
         UserRegistrationRequest request = new UserRegistrationRequest();
         request.setName("Case Probe");

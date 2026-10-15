@@ -1,8 +1,8 @@
 package com.kilivana.backend.admin.dto;
 
 import com.kilivana.backend.common.enums.VerificationStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -17,35 +17,60 @@ import java.time.LocalDateTime;
  * list and detail screens.
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Admin view of a supplier with profile and product summary")
 public class AdminSupplierResponse {
 
+    @Schema(description = "User account ID", example = "30")
     private Long userId;
+
+    @Schema(description = "Supplier profile ID", example = "12")
     private Long profileId;
-    /** Supplier code such as S-001, from the user row. */
+
+    @Schema(description = "Supplier code such as S-001", example = "S-001")
     private String code;
+
+    @Schema(description = "Company name", example = "Green Valley Farms Ltd")
     private String companyName;
+
+    @Schema(description = "Contact person name", example = "Mary Wanjiku")
     private String contactPerson;
+
+    @Schema(description = "Username", example = "greenvalley")
     private String username;
+
+    @Schema(description = "Email address", example = "info@greenvalley.co.ke")
     private String email;
+
+    @Schema(description = "Phone number", example = "+254722000003")
     private String phone;
+
+    @Schema(description = "Region or county", example = "Nakuru")
     private String region;
+
+    @Schema(description = "Physical address", example = "Plot 45, Nakuru-Eldoret Road")
     private String address;
+
+    @Schema(description = "Product category", example = "Vegetables")
     private String category;
+
+    @Schema(description = "Contract end date", example = "2026-12-31")
     private LocalDate contractEndDate;
 
-    /** active, pending, or suspended. */
+    @Schema(description = "Status for admin panel: active, pending, or suspended", example = "active")
     private String status;
+
+    @Schema(description = "Reason if supplier is suspended", example = "Contract expired")
     private String suspensionReason;
 
-    /** Number of products this supplier has listed. */
+    @Schema(description = "Number of products this supplier has listed", example = "15")
     private int productsCount;
 
-    /** Average rating, or null if none exists yet. */
+    @Schema(description = "Average rating, or null if none exists yet", example = "4.3")
     private Double rating;
 
+    @Schema(description = "Timestamp when the supplier account was created", example = "2026-01-15T10:30:00")
     private LocalDateTime createdAt;
 
     /** Maps backend user status to the panel vocabulary. */
@@ -56,5 +81,32 @@ public class AdminSupplierResponse {
             case SUSPENDED -> "suspended";
             case INACTIVE, PENDING_VERIFICATION -> "pending";
         };
+    }
+
+    // Static factory method to replace @Builder
+    public static AdminSupplierResponse of(Long userId, Long profileId, String code, String companyName,
+                                           String contactPerson, String username, String email, String phone,
+                                           String region, String address, String category, LocalDate contractEndDate,
+                                           String status, String suspensionReason, int productsCount, Double rating,
+                                           LocalDateTime createdAt) {
+        AdminSupplierResponse response = new AdminSupplierResponse();
+        response.userId = userId;
+        response.profileId = profileId;
+        response.code = code;
+        response.companyName = companyName;
+        response.contactPerson = contactPerson;
+        response.username = username;
+        response.email = email;
+        response.phone = phone;
+        response.region = region;
+        response.address = address;
+        response.category = category;
+        response.contractEndDate = contractEndDate;
+        response.status = status;
+        response.suspensionReason = suspensionReason;
+        response.productsCount = productsCount;
+        response.rating = rating;
+        response.createdAt = createdAt;
+        return response;
     }
 }

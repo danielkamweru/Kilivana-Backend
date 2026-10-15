@@ -9,11 +9,17 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Persistence for order line items.
+ */
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-    List<OrderItem> findByOrderId(Long orderId);
+    /** Returns all line items for a specific order. */
+    @Query("SELECT oi FROM OrderItem oi WHERE oi.order.id = :orderId")
+    List<OrderItem> findByOrderId(@Param("orderId") Long orderId);
 
+    /** Returns all line items for a specific seller (across all their orders). */
     List<OrderItem> findBySellerId(Long sellerId);
 
     /**
@@ -21,7 +27,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
      * so a cancelled basket does not inflate a category's total.
      */
     @Query("SELECT c.name, COUNT(oi) FROM OrderItem oi " +
-           "JOIN Order o ON o.id = oi.orderId " +
+           "JOIN oi.order o " +
            "JOIN Product p ON p.id = oi.productId " +
            "JOIN Category c ON c.id = p.categoryId " +
            "WHERE o.status IN :statuses " +

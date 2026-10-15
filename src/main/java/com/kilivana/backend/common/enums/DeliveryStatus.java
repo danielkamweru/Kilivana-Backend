@@ -3,11 +3,14 @@ package com.kilivana.backend.common.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Where a delivery job is between assignment and handover. The richer states here
  * are the job's own; the order the panel shows reads the simplified
  * assigned / picked-up / delivered view of them.
  */
+@Schema(description = "Where a delivery job is between assignment and handover.")
 public enum DeliveryStatus {
     PENDING_ASSIGNMENT,
     ASSIGNED,

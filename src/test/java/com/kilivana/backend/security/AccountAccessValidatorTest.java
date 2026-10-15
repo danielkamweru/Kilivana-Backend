@@ -24,6 +24,10 @@ class AccountAccessValidatorTest {
         when(users.findById(1L)).thenReturn(Optional.empty());
         assertThrows(UnauthorizedException.class, () -> validator.validate(1L, UserRole.FARMER));
     }
+    @Test void pendingVerificationFarmerRetainsAuthenticatedAccess() {
+        when(users.findById(1L)).thenReturn(Optional.of(User.builder().role(UserRole.FARMER).status(UserStatus.PENDING_VERIFICATION).build()));
+        assertDoesNotThrow(() -> validator.validate(1L, UserRole.FARMER));
+    }
     @Test void staleRoleTokenRejected() {
         when(users.findById(1L)).thenReturn(Optional.of(User.builder().role(UserRole.BUYER).status(UserStatus.ACTIVE).build()));
         assertThrows(UnauthorizedException.class, () -> validator.validate(1L, UserRole.ADMIN));

@@ -3,9 +3,12 @@ package com.kilivana.backend.common.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Where a dispute sits between being raised and being settled.
  */
+@Schema(description = "Where a dispute sits between being raised and being settled.")
 public enum DisputeStatus {
     OPEN,
     IN_PROGRESS,

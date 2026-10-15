@@ -10,6 +10,8 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -20,8 +22,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Creates and validates the JWTs used for authentication. Issues short-lived
+ * access tokens and longer-lived refresh tokens; access tokens carry the
+ * user id, role and email so controllers can resolve the caller without a
+ * database round-trip, while refresh tokens exist only to mint new access
+ * tokens. The signing key is derived once from the configured secret and
+ * cached for the lifetime of the process.
+ */
 @Slf4j
 public class JwtService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
     public static final String CLAIM_USER_ID = "uid";
     public static final String CLAIM_ROLE = "role";
@@ -38,6 +50,13 @@ public class JwtService {
         this.jwtProperties = jwtProperties;
     }
 
+    /**
+     * Builds and caches the HMAC signing key derived from the configured secret.
+     * Falls back to an ephemeral key (with a loud warning) when no secret is
+     * set, so local development works out of the box without committed
+     * credentials. Rejects keys shorter than 256 bits, which would be insecure
+     * for HS256.
+     */
     private SecretKey signingKey() {
         if (signingKey != null) {
             return signingKey;
@@ -89,6 +108,13 @@ public class JwtService {
         return jwtProperties.getAccessTokenExpiration() <= 0;
     }
 
+    /**
+     * Builds a token carrying the user id, role, email and token type as
+     * custom claims, so the filter can authenticate subsequent requests
+     * without a database lookup. Tokens may be non-expiring when the
+     * configured TTL is zero or negative — this is only intended for local
+     * development convenience.
+     */
     private String generateToken(User user, String type, long expirationMillis) {
         Date now = new Date();
         boolean neverExpires = expirationMillis <= 0;
@@ -117,6 +143,7 @@ public class JwtService {
                 .compact();
     }
 
+    /** Returns the subject claim, which holds the user id string. */
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();
     }
@@ -139,6 +166,11 @@ public class JwtService {
         return UserRole.valueOf(role);
     }
 
+    /**
+     * Validates that the token is an access token, not a refresh token.
+     * Presenting a refresh token as a bearer credential would be a misuse, so
+     * the filter rejects it rather than authenticating the caller.
+     */
     public boolean isTokenType(String token, String expectedType) {
         try {
             return expectedType.equals(parseClaims(token).get(CLAIM_TYPE, String.class));
@@ -156,6 +188,10 @@ public class JwtService {
         }
     }
 
+    /**
+     * Parses and signature-verifies a token, throwing {@link JwtException} on
+     * any failure so callers can treat invalid tokens as untrusted.
+     */
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey())

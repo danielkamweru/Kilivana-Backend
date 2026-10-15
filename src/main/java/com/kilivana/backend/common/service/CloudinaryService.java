@@ -49,6 +49,11 @@ public class CloudinaryService implements ImageStorage {
         return cloudinaryReady || databaseFallback != null;
     }
 
+    /**
+     * Uploads to Cloudinary, falling back to PostgreSQL when Cloudinary is unconfigured
+     * or the upload fails, so a broken third-party account degrades uploads instead of
+     * taking them offline.
+     */
     @Override
     public Map<String, Object> uploadImage(MultipartFile file, String folder) throws IOException {
         validateImageFile(file);
@@ -117,6 +122,8 @@ public class CloudinaryService implements ImageStorage {
         if (publicId == null || publicId.isBlank()) {
             return;
         }
+        // Database-stored images use their numeric row id as the public id; Cloudinary
+        // ids are never all digits, so the shape of the id tells us where it lives.
         if (databaseFallback != null && publicId.chars().allMatch(Character::isDigit)) {
             databaseFallback.deleteImage(publicId);
             return;
@@ -136,6 +143,8 @@ public class CloudinaryService implements ImageStorage {
         Map<String, Object> uploadResult = uploadImage(newFile, folder);
 
         if (uploadResult != null && uploadResult.get("public_id") != null) {
+            // Delete old only after new upload succeeds so a failure leaves the
+            // original image intact.
             deleteImage(oldPublicId);
         }
 
@@ -157,6 +166,7 @@ public class CloudinaryService implements ImageStorage {
         return (String) uploadResult.get("asset_id");
     }
 
+    /** Rejects empty files, non-image content types and anything over 10MB before any bytes are uploaded. */
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Image file is required");

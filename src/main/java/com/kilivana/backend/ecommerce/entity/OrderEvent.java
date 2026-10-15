@@ -10,6 +10,13 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * A single state change in an order's lifecycle.
+ *
+ * <p>Each transition (e.g. {@code PLACED} -> {@code CONFIRMED} -> {@code DELIVERED})
+ * is recorded here so the panel can render a timeline. The optional {@code note}
+ * captures human-readable context for the transition (e.g. cancellation reason).
+ */
 @Entity
 @Table(name = "order_events")
 @Data

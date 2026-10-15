@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Read-only reference data the admin panel and the public registration screens read to
+ * populate their dropdowns.
+ */
 @Tag(name = "Reference", description = "Shared reference data the admin panel needs to populate its dropdowns")
 @RestController
 @RequestMapping("/api/v1/regions")
@@ -31,6 +35,10 @@ public class RegionController {
         return ResponseEntity.ok(ApiResponse.success(KenyaCounty.all()));
     }
 
+    /**
+     * The currency every monetary amount in this API is denominated in, so clients can
+     * format prices without hardcoding it.
+     */
     @GetMapping("/currency")
     @Operation(summary = "The currency every amount in this API is denominated in")
     public ResponseEntity<ApiResponse<Map<String, String>>> currency() {

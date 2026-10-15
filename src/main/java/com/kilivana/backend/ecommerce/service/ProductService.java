@@ -26,13 +26,26 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-public class ProductService {
+    @RequiredArgsConstructor
+    public class ProductService {
+
+    /**
+     * Product catalogue for farmers and suppliers.
+     *
+     * <p>Products belong to a seller (farmer or supplier) and a category. A newly created product
+     * starts in {@code PENDING_APPROVAL} and must be activated by an administrator before it
+     * appears in the buyer's catalogue. Images are stored via the configured {@link ImageStorage}
+     * provider (Cloudinary, database or local filesystem) and the first uploaded image becomes the
+     * primary thumbnail.
+     */
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
@@ -116,6 +129,7 @@ public class ProductService {
 
     public List<ProductResponse> getAllProducts() {
         return productRepository.findByStatus(ProductStatus.ACTIVE).stream()
+                .filter(p -> p.getStockQty() > 0)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -128,6 +142,7 @@ public class ProductService {
 
     public List<ProductResponse> getProductsByCategory(Long categoryId) {
         return productRepository.findByCategoryId(categoryId).stream()
+                .filter(p -> p.getStatus() == ProductStatus.ACTIVE && p.getStockQty() > 0)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -175,6 +190,7 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
 
         if (Boolean.TRUE.equals(isPrimary)) {
+            // Demote the current primary so only one image wears the badge.
             productImageRepository.findPrimaryByProductId(productId)
                 .ifPresent(existingPrimary -> {
                     existingPrimary.setIsPrimary(false);
@@ -301,6 +317,40 @@ public class ProductService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public ProductResponse updateProductStatusWithReason(Long id, ProductStatus status, String reason, Long adminId) {
+        Product product = productRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        product.setStatus(status);
+        product.setStatusReason(reason);
+        product.setStatusChangedAt(LocalDateTime.now());
+        product.setStatusChangedBy(adminId);
+        return mapToResponse(productRepository.save(product));
+    }
+
+    public Page<ProductResponse> getFilteredProducts(ProductStatus status, Long categoryId, Long sellerId, String county, String search, Pageable pageable) {
+        // Note: county filter not implemented in repository query yet
+        return productRepository.findFilteredProducts(status, categoryId, sellerId, search, pageable)
+                .map(this::mapToResponse);
+    }
+
+    public Map<String, Object> getProductStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", productRepository.count());
+        stats.put("live", productRepository.countByStatus(ProductStatus.ACTIVE));
+        stats.put("pending", productRepository.countByStatus(ProductStatus.PENDING_APPROVAL));
+
+        // Count products that need restock (stock <= lowStockThreshold or stock < 10 if threshold not set)
+        stats.put("needsRestock", productRepository.countNeedsRestock());
+
+        // Calculate live stock value (sum of price * stock for active products)
+        BigDecimal liveStockValue = productRepository.calculateLiveStockValue();
+        stats.put("liveStockValue", liveStockValue != null ? liveStockValue : BigDecimal.ZERO);
+
+        return stats;
+    }
+
+    @Transactional
     public void deleteProduct(Long id) throws IOException {
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product", id);
@@ -334,6 +384,31 @@ public class ProductService {
                 .map(this::mapToImageResponse)
                 .collect(Collectors.toList());
 
+        // Get seller info for read-only fields
+        String sellerName = null;
+        String sellerPhone = null;
+        String sellerCounty = null;
+        try {
+            UserResponse seller = userService.getUserById(product.getSellerId());
+            sellerName = seller.getName();
+            sellerPhone = seller.getPhone();
+            sellerCounty = seller.getRegion();
+        } catch (Exception e) {
+            // Seller might not exist, ignore
+        }
+
+        // Get category name
+        String categoryName = null;
+        try {
+            Category category = categoryRepository.findById(product.getCategoryId()).orElse(null);
+            categoryName = category != null ? category.getName() : null;
+        } catch (Exception e) {
+            // Category might not exist, ignore
+        }
+
+        // Calculate isLive
+        boolean isLive = product.getStatus() == ProductStatus.ACTIVE && product.getStockQty() > 0;
+
         return ProductResponse.builder()
                 .id(product.getId())
                 .sellerId(product.getSellerId())
@@ -348,9 +423,27 @@ public class ProductService {
                 .soldQty(product.getSoldQty())
                 .minimumOrderQty(product.getMinimumOrderQty())
                 .status(product.getStatus())
+                .qualityGrade(product.getQualityGrade())
+                .harvestDate(product.getHarvestDate())
+                .lowStockThreshold(product.getLowStockThreshold())
+                .farmId(product.getFarmId())
+                .statusReason(product.getStatusReason())
+                .statusChangedAt(product.getStatusChangedAt())
+                .statusChangedBy(product.getStatusChangedBy())
+                .verifiedAt(product.getVerifiedAt())
+                .verifiedBy(product.getVerifiedBy())
+                .verifiedQty(product.getVerifiedQty())
+                .lastInspectionId(product.getLastInspectionId())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .images(imageResponses)
+                .sellerName(sellerName)
+                .sellerPhone(sellerPhone)
+                .sellerCounty(sellerCounty)
+                .categoryName(categoryName)
+                .farmName(null) // TODO: Fetch from Farm entity when available
+                .farmCertified(false) // TODO: Fetch from Farm entity when available
+                .isLive(isLive)
                 .build();
     }
 

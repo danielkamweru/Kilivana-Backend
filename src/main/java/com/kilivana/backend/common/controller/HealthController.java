@@ -9,6 +9,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * Unauthenticated liveness endpoints for load balancers, container orchestrators and
+ * browsers; none of them require a token.
+ */
 @Tag(name = "Health & System", description = "Service liveness and readiness information")
 @RestController
 public class HealthController {

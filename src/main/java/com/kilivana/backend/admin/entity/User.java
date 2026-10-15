@@ -13,6 +13,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * The core account row, shared by every role. A user is the login identity; the role-specific
+ * details (farm, business, vehicle, inspector qualifications) live on separate profile tables
+ * that reference this row through {@code userId}. Keeping them apart lets a user exist before
+ * their profile is onboarded without orphaning the account.
+ */
 @Entity
 @Table(name = "users")
 @Data
@@ -25,15 +31,21 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Display name shown across the admin panel and on receipts. */
     @Column(nullable = false)
     private String name;
 
+    /**
+     * Unique, case-insensitive email. Stored lowercased so lookups never depend on spelling.
+     */
     @Column(nullable = false, unique = true)
     private String email;
 
+    /** Phone number, trimmed on input; unique per account. */
     @Column(nullable = false)
     private String phone;
 
+    /** Optional login username, unique when present. */
     @Column(unique = true)
     private String username;
 
@@ -44,37 +56,89 @@ public class User {
     @Column(unique = true, updatable = false)
     private String referenceCode;
 
+    /**
+     * One of the 47 Kenyan counties, normalised at write time; never stored as free text.
+     */
     private String region;
 
+    /** Bcrypt hash of the account password; the plaintext is never stored. */
     @Column(nullable = false)
     private String passwordHash;
 
+    /** The role drives what the user can do and which profile table they own. */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
 
+    /**
+     * Lifecycle state: ACTIVE, SUSPENDED or INACTIVE. Suspension is the reversible one —
+     * the account stays, the user simply cannot use it.
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status;
 
+    /**
+     * Separate from {@link #status}: verification is about identity, status is about access.
+     * A farmer can be verified but suspended, or active but unverified.
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private VerificationStatus verificationStatus;
 
+    /** When {@link #status} last changed, for the audit panel. */
     @Column(name = "status_changed_at")
     private LocalDateTime statusChangedAt;
 
+    /** The administrator who last changed {@link #status}, or null for self-service changes. */
     @Column(name = "status_changed_by")
     private Long statusChangedBy;
 
+    /** Why the account was suspended, if it was; shown by the panel next to the status. */
     @Column(name = "suspension_reason", columnDefinition = "TEXT")
     private String suspensionReason;
 
+    /** Set once at insert and never updated. */
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    /** Bumped on every write. */
     @Column(nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    // Explicit getters and setters for Lombok compatibility
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getReferenceCode() { return referenceCode; }
+    public void setReferenceCode(String referenceCode) { this.referenceCode = referenceCode; }
+    public String getRegion() { return region; }
+    public void setRegion(String region) { this.region = region; }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
+    public UserStatus getStatus() { return status; }
+    public void setStatus(UserStatus status) { this.status = status; }
+    public VerificationStatus getVerificationStatus() { return verificationStatus; }
+    public void setVerificationStatus(VerificationStatus verificationStatus) { this.verificationStatus = verificationStatus; }
+    public LocalDateTime getStatusChangedAt() { return statusChangedAt; }
+    public void setStatusChangedAt(LocalDateTime statusChangedAt) { this.statusChangedAt = statusChangedAt; }
+    public Long getStatusChangedBy() { return statusChangedBy; }
+    public void setStatusChangedBy(Long statusChangedBy) { this.statusChangedBy = statusChangedBy; }
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

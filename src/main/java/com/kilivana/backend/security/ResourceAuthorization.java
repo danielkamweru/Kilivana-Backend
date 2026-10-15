@@ -28,7 +28,7 @@ public class ResourceAuthorization {
     private User actor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof Long id)) return null;
-        return users.findById(id).filter(u -> u.getStatus() == UserStatus.ACTIVE).orElse(null);
+        return users.findById(id).filter(u -> AccountAccessValidator.permitsAuthentication(u.getStatus())).orElse(null);
     }
 
     public boolean admin() { User u = actor(); return u != null && u.getRole() == UserRole.ADMIN; }
@@ -67,6 +67,15 @@ public class ResourceAuthorization {
                 orderItems.findByOrderId(id).stream().anyMatch(i -> Objects.equals(i.getSellerId(), u.getId())))
                 .orElse(false);
     }
+    /** STK initiation remains seller scoped; supplied identity must match the authenticated actor. */
+    public boolean sellerPayment(Long userId, UserRole role, Long orderId) {
+        User u = actor();
+        return u != null && Objects.equals(u.getId(), userId) && u.getRole() == role &&
+                (role == UserRole.FARMER || role == UserRole.SUPPLIER) &&
+                orderItems.findByOrderId(orderId).stream()
+                        .anyMatch(i -> Objects.equals(i.getSellerId(), u.getId()));
+    }
+
     public boolean payment(Long id) {
         return admin() || payments.findById(id).map(p -> order(p.getOrderId())).orElse(false);
     }

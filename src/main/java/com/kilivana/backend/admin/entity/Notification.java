@@ -9,6 +9,11 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * An in-app notification delivered to one user. Created by domain services (orders, payments,
+ * disputes, logistics) and consumed by the panel's bell icon. The read state is a single
+ * timestamp: {@code readAt == null} means unread.
+ */
 @Entity
 @Table(name = "notifications")
 @Data

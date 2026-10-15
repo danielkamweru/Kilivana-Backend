@@ -6,6 +6,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Data access layer for {@link KycDocument} entities.
+ * <p>
+ * Supports the KYC review workflow: listing all documents, listing documents
+ * for a specific user (ordered by upload date, newest first), listing
+ * documents by review status, and counting documents for a user by status
+ * (used to detect duplicate submissions).
+ */
 @Repository
 public interface KycDocumentRepository extends JpaRepository<KycDocument, Long> {
     List<KycDocument> findByUserIdOrderByUploadedAtDesc(Long userId);

@@ -11,6 +11,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * A product category, partitioned by seller type (FARMER vs SUPPLIER).
+ *
+ * <p>Category names are globally unique (not per type) so the buyer's filter
+ * dropdown never shows duplicates. Categories can be toggled active/inactive
+ * by administrators.
+ */
 @Entity
 @Table(name = "categories")
 @Data

@@ -11,6 +11,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * A single line in a shopping cart.
+ *
+ * <p>{@code priceSnapshot} captures the product's price at the moment the line
+ * was added or updated, so the buyer sees the price they agreed to at checkout
+ * even if the product price changes later.
+ */
 @Entity
 @Table(name = "cart_items")
 @Data

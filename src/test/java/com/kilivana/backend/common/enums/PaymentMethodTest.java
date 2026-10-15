@@ -69,10 +69,10 @@ class PaymentMethodTest {
     }
 
     @Test
-    @DisplayName("the status set is exactly what the panel renders")
+    @DisplayName("the status set includes Daraja failure handling")
     void statusSetMatchesThePanel() {
         assertEquals(
-                java.util.Set.of("PENDING", "PAID", "HELD", "SETTLED", "REFUNDED"),
+                java.util.Set.of("PENDING", "PAID", "HELD", "SETTLED", "REFUNDED", "FAILED"),
                 java.util.Arrays.stream(PaymentStatus.values()).map(Enum::name)
                         .collect(java.util.stream.Collectors.toSet()));
     }

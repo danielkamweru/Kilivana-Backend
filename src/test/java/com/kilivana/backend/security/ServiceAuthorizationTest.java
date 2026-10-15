@@ -44,12 +44,14 @@ class ServiceAuthorizationTest {
             PaymentService.class, DisputeService.class, CartService.class, AddressService.class,
             NotificationService.class, ProductService.class, UserService.class, LogisticsService.class})
     static class Config {
+        @Bean com.kilivana.backend.logistics.service.TrackingStopService trackingStop() { return mock(com.kilivana.backend.logistics.service.TrackingStopService.class); }
         @Bean UserRepository users() { return mock(UserRepository.class); }
         @Bean InspectionRepository inspections() { return mock(InspectionRepository.class); }
         @Bean InspectionEvidenceImageRepository evidence() { return mock(InspectionEvidenceImageRepository.class); }
         @Bean OrderRepository orders() { return mock(OrderRepository.class); }
         @Bean OrderItemRepository items() { return mock(OrderItemRepository.class); }
         @Bean OrderEventRepository events() { return mock(OrderEventRepository.class); }
+        @Bean com.kilivana.backend.service.DarajaService daraja() { return mock(com.kilivana.backend.service.DarajaService.class); }
         @Bean PaymentRepository payments() { return mock(PaymentRepository.class); }
         @Bean DisputeRepository disputes() { return mock(DisputeRepository.class); }
         @Bean ProductRepository products() { return mock(ProductRepository.class); }
@@ -72,6 +74,7 @@ class ServiceAuthorizationTest {
     @Autowired UserRepository users;
     @Autowired InspectionRepository inspections;
     @Autowired OrderRepository orders;
+    @Autowired OrderItemRepository orderItems;
     @Autowired PaymentRepository payments;
     @Autowired DisputeRepository disputes;
     @Autowired CartRepository carts;
@@ -91,7 +94,7 @@ class ServiceAuthorizationTest {
     @Autowired LogisticsJobRepository jobs;
 
     @BeforeEach void fixture() {
-        reset(users, inspections, orders, payments, disputes, carts, notifications, addresses, products, jobs);
+        reset(users, inspections, orders, orderItems, payments, disputes, carts, notifications, addresses, products, jobs);
         actor(1L, UserRole.BUYER);
         when(inspections.findById(20L)).thenReturn(Optional.of(Inspection.builder().id(20L).inspectorId(3L).build()));
         when(orders.findById(10L)).thenReturn(Optional.of(Order.builder().id(10L).buyerId(1L).build()));
@@ -107,6 +110,36 @@ class ServiceAuthorizationTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(id, null, List.of()));
     }
     void denied(org.junit.jupiter.api.function.Executable action) { assertThrows(AccessDeniedException.class, action); }
+
+    @Test void pendingFarmerKeepsOwnAccessButCannotEscalateProductStatus() {
+        actor(4L, UserRole.FARMER);
+        when(users.findById(4L)).thenReturn(Optional.of(User.builder().id(4L).role(UserRole.FARMER)
+                .status(UserStatus.PENDING_VERIFICATION).build()));
+        assertEquals(4L, userService.getUserById(4L).getId());
+        denied(() -> productService.updateProductStatusWithReason(1L, ProductStatus.ACTIVE, "test", 4L));
+        verify(products, never()).findByIdForUpdate(any());
+    }
+    @Test void ownedSellerStkReachesUpstreamBalanceValidation() {
+        actor(4L, UserRole.FARMER);
+        var line = OrderItem.builder().sellerId(4L).orderId(11L).build();
+        when(orderItems.findByOrderId(11L)).thenReturn(List.of(line));
+        when(orders.findById(11L)).thenReturn(Optional.of(Order.builder().id(11L).buyerId(2L)
+                .status(OrderStatus.PLACED).total(java.math.BigDecimal.ZERO).orderItems(List.of(line)).build()));
+        var request = new com.kilivana.backend.dto.StkPushInitiateRequest(); request.setOrderId(11L);
+        var error = assertThrows(com.kilivana.backend.common.exception.BadRequestException.class,
+                () -> paymentService.initiateStkPush(4L, UserRole.FARMER, request));
+        assertEquals("No outstanding balance on this order", error.getMessage());
+        verify(payments, never()).save(any());
+    }
+
+    @Test void stkCannotTrustSuppliedIdentityOrUnrelatedOrder() {
+        var request = new com.kilivana.backend.dto.StkPushInitiateRequest();
+        request.setOrderId(11L);
+        actor(4L, UserRole.FARMER);
+        denied(() -> paymentService.initiateStkPush(2L, UserRole.FARMER, request));
+        denied(() -> paymentService.initiateStkPush(4L, UserRole.FARMER, request));
+        verify(payments, never()).save(any());
+    }
 
     @Test void inspectionRequiresAssignedInspectorOrAdmin() {
         denied(() -> inspectionService.getInspectionById(20L));
@@ -214,7 +247,7 @@ class ServiceAuthorizationTest {
     }
     @Test void adminCanModerateButPendingCreationPolicyIsUnchanged() {
         actor(99L, UserRole.ADMIN);
-        var p = Product.builder().id(42L).status(ProductStatus.PENDING_APPROVAL).build();
+        var p = Product.builder().id(42L).stockQty(10).status(ProductStatus.PENDING_APPROVAL).build();
         when(products.findByIdForUpdate(42L)).thenReturn(Optional.of(p));
         when(products.save(any())).thenAnswer(i -> i.getArgument(0));
         productService.updateProductStatus(42L, ProductStatus.ACTIVE);

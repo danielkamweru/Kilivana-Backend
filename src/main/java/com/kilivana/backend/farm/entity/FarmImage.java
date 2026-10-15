@@ -10,6 +10,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * Represents an image associated with a farm.
+ * <p>
+ * A farm can have many images. Exactly one image per farm is marked as the
+ * primary image ({@code isPrimary = true}) and is typically used as the
+ * farm's thumbnail. The {@code sortOrder} field lets clients control the
+ * display order of secondary images. The primary flag and sort order are
+ * managed by the application layer; the database does not enforce them.
+ */
 @Entity
 @Table(name = "farm_images")
 @Data
@@ -28,9 +37,18 @@ public class FarmImage {
     @Column(columnDefinition = "TEXT")
     private String url;
 
+    /**
+     * Whether this image is the primary image for the farm. Defaults to false;
+     * the application is responsible for ensuring at most one image per farm
+     * is marked primary.
+     */
     @Column(name = "is_primary")
     private Boolean isPrimary = false;
 
+    /**
+     * Display order of the image within the farm's image set. Lower values
+     * appear first. Defaults to 0.
+     */
     @Column(name = "sort_order")
     private Integer sortOrder = 0;
 

@@ -11,6 +11,14 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * A dispute raised on an order by a buyer.
+ *
+ * <p>Raising a dispute marks the order {@code DISPUTED} and moves its payment
+ * to {@code HELD} (escrow) so the money cannot be released until the dispute
+ * is resolved. Resolution either cancels the order and refunds the buyer, or
+ * completes the order and releases the payment to the seller.
+ */
 @Entity
 @Table(name = "disputes")
 @Data

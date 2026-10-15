@@ -2,6 +2,8 @@ package com.kilivana.backend.common.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * How money moves, as the admin panel names it.
  *
@@ -9,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * corporate and cooperative orders, and card covers online checkout. Stored as
  * STRING so a new provider never invalidates a row written by an older build.
  */
+@Schema(description = "How money moves, as the admin panel names it.")
 public enum PaymentMethod {
     MPESA,
     BANK,

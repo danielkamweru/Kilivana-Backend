@@ -12,6 +12,13 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 
+/**
+ * Sends transactional email through SendGrid.
+ *
+ * <p>A thin wrapper over the SendGrid SDK: it builds the message, posts it to the
+ * {@code mail/send} endpoint and reports the outcome as a boolean, so callers can
+ * treat a mail outage as a non-failure.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,10 +35,16 @@ public class SendGridMailService {
         return dispatch(to, subject, "text/plain", body);
     }
 
+    /** Sends an HTML message. */
     public boolean sendHtml(String to, String subject, String htmlBody) {
         return dispatch(to, subject, "text/html", htmlBody);
     }
 
+    /**
+     * Posts the message to SendGrid. Returns {@code false} when the integration is
+     * unconfigured or the API call fails; never throws, so a mail outage cannot fail
+     * the business operation that triggered the email.
+     */
     private boolean dispatch(String to, String subject, String contentType, String content) {
         if (!properties.isConfigured()) {
             log.warn("SendGrid is not configured; skipping email to {} with subject '{}'", to, subject);
@@ -45,6 +58,7 @@ public class SendGridMailService {
                 new Content(contentType, content));
 
         try {
+            // Built per send: keeps the service stateless and always uses the current key.
             SendGrid sendGrid = new SendGrid(properties.getApiKey());
             Request request = new Request();
             request.setMethod(Method.POST);

@@ -1,3 +1,5 @@
+> Update 2026-10-15: the upstream code reconciliation is now recorded in [12-phase1-upstream-reconciliation.md](12-phase1-upstream-reconciliation.md). That report supersedes the historical upstream-conflict and ACTIVE-only warnings below. Live merged-build verification is blocked by the local schema; no migrations or pushes were performed.
+
 # Phase 1 review guide
 
 This review covers the tested canonical backend feature branch, based on `a55b56e` and the earlier `16e3292` main baseline. It preserves Daniel's backend and existing canonical contracts while closing focused authorization/pricing gaps. Android farmer integration has live device evidence, but **Android client code is in the separate FarmApp working tree and is not included in this backend PR**.

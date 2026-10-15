@@ -1,6 +1,7 @@
 package com.kilivana.backend.ecommerce.entity;
 
 import com.kilivana.backend.common.enums.ProductStatus;
+import com.kilivana.backend.common.enums.QualityGrade;
 import com.kilivana.backend.common.enums.SellerType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,8 +12,18 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * A product listing owned by a seller (farmer or supplier).
+ *
+ * <p>Products are created in {@code PENDING_APPROVAL} and must be activated by
+ * an administrator before appearing in the buyer's catalogue. Stock is tracked
+ * via {@code stockQty}; {@code reservedQty} holds units committed to open orders
+ * so they are not double-sold. The minimum order quantity enforces the seller's
+ * preferred lot size.
+ */
 @Entity
 @Table(name = "products")
 @Data
@@ -62,6 +73,39 @@ public class Product {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductStatus status;
+
+    @Enumerated(EnumType.STRING)
+    private QualityGrade qualityGrade;
+
+    @Column
+    private LocalDate harvestDate;
+
+    @Column
+    private Integer lowStockThreshold;
+
+    @Column
+    private Long farmId;
+
+    @Column(columnDefinition = "TEXT")
+    private String statusReason;
+
+    @Column
+    private LocalDateTime statusChangedAt;
+
+    @Column
+    private Long statusChangedBy;
+
+    @Column
+    private LocalDateTime verifiedAt;
+
+    @Column
+    private Long verifiedBy;
+
+    @Column
+    private Integer verifiedQty;
+
+    @Column
+    private Long lastInspectionId;
 
     @Column(nullable = false, updatable = false)
     @CreationTimestamp

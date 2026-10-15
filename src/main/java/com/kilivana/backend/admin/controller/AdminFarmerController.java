@@ -2,14 +2,17 @@ package com.kilivana.backend.admin.controller;
 
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.dto.UserResponse;
-import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.admin.service.UserService;
+import com.kilivana.backend.admin.service.ProfileService;
+import com.kilivana.backend.admin.dto.FarmerProfileRequest;
+import com.kilivana.backend.admin.dto.FarmerProfileResponse;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.farm.dto.FarmerListItem;
 import com.kilivana.backend.farm.dto.FarmerResponse;
 import com.kilivana.backend.farm.entity.Farm;
@@ -22,8 +25,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +41,7 @@ public class AdminFarmerController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
+    private final ProfileService profileService;
 
     @Operation(summary = "Suspend a farmer",
             description = "Suspends the farmer account. The account stays; the farmer cannot sell or interact with the platform.")
@@ -106,6 +112,16 @@ public class AdminFarmerController {
         return ResponseEntity.ok(ApiResponse.success(toFarmerResponse(user)));
     }
 
+    @Operation(summary = "Update a farmer profile")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<FarmerProfileResponse>> updateFarmerProfile(
+            @AuthenticationPrincipal Long authenticatedUserId,
+            @PathVariable("id") Long userId,
+            @Valid @RequestBody FarmerProfileRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                profileService.updateFarmerProfile(authenticatedUserId, userId, request)));
+    }
+
     @Operation(summary = "Approve a farmer")
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<FarmerResponse>> approveFarmer(@PathVariable Long id) {
@@ -159,57 +175,60 @@ public class AdminFarmerController {
     private FarmerResponse toFarmerResponse(User user) {
         List<Farm> farms = farmRepository.findByFarmerId(user.getId());
         List<FarmResponse> farmResponses = farms.stream()
-                .map(f -> FarmResponse.builder()
-                        .id(f.getId())
-                        .farmerId(f.getFarmerId())
-                        .name(f.getName())
-                        .county(f.getCounty())
-                        .subCounty(f.getSubCounty())
-                        .address(f.getAddress())
-                        .latitude(f.getLatitude())
-                        .longitude(f.getLongitude())
-                        .sizeAcres(f.getSizeAcres())
-                        .ownershipType(f.getOwnershipType())
-                        .status(f.getStatus())
-                        .description(f.getDescription())
-                        .createdAt(f.getCreatedAt())
-                        .build())
+                .map(f -> FarmResponse.of(
+                        f.getId(),
+                        f.getFarmerId(),
+                        f.getName(),
+                        f.getCounty(),
+                        f.getSubCounty(),
+                        f.getAddress(),
+                        f.getLatitude(),
+                        f.getLongitude(),
+                        f.getSizeAcres(),
+                        f.getOwnershipType(),
+                        f.getStatus(),
+                        f.getDescription(),
+                        null, // images - not fetched
+                        null, // crops - not fetched
+                        f.getCreatedAt()
+                ))
                 .collect(Collectors.toList());
 
-        return FarmerResponse.builder()
-                .id(user.getId())
-                .referenceCode(user.getReferenceCode())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .username(user.getUsername())
-                .county(user.getRegion())
-                .verificationStatus(user.getVerificationStatus())
-                .accountStatus(user.getStatus())
-                .createdAt(user.getCreatedAt())
-                .farms(farmResponses)
-                .build();
+        return FarmerResponse.of(
+                user.getId(),
+                user.getReferenceCode(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getUsername(),
+                user.getRegion(),
+                user.getVerificationStatus(),
+                user.getStatus(),
+                user.getCreatedAt(),
+                farmResponses
+        );
     }
 
-    private FarmerListItem toListItem(User user) {
+private FarmerListItem toListItem(User user) {
         List<Farm> farms = farmRepository.findByFarmerId(user.getId());
-        return FarmerListItem.builder()
-                .id(user.getId())
-                .referenceCode(user.getReferenceCode())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .county(user.getRegion())
-                .accountStatus(user.getStatus())
-                .verificationStatus(user.getVerificationStatus())
-                .statusReason(user.getSuspensionReason())
-                .statusChangedAt(user.getStatusChangedAt())
-                .statusChangedBy(user.getStatusChangedBy())
-                .farmCount(farms.size())
-                .createdAt(user.getCreatedAt())
-                .rating(null)
-                .ratingCount(0)
-                .totalRevenue(0.0)
-                .build();
+        return FarmerListItem.of(
+                user.getId(),
+                user.getReferenceCode(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getRegion(),
+                user.getStatus(),
+                user.getVerificationStatus(),
+                user.getSuspensionReason(),
+                user.getStatusChangedAt(),
+                user.getStatusChangedBy(),
+                null, // cropNames - not implemented
+                farms.size(),
+                null, // rating
+                0, // ratingCount
+                0.0, // totalRevenue
+                user.getCreatedAt()
+        );
     }
 }

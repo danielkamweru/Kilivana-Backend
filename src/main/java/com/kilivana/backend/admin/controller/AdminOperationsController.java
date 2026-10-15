@@ -58,13 +58,6 @@ public class AdminOperationsController {
         return ResponseEntity.ok(ApiResponse.success(metrics));
     }
 
-    @PatchMapping("/products/{id}/status")
-    public ResponseEntity<ApiResponse<?>> updateProductStatus(
-            @PathVariable Long id, @RequestParam String status) {
-        return ResponseEntity.ok(ApiResponse.success(
-                productService.updateProductStatus(id, ProductStatus.from(status))));
-    }
-
     /**
      * The order pipeline, filterable by buyer and status, so the
      * panel can show its tabs: placed, confirmed (processing),

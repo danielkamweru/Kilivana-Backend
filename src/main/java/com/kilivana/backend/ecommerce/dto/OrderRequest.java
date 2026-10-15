@@ -1,5 +1,6 @@
 package com.kilivana.backend.ecommerce.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -25,26 +26,33 @@ import java.util.List;
  * <p>The delivery fee is the one figure the caller supplies, because only the
  * caller knows what the delivery costs; it defaults to zero when omitted.
  */
+@Schema(description = "Request to place an order")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderRequest {
 
+    @Schema(description = "Buyer user ID", example = "42")
     @NotNull(message = "Buyer ID is required")
     private Long buyerId;
 
+    @Schema(description = "Delivery address ID", example = "8")
     @NotNull(message = "Address ID is required")
     private Long addressId;
 
+    @Schema(description = "Order line items")
     @NotEmpty(message = "Order must have at least one item")
     private List<@Valid OrderItemRequest> items;
 
+    @Schema(description = "Delivery fee", example = "150.00")
     private BigDecimal deliveryFee;
 
     /** Reconciliation figure only; the computed subtotal is what is stored. */
+    @Schema(description = "Reconciliation subtotal (computed server-side)", example = "3601.50")
     private BigDecimal subtotal;
 
     /** Reconciliation figure only; the computed total is what is stored. */
+    @Schema(description = "Reconciliation total (computed server-side)", example = "3751.50")
     private BigDecimal total;
 }
