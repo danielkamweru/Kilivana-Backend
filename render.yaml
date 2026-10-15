@@ -65,8 +65,7 @@ services:
       - key: SEED_ENFORCE_PASSWORDS
         value: "true"
       # The Render filesystem is ephemeral, so uploaded images live in
-      # PostgreSQL. Switch to cloudinary only when the CLOUDINARY_*
-      # secrets are configured.
+      # PostgreSQL.
       - key: STORAGE_PROVIDER
         value: database
       # Swagger stays on so the deployment documents itself; turn it off

@@ -119,10 +119,8 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it here, in the environment, or as a Render secret. |
 | `SEED_DEMO_PASSWORD` | `Kilivana#2026` | Shared password of the seeded demo accounts. Change it before anyone else uses the deployment. |
 | `SEED_ENFORCE_PASSWORDS` | `false` | Reset a seeded account's password to the configured value when it no longer matches. Use for a demo environment whose seeded accounts are the intended logins; leave `false` in production. |
-| `STORAGE_PROVIDER` | `database` | Image storage: `local`, `database`, or `cloudinary`. The Render filesystem is ephemeral, so `database` (the default) is the right choice there. |
-| `STORAGE_FALLBACK_PROVIDER` | `database` | Provider used when the primary one fails. `none` fails hard instead. |
+| `STORAGE_PROVIDER` | `database` | Image storage: `local` or `database`. The Render filesystem is ephemeral, so `database` (the default) is the right choice there. |
 | `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Disk directory for the `local` provider. |
-| `CLOUDINARY_*` | *(empty)* | Image upload credentials, used only when `STORAGE_PROVIDER=cloudinary`. |
 | `SENDGRID_ENABLED` | `false` | Master switch for transactional email. |
 | `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
@@ -136,23 +134,10 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | --- | --- |
 | `local` | Writes to `app.storage.local.directory` (`./uploads`) and serves `{PUBLIC_BASE_URL}/uploads/...`. |
 | `database` *(default)* | Stores the bytes as `bytea` in `stored_images` and serves `{PUBLIC_BASE_URL}/api/v1/images/{publicId}`. |
-| `cloudinary` | Uploads to Cloudinary, which needs the three credentials below. |
-
-With `cloudinary`, a missing or failing Cloudinary account no longer breaks uploads: the image is
-stored in PostgreSQL instead, using the `database` provider's storage. Set
-`STORAGE_FALLBACK_PROVIDER=none` to fail hard on Cloudinary errors and get
-`503 SERVICE_UNAVAILABLE` naming the missing variables.
 
 Both public image URLs are readable without a Bearer token, because they are embedded in `<img>`
 tags and mobile payloads that cannot send one: `GET /uploads/**` and `GET /api/v1/images/**`. Every
 other endpoint still requires authentication.
-
-```bash
-CLOUDINARY_CLOUD_NAME=your_cloud \
-CLOUDINARY_API_KEY=your_key \
-CLOUDINARY_API_SECRET=your_secret \
-mvn spring-boot:run
-```
 
 ### Database migrations
 
@@ -204,40 +189,14 @@ Profile and business records preserve the existing scalar-ID relationship model.
 
 The current development authentication service returns demo access/refresh tokens. Production deployment still requires JWT or secure session-token storage, revocation, and role-based authorization instead of the development-open security configuration.
 
-## Cloudinary Image Management
+## Image Management
 
-The backend integrates with Cloudinary for image storage. All image files are uploaded directly to your configured Cloudinary account; PostgreSQL stores only metadata (public IDs, URLs, sort order, primary flag).
+Images are stored in PostgreSQL as bytea or on the local filesystem based on the `STORAGE_PROVIDER` configuration. PostgreSQL stores the image bytes directly; filesystem storage stores files and serves them via HTTP.
 
-### Configuration
-
-Cloudinary credentials are loaded from environment variables. Create a `.env` file (ignored by git) or set them in your shell:
-
-```env
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-```
-
-The `.env.example` file contains placeholders only. Never commit real credentials.
-
-### Centralized Service
-
-All domains use one centralized service:
-
-```
-com.kilivana.backend.common.service.CloudinaryService
-```
-
-Operations:
-
-- `uploadImage(file, folder)` — uploads to a Cloudinary folder, returns secure URL, public ID, asset ID
-- `deleteImage(publicId)` — deletes a Cloudinary asset by public ID
-- `replaceImage(oldPublicId, newFile, folder)` — uploads the new image first, then deletes the old asset only if the upload succeeds
-
-Image validation:
+### Image Validation
 
 - File must be present and non-empty
-- Content-Type must start with `image/` (JPEG, PNG, GIF, etc.)
+- Content-Type must start with `image/` (JPEG, PNG, GIF, WebP)
 - File size must be under 10 MB
 
 ### Product Image API
@@ -303,7 +262,7 @@ Content-Type: application/json
 [10, 12, 11]
 ```
 
-**Delete an image (removes from Cloudinary and PostgreSQL):**
+**Delete an image (removes from storage and PostgreSQL):**
 
 ```http
 DELETE http://localhost:8080/api/v1/products/{productId}/images/{imageId}
@@ -313,12 +272,6 @@ X-User-Id: <user-id (owner or ADMIN)>
 ### Profile Image API
 
 Farmers, suppliers, and drivers can upload images for their own profiles. Admins can access any profile's images.
-
-Folders in Cloudinary:
-
-- `kilivana/farmers/{userId}/` for farmer profile images
-- `kilivana/suppliers/{userId}/` for supplier profile images
-- `kilivana/drivers/{userId}/` for driver profile images
 
 **Upload profile image:**
 
@@ -345,7 +298,7 @@ PUT http://localhost:8080/api/v1/profiles/farmers/{userId}/images/{imageId}/prim
 X-User-Id: <user-id (must match {userId} or be ADMIN)>
 ```
 
-**Delete profile image (removes from Cloudinary and PostgreSQL):**
+**Delete profile image (removes from storage and PostgreSQL):**
 
 ```http
 DELETE http://localhost:8080/api/v1/profiles/farmers/{userId}/images/{imageId}
@@ -593,12 +546,9 @@ This project is currently configured for internal development use. Add a license
 | `SEED_ADMIN_PASSWORD` | (none) | Initial admin user password |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200,http://localhost:8080,http://127.0.0.1:4200` | Comma-separated allowed CORS origins |
 | `PORT` | `8080` | Server port |
-| `STORAGE_PROVIDER` | `database` | `database`, `local`, or `cloudinary` |
+| `STORAGE_PROVIDER` | `database` | `database` or `local` |
 | `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Local storage directory (when `STORAGE_PROVIDER=local`) |
 | `PUBLIC_BASE_URL` | (server URL) | Base URL for Swagger docs |
-| `CLOUDINARY_CLOUD_NAME` | (none) | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | (none) | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | (none) | Cloudinary API secret |
 | `SENDGRID_ENABLED` | `false` | Enable/disable SendGrid email |
 | `SENDGRID_API_KEY` | (none) | SendGrid API key |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Sender email address |
@@ -869,7 +819,7 @@ This project is currently configured for internal development use. Add a license
 1. **API Response**: All responses wrapped in `{success, message, data, timestamp, error}`
 2. **Error handling**: `GlobalExceptionHandler` converts exceptions to proper `ApiResponse`
 3. **Validation**: `@Valid` on request bodies, returns field→message map on 400
-4. **Image upload**: Use `ImageStorage` interface (`cloudinaryService` bean), handles database/local/cloudinary
+4. **Image upload**: Use `ImageStorage` interface, handles database/local storage
 5. **Roles**: `BUYER`, `FARMER`, `SUPPLIER`, `DRIVER`, `INSPECTOR`, `ADMIN`
 6. **Pagination**: Use `Pageable` parameter for list endpoints
 7. **Testing**: `./mvnw test` — H2 in-memory database for tests

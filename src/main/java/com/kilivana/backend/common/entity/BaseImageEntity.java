@@ -33,7 +33,7 @@ public abstract class BaseImageEntity {
     @Column(name = "public_id", nullable = false, unique = true)
     private String publicId;
 
-    /** The storage provider's own id (e.g. Cloudinary's); {@code null} when the provider has none. */
+    /** The storage provider's own id (e.g. external provider's); {@code null} when the provider has none. */
     @Column(name = "asset_id")
     private String assetId;
 

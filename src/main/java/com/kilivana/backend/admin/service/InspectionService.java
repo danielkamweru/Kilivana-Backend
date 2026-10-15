@@ -41,7 +41,7 @@ public class InspectionService {
 
     private final InspectionRepository inspectionRepository;
     private final InspectionEvidenceImageRepository evidenceImageRepository;
-    private final ImageStorage cloudinaryService;
+    private final ImageStorage imageStorage;
 
     @Transactional
     public InspectionResponse createInspection(InspectionRequest request) {
@@ -123,7 +123,7 @@ public class InspectionService {
     public void deleteInspection(Long id) {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
-        // Delete evidence images from Cloudinary first, then the DB rows, then the
+        // Delete evidence images from storage first, then the DB rows, then the
         // inspection itself — so a partial failure leaves the inspection but not orphan blobs.
         evidenceImageRepository.findByInspectionIdOrderByCreatedAt(id).forEach(evidenceImageRepository::delete);
         inspectionRepository.delete(inspection);
@@ -135,10 +135,10 @@ public class InspectionService {
         inspectionRepository.findById(inspectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", inspectionId));
 
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, "inspections/evidence");
-        String url = cloudinaryService.getSecureUrl(uploadResult);
-        String publicId = cloudinaryService.getPublicId(uploadResult);
-        String assetId = cloudinaryService.getAssetId(uploadResult);
+        Map<String, Object> uploadResult = imageStorage.uploadImage(image, "inspections/evidence");
+        String url = imageStorage.getSecureUrl(uploadResult);
+        String publicId = imageStorage.getPublicId(uploadResult);
+        String assetId = imageStorage.getAssetId(uploadResult);
 
         InspectionEvidenceImage entity = InspectionEvidenceImage.builder()
                 .inspectionId(inspectionId)
@@ -151,7 +151,7 @@ public class InspectionService {
         try {
             entity = evidenceImageRepository.save(entity);
         } catch (DataIntegrityViolationException e) {
-            cloudinaryService.deleteImage(publicId);
+            imageStorage.deleteImage(publicId);
             throw e;
         }
 
@@ -176,7 +176,7 @@ public class InspectionService {
         if (!image.getInspectionId().equals(inspectionId)) {
             throw new BadRequestException("Image does not belong to this inspection");
         }
-        cloudinaryService.deleteImage(image.getPublicId());
+        imageStorage.deleteImage(image.getPublicId());
         evidenceImageRepository.delete(image);
         removeEvidenceUrl(inspectionId, image.getUrl());
     }

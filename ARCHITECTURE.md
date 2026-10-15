@@ -15,7 +15,7 @@ com.kilivana.backend
 ├── farm/           # Farm-specific entities (crops, farms, farm images, KYC documents)
 ├── logistics/      # Delivery logistics (jobs, tracking, drivers, proof of delivery)
 ├── mail/           # Email/SMS services
-├── config/         # Spring configuration (CORS, Security, Cloudinary)
+├── config/         # Spring configuration (CORS, Security)
 ├── security/       # JWT authentication
 ├── common/         # Shared DTOs, exceptions, enums, base classes
 └── [root]          # Application entry point
@@ -27,7 +27,6 @@ com.kilivana.backend
 - Spring Security + JWT
 - Hibernate/JPA (ddl-auto=update)
 - PostgreSQL 16
-- Cloudinary (for image storage in production)
 
 ## Authentication
 - JWT tokens: `{"alg": "HS256", "sub": "<userId>", "role": "ADMIN", "type": "access"}`
@@ -106,8 +105,8 @@ public static InventoryResponse fromEntity(Inspection inspection) {
 
 ## Image Upload Pattern
 1. Controller endpoint: `@PostMapping(value = "/{userId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)`
-2. Service: `cloudinaryService.uploadImage(image, folder)` returns `Map<String, Object>`
-3. Save entity with URL from `cloudinaryService.getSecureUrl(result)` and publicId from `getPublicId(result)`
+2. Service: `imageStorage.uploadImage(image, folder)` returns `Map<String, Object>`
+3. Save entity with URL from `imageStorage.getSecureUrl(result)` and publicId from `getPublicId(result)`
 4. Storage provider: `STORAGE_PROVIDER` env var (default: `database`)
 
 ## CORS Configuration
@@ -143,13 +142,6 @@ CORS_ALLOWED_ORIGINS="http://localhost:4200,https://*.ngrok-free.dev" \
 
 # With local storage instead of database
 STORAGE_PROVIDER=local ./mvnw spring-boot:run
-
-# With Cloudinary
-STORAGE_PROVIDER=cloudinary \
-CLOUDINARY_CLOUD_NAME=your-cloud \
-CLOUDINARY_API_KEY=your-key \
-CLOUDINARY_API_SECRET=your-secret \
-./mvnw spring-boot:run
 ```
 
 ## Testing
@@ -182,7 +174,7 @@ SEED_DATA=true/false
 SEED_ADMIN_EMAIL=admin.test@kilivana.local
 SEED_ADMIN_PASSWORD=Kilivana#2026
 CORS_ALLOWED_ORIGINS=http://localhost:4200,https://*.ngrok-free.dev
-STORAGE_PROVIDER=database|local|cloudinary
+STORAGE_PROVIDER=database|local
 PORT=8080
 JWT_EXPIRATION=0 (dev no-expiry)
 JWT_REFRESH_EXPIRATION=604800000 (7 days)

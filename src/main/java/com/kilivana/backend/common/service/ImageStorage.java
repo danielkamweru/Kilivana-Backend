@@ -8,10 +8,8 @@ import java.util.Map;
 /**
  * Where uploaded images are kept.
  *
- * Two implementations exist: Cloudinary for a real deployment, and a local filesystem
- * provider so image upload can be exercised without a Cloudinary account. The active one
- * is chosen by {@code app.storage.provider}, because an unconfigured provider previously
- * failed at upload time with an opaque error.
+ * Two implementations exist: database storage for PostgreSQL, and a local filesystem
+ * provider for development. The active one is chosen by {@code app.storage.provider}.
  */
 public interface ImageStorage {
 

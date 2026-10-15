@@ -44,6 +44,7 @@ public class Farm {
     @Column(nullable = false)
     private String county;
 
+    @Column
     private String subCounty;
 
     @Column(columnDefinition = "TEXT")

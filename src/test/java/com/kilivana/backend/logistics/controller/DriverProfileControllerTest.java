@@ -91,8 +91,8 @@ class DriverProfileControllerTest {
 
         List<ImageResponse> images = List.of(ImageResponse.builder()
                 .id(1L)
-                .url("https://res.cloudinary.com/demo/image/upload/driver.png")
-                .publicId("driver/10/driver")
+                .url("http://localhost:8080/api/v1/images/1")
+                .publicId("1")
                 .isPrimary(true)
                 .sortOrder(0)
                 .build());
@@ -110,8 +110,8 @@ class DriverProfileControllerTest {
     @Test
     void getDriverImages_shouldReturnImages() throws Exception {
         List<ImageResponse> images = List.of(ImageResponse.builder()
-                .id(1L).url("https://res.cloudinary.com/demo/image/upload/driver.png")
-                .publicId("driver").isPrimary(true).sortOrder(0).build());
+                .id(1L).url("http://localhost:8080/api/v1/images/1")
+                .publicId("1").isPrimary(true).sortOrder(0).build());
 
         when(profileService.getDriverProfileImages(10L, 10L)).thenReturn(images);
 

@@ -18,6 +18,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * Wires the tracking beans together from externalised properties so a deployment can
@@ -70,10 +73,11 @@ public class TrackingConfig {
     /** Prunes the high-frequency stream on a fixed cadence so it cannot grow without bound. */
     @Scheduled(fixedDelay = 3600_000, initialDelay = 3600_000)
     public void pruneStaleFixes() {
-        long cutoff = System.currentTimeMillis()
+        long cutoffMillis = System.currentTimeMillis()
                 - Duration.ofDays(properties.getHistoryRetentionDays()).toMillis();
-        int deleted = locationRepository.deleteByRecordedAtBefore(
-                java.time.Instant.ofEpochMilli(cutoff));
+        Instant instant = Instant.ofEpochMilli(cutoffMillis);
+        LocalDateTime cutoff = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
+        int deleted = locationRepository.deleteByRecordedAtBefore(cutoff);
         if (deleted > 0) {
             org.slf4j.LoggerFactory.getLogger(TrackingConfig.class)
                     .info("Pruned {} stale location fixes older than {} days",

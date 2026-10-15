@@ -13,10 +13,7 @@ import java.util.Map;
  * Exposes {@link DatabaseImageStorage} as the application's image provider, for deployments that
  * keep image bytes in PostgreSQL.
  *
- * <p>A thin wrapper rather than an {@code @Primary} on the storage itself: the storage is also
- * Cloudinary's fallback, so it has to exist as a bean whenever Cloudinary is the provider. Marking
- * it {@code @Primary} would have made the fallback silently take over whenever Cloudinary was
- * misconfigured — the exact case the fallback exists to hide.
+ * <p>A thin wrapper rather than an {@code @Primary} on the storage itself.
  */
 @Slf4j
 @Service

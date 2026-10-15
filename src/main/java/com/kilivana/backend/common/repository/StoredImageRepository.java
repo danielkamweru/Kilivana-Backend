@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * CRUD access to images kept as bytes in PostgreSQL — the {@code database} storage
- * provider and Cloudinary's fallback.
+ * provider.
  */
 @Repository
 public interface StoredImageRepository extends JpaRepository<StoredImage, Long> {

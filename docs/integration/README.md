@@ -68,3 +68,13 @@ process has not loaded this patch. Pending image byte reads now require owner/ad
 authentication; Android's token-free image transport needs a coordinated follow-up.
 No PostgreSQL data, migrations or product statuses changed. Unlisting and sold-out
 functionality remain Daniel's handover requirements, outside this patch.
+
+## Final local reconciliation — 2026-10-15
+
+[Current reconciliation and handover report](21-final-local-reconciliation-handover.md)
+records the merge with upstream4679d49, verified private backups, curated commits,
+credential/token-log removal, optional-demo separation and final test evidence.
+Earlier reports retain historical checkpoints. Current source protections are fixed;
+the8081 process has not been reloaded. Pending-image client authentication and the
+Admin Portal environment mismatch remain explicit limitations. No SQL migration,
+existing development-database modification, push or PR was performed.

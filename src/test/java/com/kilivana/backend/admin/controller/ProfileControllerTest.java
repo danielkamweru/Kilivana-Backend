@@ -132,7 +132,7 @@ class ProfileControllerTest {
 
         List<ImageResponse> images = List.of(ImageResponse.builder()
                 .id(1L)
-                .url("https://res.cloudinary.com/demo/image/upload/fake.png")
+                .url("http://localhost:8080/api/v1/images/fake.png")
                 .publicId("farmer/10/fake")
                 .isPrimary(true)
                 .sortOrder(0)
@@ -154,9 +154,9 @@ class ProfileControllerTest {
     @Test
     void getFarmerImages_shouldReturnImages() throws Exception {
         List<ImageResponse> images = List.of(
-                ImageResponse.builder().id(1L).url("https://res.cloudinary.com/demo/image/upload/a.png")
+                ImageResponse.builder().id(1L).url("http://localhost:8080/api/v1/images/a.png")
                         .publicId("a").isPrimary(true).sortOrder(0).build(),
-                ImageResponse.builder().id(2L).url("https://res.cloudinary.com/demo/image/upload/b.png")
+                ImageResponse.builder().id(2L).url("http://localhost:8080/api/v1/images/b.png")
                         .publicId("b").isPrimary(false).sortOrder(1).build());
 
         when(profileService.getFarmerProfileImages(10L, 10L)).thenReturn(images);
@@ -195,7 +195,7 @@ class ProfileControllerTest {
 
         List<ImageResponse> images = List.of(ImageResponse.builder()
                 .id(1L)
-                .url("https://res.cloudinary.com/demo/image/upload/supplier.png")
+                .url("http://localhost:8080/api/v1/images/supplier.png")
                 .publicId("supplier/10/supplier")
                 .isPrimary(true)
                 .sortOrder(0)
@@ -215,7 +215,7 @@ class ProfileControllerTest {
     @Test
     void getSupplierImages_shouldReturnImages() throws Exception {
         List<ImageResponse> images = List.of(ImageResponse.builder()
-                .id(1L).url("https://res.cloudinary.com/demo/image/upload/supplier.png")
+                .id(1L).url("http://localhost:8080/api/v1/images/supplier.png")
                 .publicId("supplier").isPrimary(true).sortOrder(0).build());
 
         when(profileService.getSupplierProfileImages(10L, 10L)).thenReturn(images);
@@ -243,7 +243,7 @@ class ProfileControllerTest {
 
         List<ImageResponse> images = List.of(ImageResponse.builder()
                 .id(5L)
-                .url("https://res.cloudinary.com/demo/image/upload/badge.png")
+                .url("http://localhost:8080/api/v1/images/badge.png")
                 .publicId("inspector/7/badge")
                 .isPrimary(true)
                 .sortOrder(0)
@@ -264,7 +264,7 @@ class ProfileControllerTest {
         // The acting user must come from the token, so the service can reject an
         // inspector reaching into another inspector's credentials.
         List<ImageResponse> images = List.of(ImageResponse.builder()
-                .id(5L).url("https://res.cloudinary.com/demo/image/upload/badge.png")
+                .id(5L).url("http://localhost:8080/api/v1/images/badge.png")
                 .publicId("badge").isPrimary(true).sortOrder(0).build());
 
         when(profileService.getInspectorProfileImages(7L, 9L)).thenReturn(images);
@@ -328,7 +328,7 @@ class ProfileControllerTest {
     void imageEndpoints_shouldIdentifyTheCallerFromTheToken() throws Exception {
         // The acting user must come from the token, not from a client-supplied id.
         List<ImageResponse> images = List.of(ImageResponse.builder()
-                .id(1L).url("https://res.cloudinary.com/demo/image/upload/x.png")
+                .id(1L).url("http://localhost:8080/api/v1/images/x.png")
                 .publicId("x").isPrimary(true).sortOrder(0).build());
 
         when(profileService.getFarmerProfileImages(10L, 42L)).thenReturn(images);

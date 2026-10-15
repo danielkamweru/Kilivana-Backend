@@ -35,7 +35,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_GET_ENDPOINTS = {
         "/", "/favicon.ico", "/actuator/health", "/actuator/info", "/api/v1/health",
         "/uploads/**", "/api/v1/images/**", "/api/v1/products/**", "/ws", "/ws/**",
-        "/api/v1/categories/**", "/api/v1/crop-types/**", "/api/v1/regions", "/api/v1/regions/**",
+        "/api/v1/users/farmers/**", "/api/v1/categories/**", "/api/v1/crop-types/**", "/api/v1/regions", "/api/v1/regions/**",
         "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**",
         "/api-docs", "/api-docs/**"
     };

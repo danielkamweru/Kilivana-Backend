@@ -43,14 +43,14 @@ import java.util.stream.Collectors;
      * <p>Products belong to a seller (farmer or supplier) and a category. A newly created product
      * starts in {@code PENDING_APPROVAL} and must be activated by an administrator before it
      * appears in the buyer's catalogue. Images are stored via the configured {@link ImageStorage}
-     * provider (Cloudinary, database or local filesystem) and the first uploaded image becomes the
+     * provider (database or local filesystem) and the first uploaded image becomes the
      * primary thumbnail.
      */
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final CategoryRepository categoryRepository;
-    private final ImageStorage cloudinaryService;
+    private final ImageStorage imageStorage;
     private final UserService userService;
     private final com.kilivana.backend.security.ProductVisibility visibility;
 
@@ -199,11 +199,11 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/products/" + productId;
-        Map<String, Object> uploadResult = cloudinaryService.uploadImage(image, folder);
+        Map<String, Object> uploadResult = imageStorage.uploadImage(image, folder);
         
-        String secureUrl = cloudinaryService.getSecureUrl(uploadResult);
-        String publicId = cloudinaryService.getPublicId(uploadResult);
-        String assetId = cloudinaryService.getAssetId(uploadResult);
+        String secureUrl = imageStorage.getSecureUrl(uploadResult);
+        String publicId = imageStorage.getPublicId(uploadResult);
+        String assetId = imageStorage.getAssetId(uploadResult);
 
         ProductImage productImage = ProductImage.builder()
                 .productId(productId)
@@ -227,7 +227,7 @@ import java.util.stream.Collectors;
             throw new BadRequestException("Image does not belong to this product");
         }
         
-        cloudinaryService.deleteImage(productImage.getPublicId());
+        imageStorage.deleteImage(productImage.getPublicId());
         productImageRepository.delete(productImage);
     }
 
@@ -250,11 +250,11 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/products/" + productId;
-        Map<String, Object> uploadResult = cloudinaryService.replaceImage(productImage.getPublicId(), newImage, folder);
+        Map<String, Object> uploadResult = imageStorage.replaceImage(productImage.getPublicId(), newImage, folder);
         
-        String secureUrl = cloudinaryService.getSecureUrl(uploadResult);
-        String publicId = cloudinaryService.getPublicId(uploadResult);
-        String assetId = cloudinaryService.getAssetId(uploadResult);
+        String secureUrl = imageStorage.getSecureUrl(uploadResult);
+        String publicId = imageStorage.getPublicId(uploadResult);
+        String assetId = imageStorage.getAssetId(uploadResult);
 
         productImage.setUrl(secureUrl);
         productImage.setPublicId(publicId);
@@ -373,7 +373,7 @@ import java.util.stream.Collectors;
     private void deleteAllProductImages(Long productId) throws IOException {
         List<ProductImage> images = productImageRepository.findByProductId(productId);
         for (ProductImage image : images) {
-            cloudinaryService.deleteImage(image.getPublicId());
+            imageStorage.deleteImage(image.getPublicId());
         }
         productImageRepository.deleteAll(images);
     }

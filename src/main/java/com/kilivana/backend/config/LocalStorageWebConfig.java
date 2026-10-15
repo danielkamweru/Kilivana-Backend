@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 /**
  * Serves locally stored uploads over HTTP.
  *
- * <p>Only active for the local filesystem provider. Cloudinary returns its own URLs, so
+ * <p>Only active for the local filesystem provider. Database storage returns its own URLs, so
  * nothing here should shadow them.
  */
 @Configuration

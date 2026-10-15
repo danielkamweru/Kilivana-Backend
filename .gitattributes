@@ -1,0 +1,8 @@
+# Keep reviewed migration/helper bytes identical to SHA256SUMS, including line endings.
+db/migrations/V16__reconciled_tracking_schema.sql -text whitespace=cr-at-eol
+db/migrations/V17__reconciled_product_payment_fields.sql -text whitespace=cr-at-eol
+db/migrations/V18__reconciled_payment_checks_order_item_fk.sql -text whitespace=cr-at-eol
+docs/integration/schema-review/preflight.sql -text whitespace=cr-at-eol
+docs/integration/schema-review/preservation-query.sql -text whitespace=cr-at-eol
+docs/integration/schema-review/verify.sql -text whitespace=cr-at-eol
+docs/integration/schema-review/apply-reviewed-schema.psql -text whitespace=cr-at-eol

@@ -27,7 +27,7 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     @Query("SELECT pi FROM ProductImage pi WHERE pi.productId = :productId AND pi.isPrimary = true")
     Optional<ProductImage> findPrimaryByProductId(@Param("productId") Long productId);
 
-    /** Finds an image by its Cloudinary public ID (for deletion/replacement). */
+    /** Finds an image by its public ID (for deletion/replacement). */
     @Query("SELECT pi FROM ProductImage pi WHERE pi.publicId = :publicId")
     Optional<ProductImage> findByPublicId(@Param("publicId") String publicId);
 }

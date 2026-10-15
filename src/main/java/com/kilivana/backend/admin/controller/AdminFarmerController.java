@@ -15,9 +15,12 @@ import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.farm.dto.FarmerListItem;
 import com.kilivana.backend.farm.dto.FarmerResponse;
-import com.kilivana.backend.farm.entity.Farm;
-import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.farm.dto.FarmResponse;
+import com.kilivana.backend.farm.dto.FarmImageResponse;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.entity.FarmImage;
+import com.kilivana.backend.farm.repository.FarmImageRepository;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +44,7 @@ public class AdminFarmerController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
+    private final FarmImageRepository farmImageRepository;
     private final ProfileService profileService;
 
     @Operation(summary = "Suspend a farmer",
@@ -159,7 +163,8 @@ public class AdminFarmerController {
 
     private boolean matchesCounty(User u, String county) {
         if (county == null || county.isBlank()) return true;
-        return county.equalsIgnoreCase(u.getRegion());
+        String region = u.getRegion();
+        return region != null && county.equalsIgnoreCase(region);
     }
 
     private boolean matchesStatus(User u, UserStatus status) {
@@ -175,23 +180,33 @@ public class AdminFarmerController {
     private FarmerResponse toFarmerResponse(User user) {
         List<Farm> farms = farmRepository.findByFarmerId(user.getId());
         List<FarmResponse> farmResponses = farms.stream()
-                .map(f -> FarmResponse.of(
-                        f.getId(),
-                        f.getFarmerId(),
-                        f.getName(),
-                        f.getCounty(),
-                        f.getSubCounty(),
-                        f.getAddress(),
-                        f.getLatitude(),
-                        f.getLongitude(),
-                        f.getSizeAcres(),
-                        f.getOwnershipType(),
-                        f.getStatus(),
-                        f.getDescription(),
-                        null, // images - not fetched
-                        null, // crops - not fetched
-                        f.getCreatedAt()
-                ))
+                .map(f -> {
+                    List<FarmImage> images = farmImageRepository.findByFarmIdOrderBySortOrderAsc(f.getId());
+                    List<FarmImageResponse> imageResponses = images.stream()
+                            .map(img -> FarmImageResponse.builder()
+                                    .id(img.getId())
+                                    .url(img.getUrl())
+                                    .isPrimary(img.getIsPrimary())
+                                    .build())
+                            .collect(Collectors.toList());
+                    return FarmResponse.of(
+                            f.getId(),
+                            f.getFarmerId(),
+                            f.getName(),
+                            f.getCounty(),
+                            f.getSubCounty(),
+                            f.getAddress(),
+                            f.getLatitude(),
+                            f.getLongitude(),
+                            f.getSizeAcres(),
+                            f.getOwnershipType(),
+                            f.getStatus(),
+                            f.getDescription(),
+                            imageResponses,
+                            null,
+                            f.getCreatedAt()
+                    );
+                })
                 .collect(Collectors.toList());
 
         return FarmerResponse.of(
