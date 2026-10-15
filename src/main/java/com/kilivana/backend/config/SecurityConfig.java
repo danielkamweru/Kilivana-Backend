@@ -59,6 +59,8 @@ public class SecurityConfig {
             // Reference data: counties and currency
             "GET", "/api/v1/regions",
             "GET", "/api/v1/regions/**",
+            // Public farmer profile for buyers viewing product pages
+            "GET", "/api/v1/users/farmers/**",
             "POST", "/api/v1/auth/register",
             "POST", "/api/v1/auth/login",
             "POST", "/api/v1/auth/refresh",

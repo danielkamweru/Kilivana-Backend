@@ -1,7 +1,10 @@
 package com.kilivana.backend.farm.controller;
 
+import com.kilivana.backend.farm.dto.FarmImageResponse;
 import com.kilivana.backend.farm.dto.FarmResponse;
 import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.entity.FarmImage;
+import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.FarmStatus;
@@ -37,6 +40,7 @@ public class FarmController {
     private static final Logger logger = LoggerFactory.getLogger(FarmController.class);
 
     private final FarmRepository farmRepository;
+    private final FarmImageRepository farmImageRepository;
 
     @Operation(summary = "List farms",
             description = "Paginated search across farm records with optional filters for farmer, county, status, and free-text search.")
@@ -181,6 +185,14 @@ public class FarmController {
     }
 
     private FarmResponse toFullResponse(Farm farm) {
+        List<FarmImage> images = farmImageRepository.findByFarmIdOrderBySortOrderAsc(farm.getId());
+        List<FarmImageResponse> imageResponses = images.stream()
+                .map(img -> FarmImageResponse.builder()
+                        .id(img.getId())
+                        .url(img.getUrl())
+                        .isPrimary(img.getIsPrimary())
+                        .build())
+                .collect(Collectors.toList());
         return FarmResponse.builder()
                 .id(farm.getId())
                 .farmerId(farm.getFarmerId())
@@ -194,6 +206,7 @@ public class FarmController {
                 .ownershipType(farm.getOwnershipType())
                 .status(farm.getStatus())
                 .description(farm.getDescription())
+                .images(imageResponses)
                 .createdAt(farm.getCreatedAt())
                 .build();
     }

@@ -9,8 +9,11 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.farm.dto.FarmerListItem;
 import com.kilivana.backend.farm.dto.FarmerResponse;
+import com.kilivana.backend.farm.dto.FarmImageResponse;
 import com.kilivana.backend.farm.dto.FarmResponse;
 import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.entity.FarmImage;
+import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -37,6 +40,7 @@ import java.util.stream.Collectors;
 
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
+    private final FarmImageRepository farmImageRepository;
 
     @Transactional(readOnly = true)
     public Page<FarmerListItem> listFarmers(String search, String county, UserStatus accountStatus,
@@ -158,37 +162,52 @@ import java.util.stream.Collectors;
     }
 
     private FarmerResponse toFarmerResponse(User user) {
-        List<Farm> farms = farmRepository.findByFarmerId(user.getId());
+            List<Farm> farms = farmRepository.findByFarmerId(user.getId());
 
-        return FarmerResponse.builder()
-                .id(user.getId())
-                .referenceCode(user.getReferenceCode())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .username(user.getUsername())
-                .county(user.getRegion())
-                .verificationStatus(user.getVerificationStatus())
-                .accountStatus(user.getStatus())
-                .createdAt(user.getCreatedAt())
-                .farms(farms.stream()
-                        .map(f -> FarmResponse.builder()
-                                .id(f.getId())
-                                .farmerId(f.getFarmerId())
-                                .name(f.getName())
-                                .county(f.getCounty())
-                                .subCounty(f.getSubCounty())
-                                .address(f.getAddress())
-                                .latitude(f.getLatitude())
-                                .longitude(f.getLongitude())
-                                .sizeAcres(f.getSizeAcres())
-                                .ownershipType(f.getOwnershipType())
-                                .status(f.getStatus())
-                                .description(f.getDescription())
-                                .createdAt(f.getCreatedAt())
-                                .build())
-                        .collect(Collectors.toList()))
-                .build();
+            return FarmerResponse.builder()
+                    .id(user.getId())
+                    .referenceCode(user.getReferenceCode())
+                    .name(user.getName())
+                    .email(user.getEmail())
+                    .phone(user.getPhone())
+                    .username(user.getUsername())
+                    .county(user.getRegion())
+                    .verificationStatus(user.getVerificationStatus())
+                    .accountStatus(user.getStatus())
+                    .createdAt(user.getCreatedAt())
+                    .farms(farms.stream()
+                            .map(f -> FarmResponse.builder()
+                                    .id(f.getId())
+                                    .farmerId(f.getFarmerId())
+                                    .name(f.getName())
+                                    .county(f.getCounty())
+                                    .subCounty(f.getSubCounty())
+                                    .address(f.getAddress())
+                                    .latitude(f.getLatitude())
+                                    .longitude(f.getLongitude())
+                                    .sizeAcres(f.getSizeAcres())
+                                    .ownershipType(f.getOwnershipType())
+                                    .status(f.getStatus())
+                                    .description(f.getDescription())
+                                    .images(toImageResponses(farmImageRepository.findByFarmIdOrderBySortOrderAsc(f.getId())))
+                                    .crops(null)
+                                    .createdAt(f.getCreatedAt())
+                                    .build())
+                            .collect(Collectors.toList()))
+                    .build();
+    }
+
+    private static List<FarmImageResponse> toImageResponses(List<FarmImage> images) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+        return images.stream()
+                .map(img -> FarmImageResponse.builder()
+                        .id(img.getId())
+                        .url(img.getUrl())
+                        .isPrimary(img.getIsPrimary())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private FarmerListItem toListItem(User user) {
