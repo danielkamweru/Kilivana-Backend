@@ -63,3 +63,11 @@ Android defaults to `http://127.0.0.1:8081/api/v1/`. The Admin Portal uses `http
 Android's pending-image byte loader is token-free. Private pending database/local images now require authenticated same-origin owner/admin loading, so Android and relevant web/admin image transports need a coordinated change or reviewed private delivery design. Never forward bearer tokens to external image hosts. Removing Cloudinary code does not revoke pre-existing external URLs or cached/downloaded images. Current runtime/device image compatibility is not established by source tests.
 
 Stateless refresh/logout revocation limits, disabled buyer checkout, safe seller order projections, complete inspection/admin review and other accepted transfer-or-defer items remain documented in17–20. This reconciliation does not complete those features or establish production readiness. The current backend is suitable for a review-branch handover with these limitations explicitly disclosed; deployment requires separate runtime/client/environment verification. No push or PR has been authorized.
+
+## Completed Git checkpoint
+
+The reconciliation merge is committed locally as `b8ccde7609188459df7f61c41cd26174c92975dc`, parents `a2bd2c3` and upstream `4679d49`. A final documentation/example-hygiene commit follows it; use `git log -1` for the final review HEAD. No upstream commit was amended or rewritten.
+
+The example demo password is also blank. An overly broad credential-name filter briefly cleared SEED_ENFORCE_PASSWORDS in the local merge commit; this final checkpoint restores the original upstream boolean unchanged. It is a configuration flag, not a credential. This correction changes no runtime or deployment configuration. Code and tests remain exactly those of the successful final runs.
+
+Final tracked status must be clean, with only the16 preserved local originals and the upstream editor backup untracked (17 excluded files). None belongs in a blanket add. The branch contains all of the fetched main and is ready for user approval to push as a review branch, subject to explicit disclosure of credential rotation, pending-image client work and the unverified Admin Portal environment. This is not deployment approval or a claim of production readiness. Proposed later command: `git push -u origin feature/android-backend-integration`; not executed.
