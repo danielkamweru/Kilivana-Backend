@@ -49,6 +49,7 @@ public class DriverLocationController {
     public ResponseEntity<ApiResponse<LocationUpdateResponse>> submitLocation(
             @Parameter(description = "ID of the delivery job") @PathVariable Long jobId,
             @Valid @RequestBody LocationUpdateRequest request) {
+        request.setTripId(jobId);
         LocationUpdateResponse response = driverLocationService.submitLocation(CurrentUser.id(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }

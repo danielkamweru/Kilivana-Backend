@@ -23,6 +23,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+
 /**
  * Self-service registration, login, token refresh and password reset.
  *
@@ -97,14 +99,14 @@ import org.springframework.transaction.annotation.Transactional;
     }
 
     private AuthTokenResponse buildTokenResponse(User user) {
-        long expiration = jwtProperties.getAccessTokenExpiration();
+        long expirationHours = jwtProperties.getAccessTokenExpirationHours();
         return AuthTokenResponse.builder()
                 .accessToken(jwtService.generateAccessToken(user))
                 .refreshToken(jwtService.generateRefreshToken(user))
                 .tokenType("Bearer")
                 // null means the token carries no expiry and stays valid until the
                 // signing secret changes.
-                .expiresIn(expiration > 0 ? expiration / 1000 : null)
+                .expiresIn(expirationHours > 0 ? Duration.ofHours(expirationHours).toSeconds() : null)
                 .user(mapToResponse(user))
                 .build();
     }

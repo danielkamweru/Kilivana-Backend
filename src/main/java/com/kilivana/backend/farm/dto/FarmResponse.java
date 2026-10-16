@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -55,7 +56,7 @@ public class FarmResponse {
     private String description;
 
     @Schema(description = "List of images associated with the farm")
-    private List<FarmImageResponse> images;
+    private List<FarmImageResponse> images = new ArrayList<>();
 
     @Schema(description = "List of crops grown on the farm")
     private List<CropResponse> crops;
@@ -81,7 +82,7 @@ public class FarmResponse {
         response.ownershipType = ownershipType;
         response.status = status;
         response.description = description;
-        response.images = images;
+        response.images = images != null ? images : new ArrayList<>();
         response.crops = crops;
         response.createdAt = createdAt;
         return response;
@@ -104,7 +105,7 @@ public class FarmResponse {
         private OwnershipType ownershipType;
         private FarmStatus status;
         private String description;
-        private List<FarmImageResponse> images;
+        private List<FarmImageResponse> images = new ArrayList<>();
         private List<CropResponse> crops;
         private LocalDateTime createdAt;
 
@@ -197,7 +198,7 @@ public class FarmResponse {
             response.ownershipType = this.ownershipType;
             response.status = this.status;
             response.description = this.description;
-            response.images = this.images;
+            response.images = this.images != null ? this.images : new ArrayList<>();
             response.crops = this.crops;
             response.createdAt = this.createdAt;
             return response;

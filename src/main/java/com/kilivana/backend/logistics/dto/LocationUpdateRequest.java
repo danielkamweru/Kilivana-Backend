@@ -23,9 +23,8 @@ import lombok.Data;
 public class LocationUpdateRequest {
 
     /** The delivery job the driver is currently running. */
-    @Schema(description = "ID of the delivery job the driver is running.",
-            example = "17", required = true, minimum = "1")
-    @NotNull(message = "tripId is required")
+    @Schema(description = "ID of the delivery job the driver is running. Set automatically from URL path.",
+            example = "17", required = false, minimum = "1")
     @Min(value = 1, message = "tripId must be a positive number")
     private Long tripId;
 

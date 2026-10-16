@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
@@ -96,16 +97,26 @@ public class JwtService {
     }
 
     public String generateAccessToken(User user) {
-        return generateToken(user, TYPE_ACCESS, jwtProperties.getAccessTokenExpiration());
+        return generateToken(user, TYPE_ACCESS, accessTokenExpirationMillis());
     }
 
     public String generateRefreshToken(User user) {
-        return generateToken(user, TYPE_REFRESH, jwtProperties.getRefreshTokenExpiration());
+        return generateToken(user, TYPE_REFRESH, refreshTokenExpirationMillis());
     }
 
     /** True when tokens are issued without an {@code exp} claim and therefore never expire. */
     public boolean isAccessTokenNonExpiring() {
-        return jwtProperties.getAccessTokenExpiration() <= 0;
+        return jwtProperties.getAccessTokenExpirationHours() <= 0;
+    }
+
+    private long accessTokenExpirationMillis() {
+        long expirationHours = jwtProperties.getAccessTokenExpirationHours();
+        return expirationHours <= 0 ? expirationHours : Duration.ofHours(expirationHours).toMillis();
+    }
+
+    private long refreshTokenExpirationMillis() {
+        long expirationHours = jwtProperties.getRefreshTokenExpirationHours();
+        return expirationHours <= 0 ? expirationHours : Duration.ofHours(expirationHours).toMillis();
     }
 
     /**

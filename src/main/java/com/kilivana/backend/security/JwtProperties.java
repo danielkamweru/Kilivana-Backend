@@ -17,16 +17,20 @@ public class JwtProperties {
 
     /** Signing secret for HS256. When blank, an ephemeral key is generated. */
     private String secret;
-    /** Access token lifetime in milliseconds (default: 30 minutes). */
-    private long accessTokenExpiration = 1800000L;
-    /** Refresh token lifetime in milliseconds (default: 7 days). */
-    private long refreshTokenExpiration = 604800000L;
+    /** Access token lifetime in hours (default: 24 hours). */
+    private long accessTokenExpirationHours = 24;
+    /** Refresh token lifetime in hours (default: 7 days / 168 hours). */
+    private long refreshTokenExpirationHours = 168;
 
     // Explicit getters and setters for Lombok compatibility
     public String getSecret() { return secret; }
     public void setSecret(String secret) { this.secret = secret; }
-    public long getAccessTokenExpiration() { return accessTokenExpiration; }
-    public void setAccessTokenExpiration(long accessTokenExpiration) { this.accessTokenExpiration = accessTokenExpiration; }
-    public long getRefreshTokenExpiration() { return refreshTokenExpiration; }
-    public void setRefreshTokenExpiration(long refreshTokenExpiration) { this.refreshTokenExpiration = refreshTokenExpiration; }
+    public long getAccessTokenExpirationHours() { return accessTokenExpirationHours; }
+    public void setAccessTokenExpirationHours(long accessTokenExpirationHours) {
+        this.accessTokenExpirationHours = accessTokenExpirationHours;
+    }
+    public long getRefreshTokenExpirationHours() { return refreshTokenExpirationHours; }
+    public void setRefreshTokenExpirationHours(long refreshTokenExpirationHours) {
+        this.refreshTokenExpirationHours = refreshTokenExpirationHours;
+    }
 }
