@@ -31,55 +31,19 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
 
-    /** Endpoints reachable without a token. Everything else requires a valid access token. */
-    private static final String[] PUBLIC_ENDPOINTS = {
-            "GET", "/",
-            "GET", "/favicon.ico",
-            "GET", "/actuator/health",
-            "GET", "/actuator/info",
-            // Render's health check hits the API path directly.
-            "GET", "/api/v1/health",
-            // Uploaded images are referenced by URL from <img> tags and mobile clients,
-            // which cannot attach a bearer token. Filenames are random, so the files are
-            // safe to read without a token.
-            "GET", "/uploads/**",
-            // Same reason as /uploads/**: images kept in PostgreSQL are served from here and
-            // are referenced from <img> tags and mobile payloads that carry no bearer token.
-            "GET", "/api/v1/images/**",
-            // Product catalogue browsing is public: categories, product listing, search, etc.
-            "GET", "/api/v1/products/**",
-            // Live tracking WebSocket. The bearer token arrives in the query string and is
-            // validated by the handshake handler, so the endpoint itself is public while
-            // the channel interceptor rejects messages from unauthenticated sessions.
-            "GET", "/ws",
-            "GET", "/ws/**",
-            "GET", "/api/v1/categories/**",
-            // Crop types for farmer registration dropdown
-            "GET", "/api/v1/crop-types/**",
-            // Reference data: counties and currency
-            "GET", "/api/v1/regions",
-            "GET", "/api/v1/regions/**",
-            // Public farmer profile for buyers viewing product pages
-            "GET", "/api/v1/users/farmers/**",
-            "POST", "/api/v1/auth/register",
-            "POST", "/api/v1/auth/login",
-            "POST", "/api/v1/auth/refresh",
-            "POST", "/api/v1/auth/forgot-password",
-            "POST", "/api/v1/auth/reset-password",
-            "POST", "/api/auth/register",
-            "POST", "/api/auth/login",
-            "POST", "/api/auth/refresh",
-            "POST", "/api/auth/forgot-password",
-            "POST", "/api/auth/reset-password",
-            "POST", "/api/v1/users",
-            "POST", "/api/users",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/v3/api-docs",
-            "/v3/api-docs/**",
-            "/api-docs",
-            "/api-docs/**",
-            "/error"
+    // Methods must be passed to requestMatchers, not embedded in a path array.
+    private static final String[] PUBLIC_GET_ENDPOINTS = {
+        "/", "/favicon.ico", "/actuator/health", "/actuator/info", "/api/v1/health",
+        "/uploads/**", "/api/v1/images/**", "/api/v1/products/**", "/ws", "/ws/**",
+        "/api/v1/users/farmers/**", "/api/v1/categories/**", "/api/v1/crop-types/**", "/api/v1/regions", "/api/v1/regions/**",
+        "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**",
+        "/api-docs", "/api-docs/**"
+    };
+    private static final String[] PUBLIC_POST_ENDPOINTS = {
+        "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
+        "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",
+        "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
+        "/api/auth/forgot-password", "/api/auth/reset-password", "/api/v1/users", "/api/users"
     };
 
     @Bean
@@ -102,8 +66,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
-        return new JwtAuthenticationFilter(jwtService);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService,
+            com.kilivana.backend.security.AccountAccessValidator accountAccessValidator) {
+        return new JwtAuthenticationFilter(jwtService, accountAccessValidator);
     }
 
     @Bean
@@ -129,9 +94,13 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                     .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
+                .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.HEAD, PUBLIC_GET_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
                 // CORS preflight requests carry no credentials, so they need no token.
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/v1/categories/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 // Ordering and the order lifecycle are administrator powers.
                 .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs").hasRole("ADMIN")

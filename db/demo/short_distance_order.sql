@@ -83,6 +83,6 @@ UNION ALL
 SELECT 'Payments', count(*) FROM payments WHERE id = 900;
 
 -- Show the logistics job details
-SELECT id, order_id, pickup_address, destination_address, distance_km, estimated_minutes, 
+SELECT id, order_id, pickup_address, destination_address, distance_km, estimated_minutes,
        payout_amount, status, driver_id, delivery_otp_expires_at
 FROM logistics_jobs WHERE id = 900;

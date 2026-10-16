@@ -18,6 +18,7 @@ import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
  * seller - and records why.
  */
 @Service
+@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class DisputeService {
 
@@ -50,6 +52,7 @@ public class DisputeService {
      * @throws ResourceNotFoundException if the order does not exist
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.self(#request.raisedBy) and @resourceAuthorization.orderParticipant(#request.orderId) and (@resourceAuthorization.admin() or #request.status == null or #request.status.name() == 'OPEN')")
     public DisputeResponse createDispute(DisputeRequest request) {
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", request.getOrderId()));
@@ -72,6 +75,7 @@ public class DisputeService {
      *
      * @throws ResourceNotFoundException if the dispute does not exist
      */
+    @PreAuthorize("@resourceAuthorization.dispute(#id)")
     public DisputeResponse getDisputeById(Long id) {
         Dispute dispute = disputeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dispute", id));
@@ -79,6 +83,7 @@ public class DisputeService {
     }
 
     /** Returns all disputes for a specific order. */
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
     public List<DisputeResponse> getDisputesByOrder(Long orderId) {
         return disputeRepository.findByOrderId(orderId).stream()
                 .map(this::mapToResponse)
@@ -86,6 +91,7 @@ public class DisputeService {
     }
 
     /** Returns all disputes raised by a specific user. */
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public List<DisputeResponse> getDisputesByUser(Long userId) {
         return disputeRepository.findByRaisedBy(userId).stream()
                 .map(this::mapToResponse)

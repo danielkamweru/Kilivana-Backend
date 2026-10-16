@@ -22,6 +22,7 @@ import com.kilivana.backend.logistics.repository.TrackingEventRepository;
 import com.kilivana.backend.logistics.service.TrackingStopService;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +55,7 @@ import java.util.stream.Collectors;
  * </ul>
  */
 @Service
+@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class LogisticsService {
 
@@ -184,6 +186,7 @@ public class LogisticsService {
      * counter permanently at zero and the lockout unreachable.
      */
     @Transactional(noRollbackFor = { BadRequestException.class, TooManyRequestsException.class })
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId)")
     public LogisticsJob verifyDeliveryOtp(Long jobId, String otp) {
         LogisticsJob job = getJobById(jobId);
         if (job.getDeliveryOtpHash() == null) {
@@ -217,6 +220,7 @@ public class LogisticsService {
         return logisticsJobRepository.save(job);
     }
 
+    @PreAuthorize("@resourceAuthorization.jobRead(#id)")
     public LogisticsJob getJobById(Long id) {
         return logisticsJobRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", id));
@@ -227,12 +231,14 @@ public class LogisticsService {
     }
 
     /** The jobs one driver is working, newest first. */
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
     public List<LogisticsJob> getJobsByDriver(Long driverId) {
         return logisticsJobRepository.findByDriverId(driverId).stream()
                 .sorted(java.util.Comparator.comparing(LogisticsJob::getId).reversed())
                 .toList();
     }
 
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
     public List<LogisticsJob> getJobsByOrder(Long orderId) {
         return logisticsJobRepository.findByOrderId(orderId);
     }
@@ -261,6 +267,7 @@ public class LogisticsService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId) and @resourceAuthorization.driver(#driverId)")
     public LogisticsJob acceptJob(Long jobId, Long driverId) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
@@ -300,6 +307,7 @@ public class LogisticsService {
                     java.util.Map.entry(DeliveryStatus.FAILED, java.util.Set.of()));
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId)")
     public LogisticsJob updateJobStatus(Long jobId, DeliveryStatus status) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
@@ -367,6 +375,7 @@ public class LogisticsService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId) and @resourceAuthorization.driver(#driverId)")
     public TrackingEvent addTrackingEvent(Long jobId, DeliveryStatus status, Double latitude, Double longitude, String note, Long driverId) {
         TrackingEvent event = TrackingEvent.builder()
                 .logisticsJobId(jobId)
@@ -384,15 +393,18 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("TrackingEvent", id));
     }
 
+    @PreAuthorize("@resourceAuthorization.jobRead(#jobId)")
     public List<TrackingEvent> getTrackingHistory(Long jobId) {
         return trackingEventRepository.findByLogisticsJobIdOrderByRecordedAtDesc(jobId);
     }
 
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
     public List<TrackingEvent> getTrackingEventsByDriver(Long driverId) {
         return trackingEventRepository.findByDriverId(driverId);
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#proof.logisticsJobId)")
     public ProofOfDelivery createProofOfDelivery(ProofOfDelivery proof, String otp) {
         // Proof of delivery is the record that a delivery happened. It may only be filed
         // once the driver has confirmed the customer's handover code, so an unverified
@@ -430,11 +442,13 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("ProofOfDelivery", id));
     }
 
+    @PreAuthorize("@resourceAuthorization.jobRead(#jobId)")
     public ProofOfDelivery getProofByJobId(Long jobId) {
         return proofOfDeliveryRepository.findByLogisticsJobId(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("ProofOfDelivery", jobId));
     }
 
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
     public List<ProofOfDelivery> getProofsByDriver(Long driverId) {
         // Collect the driver's job ids first, then match in memory. The previous version
         // ran one job lookup per proof, so the query count grew with the page size.

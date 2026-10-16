@@ -33,7 +33,8 @@ public class OrderItem {
     @JoinColumn(name = "order_id", insertable = false, updatable = false)
     private Order order;
 
-    @Transient
+    // Preserve canonical scalar writes while retaining the upstream read-only relationship.
+    @Column(name = "order_id", nullable = false)
     private Long orderId;
 
     @Column(nullable = false)

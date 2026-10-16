@@ -9,6 +9,7 @@ import com.kilivana.backend.ecommerce.entity.Category;
 import com.kilivana.backend.ecommerce.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class CategoryService {
      * @throws BadRequestException if a category with the same name already exists
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
             throw new BadRequestException("Category name already exists");
@@ -86,6 +88,7 @@ public class CategoryService {
      * @throws ResourceNotFoundException if the category does not exist
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
@@ -103,6 +106,7 @@ public class CategoryService {
      * @throws ResourceNotFoundException if the category does not exist
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public CategoryResponse updateCategoryStatus(Long id, Boolean active) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
@@ -117,6 +121,7 @@ public class CategoryService {
      * @throws ResourceNotFoundException if the category does not exist
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));

@@ -87,6 +87,7 @@ class OrderServiceTest {
                 .stockQty(10).reservedQty(0).soldQty(0).minimumOrderQty(1)
                 .status(ProductStatus.ACTIVE).build();
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // The first save assigns the identity, the second stores the code.
@@ -108,6 +109,8 @@ class OrderServiceTest {
             Long id = inv.getArgument(0);
             return id == 100L ? Optional.of(placedOrder()) : Optional.empty();
         });
+        lenient().when(orderRepository.findByIdForUpdate(anyLong()))
+                .thenAnswer(inv -> orderRepository.findById(inv.getArgument(0)));
     }
 
     private Order placedOrder() {
@@ -279,5 +282,31 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.COMPLETED, completed.getStatus());
         assertEquals(PaymentStatus.SETTLED, completed.getPaymentStatus());
+    }
+
+    @Test void manipulatedCatalogPriceRejectedBeforeReservation() {
+        var request = items(); request.get(0).setUnitPrice(new BigDecimal("0.01"));
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, request, null, null));
+        verify(productRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
+    }
+    @Test void invalidAndDuplicateQuantitiesRejectedBeforeWrites() {
+        var request = items(); request.get(0).setQuantity(0);
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, request, null, null));
+        request.get(0).setQuantity(2);
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, List.of(request.get(0), request.get(0)), null, null));
+        verify(productRepository, never()).save(any());
+    }
+    @Test void minimumAndReservedStockEnforced() {
+        Product product = productRepository.findById(PRODUCT_ID).orElseThrow();
+        product.setMinimumOrderQty(3);
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null));
+        product.setMinimumOrderQty(1); product.setReservedQty(9);
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null));
+        verify(productRepository, never()).save(any());
+    }
+    @Test void reservationUsesLockedCatalogRecord() {
+        orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null);
+        verify(productRepository).findByIdForUpdate(PRODUCT_ID);
     }
 }

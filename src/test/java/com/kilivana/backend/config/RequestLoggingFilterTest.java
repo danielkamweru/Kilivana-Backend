@@ -24,6 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         com.kilivana.backend.common.controller.HealthController.class)
 @org.springframework.context.annotation.Import(SecurityConfig.class)
 class RequestLoggingFilterTest {
+    @org.springframework.boot.test.mock.mockito.MockBean
+    com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
 
     @Autowired
     private MockMvc mockMvc;

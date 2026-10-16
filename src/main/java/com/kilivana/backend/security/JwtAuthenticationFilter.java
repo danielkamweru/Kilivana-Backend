@@ -28,9 +28,9 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final boolean DEBUG_LOGGING = true;
 
     private final JwtService jwtService;
+    private final AccountAccessValidator accountAccessValidator;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -49,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("Rejected a non-access token presented as a bearer credential");
                 }
             } catch (Exception ex) {
-                log.debug("Bearer token was rejected: {}", ex.getMessage());
+                log.debug("Bearer credential was rejected");
                 SecurityContextHolder.clearContext();
             }
         }
@@ -65,6 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticate(String token, HttpServletRequest request) {
         Long userId = jwtService.extractUserId(token);
         var role = jwtService.extractRole(token);
+        accountAccessValidator.validate(userId, role);
 
         var authentication = new UsernamePasswordAuthenticationToken(
                 userId,
@@ -79,17 +80,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     /** Pulls the bearer token from the Authorization header, returning null when absent. */
     private String resolveToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
-        if (DEBUG_LOGGING) {
-            log.debug("Authorization header from request: [{}]", header);
-            if (header != null) {
-                log.debug("Header length: {}, Starts with Bearer? {}", header.length(), header.startsWith("Bearer "));
-                if (header.startsWith(BEARER_PREFIX)) {
-                    String token = header.substring(BEARER_PREFIX.length()).trim();
-                    log.debug("Token after Bearer prefix removal: [{}], length: {}", token, token.length());
-                    log.debug("Token is empty: {}", token.isEmpty());
-                }
-            }
-        }
         if (header != null && header.startsWith(BEARER_PREFIX)) {
             String token = header.substring(BEARER_PREFIX.length()).trim();
             return token.isEmpty() ? null : token;

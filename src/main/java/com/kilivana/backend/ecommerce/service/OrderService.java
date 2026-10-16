@@ -30,6 +30,7 @@ import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,7 @@ import java.util.List;
  * product is renamed or deleted.
  */
 @Service
+@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -65,15 +67,18 @@ public class OrderService {
     private final LogisticsService logisticsService;
     private final LogisticsJobRepository logisticsJobRepository;
 
+    @PreAuthorize("@resourceAuthorization.order(#id)")
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
     }
 
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
     public List<Order> getOrdersByBuyer(Long buyerId) {
         return orderRepository.findByBuyerId(buyerId);
     }
 
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
     public Page<Order> searchOrders(Long buyerId, String status, Pageable pageable) {
         OrderStatus orderStatus = status != null ? OrderStatus.from(status) : null;
         return orderRepository.searchOrders(buyerId, orderStatus, pageable);
@@ -90,6 +95,7 @@ public class OrderService {
      *     computed ones
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
                              List<OrderItemRequest> items,
                              BigDecimal claimedSubtotal, BigDecimal claimedTotal) {
@@ -107,24 +113,38 @@ public class OrderService {
             throw new BadRequestException("Delivery fee cannot be negative");
         }
 
+        if (items == null || items.isEmpty()) throw new BadRequestException("Order must have items");
+        // Lock in ID order so competing multi-product orders do not invert lock acquisition.
+        var locked = new java.util.TreeMap<Long, Product>();
+        for (OrderItemRequest item : items) {
+            if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() < 1)
+                throw new BadRequestException("Each item requires a product and positive whole quantity");
+            if (locked.putIfAbsent(item.getProductId(), Product.builder().build()) != null)
+                throw new BadRequestException("Duplicate product lines are not supported");
+        }
+        for (Long id : locked.keySet()) {
+            locked.put(id, productRepository.findByIdForUpdate(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", id)));
+        }
         BigDecimal subtotal = BigDecimal.ZERO;
         for (OrderItemRequest item : items) {
-            Product product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", item.getProductId()));
-            if (product.getStatus() != com.kilivana.backend.common.enums.ProductStatus.ACTIVE) {
-                throw new BadRequestException("Product is not available: " + product.getName());
-            }
-            int available = product.getStockQty() - nullToZero(product.getReservedQty());
-            if (available < item.getQuantity()) {
-                throw new BadRequestException("Only " + available
-                        + " units of " + product.getName() + " are available");
-            }
-            // Reserve the stock now, so two buyers cannot order the last units
-            // of a product at the same time.
-            product.setReservedQty(nullToZero(product.getReservedQty()) + item.getQuantity());
-            productRepository.save(product);
-            subtotal = subtotal.add(item.getUnitPrice()
-                    .multiply(BigDecimal.valueOf(item.getQuantity())));
+            Product product = locked.get(item.getProductId());
+            if (product.getStatus() != com.kilivana.backend.common.enums.ProductStatus.ACTIVE)
+                throw new BadRequestException("Product is not available");
+            if (java.util.Objects.equals(product.getSellerId(), buyerId))
+                throw new BadRequestException("Cannot order your own product");
+            if (product.getPrice() == null || product.getPrice().signum() <= 0)
+                throw new BadRequestException("Invalid catalog price");
+            if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(product.getPrice()) != 0)
+                throw new BadRequestException("Unit price does not match the current catalog price");
+            int stock = nullToZero(product.getStockQty());
+            int reserved = nullToZero(product.getReservedQty());
+            if (stock < 0 || reserved < 0 || reserved > stock)
+                throw new BadRequestException("Invalid stock state");
+            if (item.getQuantity() < Math.max(1, nullToZero(product.getMinimumOrderQty())))
+                throw new BadRequestException("Quantity is below the minimum order quantity");
+            if (stock - reserved < item.getQuantity()) throw new BadRequestException("Insufficient available stock");
+            subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
         subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
         BigDecimal total = subtotal.add(fee).setScale(2, RoundingMode.HALF_UP);
@@ -136,6 +156,12 @@ public class OrderService {
         if (claimedTotal != null && claimedTotal.compareTo(total) != 0) {
             throw new BadRequestException("Total does not match the order items. Expected "
                     + total + " but received " + claimedTotal);
+        }
+
+        for (OrderItemRequest item : items) {
+            Product product = locked.get(item.getProductId());
+            product.setReservedQty(nullToZero(product.getReservedQty()) + item.getQuantity());
+            productRepository.save(product);
         }
 
         Order order = Order.builder()
@@ -151,7 +177,7 @@ public class OrderService {
         Order saved = orderRepository.save(order);
 
         for (OrderItemRequest item : items) {
-            Product product = productRepository.findById(item.getProductId()).orElseThrow();
+            Product product = locked.get(item.getProductId());
             orderItemRepository.save(OrderItem.builder()
                     .orderId(saved.getId())
                     .productId(product.getId())
@@ -159,8 +185,8 @@ public class OrderService {
                     .productName(product.getName())
                     .unit(product.getUnit())
                     .quantity(item.getQuantity())
-                    .unitPrice(item.getUnitPrice())
-                    .subtotal(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .unitPrice(product.getPrice())
+                    .subtotal(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                     .build());
         }
 
@@ -187,7 +213,8 @@ public class OrderService {
      */
     @Transactional
     public Order cancelOrder(Long orderId, String reason) {
-        Order order = getOrderById(orderId);
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.COMPLETED) {
             throw new BadRequestException("A " + order.getStatus().wire() + " order cannot be cancelled");
         }
@@ -213,8 +240,10 @@ public class OrderService {
      * to the seller.
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
     public Order confirmReceipt(Long orderId) {
-        Order order = getOrderById(orderId);
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         if (order.getStatus() != OrderStatus.DELIVERED) {
             throw new BadRequestException("Only a delivered order can be completed");
         }
@@ -232,19 +261,22 @@ public class OrderService {
 
     @Transactional
     public Order updateOrderStatus(Long orderId, OrderStatus status) {
-        Order order = getOrderById(orderId);
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         order.setStatus(status);
         Order saved = orderRepository.save(order);
         orderEventRepository.save(OrderEvent.builder().orderId(orderId).status(status).build());
         return saved;
     }
 
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
     public List<OrderEvent> getOrderTimeline(Long orderId) {
         getOrderById(orderId);
         return orderEventRepository.findByOrderIdOrderByCreatedAtAsc(orderId);
     }
 
     /** The order's line items, for the response the panel renders. */
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
     public List<OrderItemResponse> getOrderItems(Long orderId) {
         return orderItemRepository.findByOrderId(orderId).stream()
                 .map(item -> OrderItemResponse.builder()
@@ -261,6 +293,7 @@ public class OrderService {
     }
 
     /** The panel-facing view of an order, line items included. */
+    @PreAuthorize("@resourceAuthorization.order(#order.id)")
     public OrderResponse toResponse(Order order) {
         LogisticsJob job = latestJob(order.getId());
         User driver = job == null || job.getDriverId() == null
@@ -331,7 +364,8 @@ public class OrderService {
     @Transactional
     public LogisticsJob assignOrderToDriver(Long orderId, Long driverId,
                                             String pickupAddress, String destinationAddress) {
-        Order order = getOrderById(orderId);
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
         if (order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.COMPLETED
                 || order.getStatus() == OrderStatus.CANCELLED) {
@@ -414,7 +448,7 @@ public class OrderService {
     /** Returns the units a cancelled order had reserved. */
     private void releaseStock(Order order) {
         orderItemRepository.findByOrderId(order.getId()).forEach(item -> {
-            productRepository.findById(item.getProductId()).ifPresent(product -> {
+            productRepository.findByIdForUpdate(item.getProductId()).ifPresent(product -> {
                 int reserved = nullToZero(product.getReservedQty()) - item.getQuantity();
                 product.setReservedQty(Math.max(0, reserved));
                 productRepository.save(product);

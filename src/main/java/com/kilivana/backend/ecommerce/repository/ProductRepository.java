@@ -16,6 +16,10 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
+    /** Serialize stock changes with order reservations; no schema change required. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    Optional<Product> findByIdForUpdate(@Param("id") Long id);
     
     List<Product> findBySellerId(Long sellerId);
 
@@ -72,10 +76,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "(CAST(:sellerId AS BIGINT) IS NULL OR p.seller_id = :sellerId) AND " +
            "(CAST(:search AS VARCHAR) IS NULL OR p.name ILIKE '%' || :search || '%' OR p.description ILIKE '%' || :search || '%')",
            nativeQuery = true)
-    Page<Product> findFilteredProducts(
-            @Param("status") ProductStatus status,
+    Page<Product> findFilteredProductsByStatusName(
+            @Param("status") String status,
             @Param("categoryId") Long categoryId,
             @Param("sellerId") Long sellerId,
             @Param("search") String search,
             Pageable pageable);
+    /** Bind enum names explicitly: native SQL otherwise receives ordinal values. */
+    default Page<Product> findFilteredProducts(ProductStatus status, Long categoryId, Long sellerId,
+                                                String search, Pageable pageable) {
+        return findFilteredProductsByStatusName(status == null ? null : status.name(),
+                categoryId, sellerId, search, pageable);
+    }
+
 }

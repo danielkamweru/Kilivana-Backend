@@ -39,6 +39,7 @@ public class JwtHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
     public static final String USER_ID_PROPERTY = "jwtUserId";
 
     private final JwtService jwtService;
+    private final AccountAccessValidator accountAccessValidator;
 
     /**
      * Reads the token out of the handshake query string before the handshake completes and
@@ -61,10 +62,11 @@ public class JwtHandshakeInterceptor extends HttpSessionHandshakeInterceptor {
                 throw new UnauthorizedException("WebSocket token is not an access token");
             }
             Long userId = jwtService.extractUserId(token);
+            accountAccessValidator.validate(userId, jwtService.extractRole(token));
             attributes.put(USER_ID_PROPERTY, userId);
             return true;
         } catch (JwtException | UnauthorizedException ex) {
-            log.debug("Rejected WebSocket handshake token: {}", ex.getMessage());
+            log.debug("Rejected WebSocket handshake token");
             return false;
         }
     }

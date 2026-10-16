@@ -57,13 +57,13 @@ class TrackingChannelInterceptorTest {
     }
 
     @Test
-    void allowsMessageWithNoUserId() {
+    void dropsDestinationMessageWithNoUserId() {
         TrackingChannelInterceptor interceptor = interceptorWithJob(null, null);
         Message<?> message = message("/topic/tracking/1", null);
 
         Message<?> result = interceptor.preSend(message, mock(MessageChannel.class));
 
-        assertThat(result).isSameAs(message);
+        assertThat(result).isNull();
     }
 
     @Test
@@ -89,6 +89,13 @@ class TrackingChannelInterceptorTest {
         Message<?> result = interceptor.preSend(message, mock(MessageChannel.class));
 
         assertThat(result).isSameAs(message);
+    }
+
+    @Test void refusesAnotherUsersTrackingDestination() {
+        var interceptor = interceptorWithJob(null, null);
+        assertThatThrownBy(() -> interceptor.preSend(message("/user/99/tracking", 7L), mock(MessageChannel.class)))
+                .isInstanceOf(ForbiddenException.class);
+        assertThat(interceptor.preSend(message("/user/7/tracking", 7L), mock(MessageChannel.class))).isNotNull();
     }
 
     private TrackingChannelInterceptor interceptorWithJob(Long jobId, LogisticsJob job) {

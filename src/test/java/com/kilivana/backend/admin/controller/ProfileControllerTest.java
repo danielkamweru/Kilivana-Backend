@@ -44,6 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfig.class)
 class ProfileControllerTest {
 
+    @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
+
     @Autowired
     private MockMvc mockMvc;
 

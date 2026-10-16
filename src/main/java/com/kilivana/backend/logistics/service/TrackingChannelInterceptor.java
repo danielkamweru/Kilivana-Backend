@@ -46,10 +46,15 @@ public class TrackingChannelInterceptor implements ChannelInterceptor {
         String destination = accessor.getDestination();
         Long userId = userId(accessor);
 
-        if (destination == null || userId == null) {
+        if (destination == null) {
             return message;
         }
 
+        if (userId == null) return null;
+        if (destination.startsWith("/user/") &&
+                !destination.equals("/user/" + userId + "/tracking")) {
+            throw new ForbiddenException("Cannot subscribe to another user's tracking");
+        }
         if (destination.startsWith("/topic/tracking/")) {
             Long jobId = parseJobId(destination, "/topic/tracking/".length());
             if (jobId == null) {
@@ -66,7 +71,7 @@ public class TrackingChannelInterceptor implements ChannelInterceptor {
             ensureIsDriver(jobId, userId);
         }
         // /user/{id}/tracking subscriptions are allowed for the session's own user only,
-        // which the handshake already guarantees by scoping the destination to that id.
+        // enforced above against the authenticated session identity.
         return message;
     }
 

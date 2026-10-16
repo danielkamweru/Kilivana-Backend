@@ -61,7 +61,7 @@ public class TripsController {
             @Parameter(description = "ID of the trip to start tracking") @PathVariable Long id) {
         Long driverId = CurrentUser.id();
         LogisticsJob job = logisticsService.getJobById(id);
-        
+
         // If job is in ASSIGNED state, try to accept it (driver acceptance)
         if (job.getStatus() == com.kilivana.backend.common.enums.DeliveryStatus.ASSIGNED) {
             // Verify the driver is assigned to this job
@@ -69,14 +69,14 @@ public class TripsController {
                 throw new BadRequestException("You are not the driver assigned to this trip");
             }
             logisticsService.acceptJob(id, driverId);
-        } 
+        }
         // If job is already in an active state, tracking is already possible
         else if (!driverLocationService.getActiveStates().contains(job.getStatus())) {
             // Job is not in any active state - cannot start tracking
             throw new BadRequestException("Cannot start tracking for trip in status: " + job.getStatus().wire());
         }
         // If job is already active, do nothing - tracking is already startable
-        
+
         return ResponseEntity.ok(ApiResponse.successMessage("Tracking started successfully"));
     }
 }

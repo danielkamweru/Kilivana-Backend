@@ -7,6 +7,9 @@ import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.ecommerce.entity.Product;
+import com.kilivana.backend.common.enums.ProductStatus;
+import com.kilivana.backend.common.enums.SellerType;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +35,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Runs against the configured PostgreSQL instance rather than an embedded database,
  * because the bug under test is PostgreSQL-specific parameter typing.
  */
-@DataJpaTest
+@org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "KILIVANA_RUN_ISOLATED_DB_TESTS", matches = "true")
+@org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named = "SPRING_DATASOURCE_URL", matches = "jdbc:postgresql://127\\.0\\.0\\.1:55432/kilivana(?:\\?.*)?")
+@DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=validate", "spring.sql.init.mode=never", "app.seed.enabled=false"})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class OptionalFilterQueryTest {
 
@@ -132,4 +137,28 @@ class OptionalFilterQueryTest {
         AuditLog reloaded = auditLogRepository.findById(saved.getId()).orElseThrow();
         assertThat(reloaded.getCreatedAt()).isNotNull();
     }
+    @Test
+    void adminProductFilters_shouldAcceptOmittedAndIndividualFilters() {
+        assertThat(productRepository.findFilteredProducts(null, null, null, null, PAGE)).isNotNull();
+        assertThat(productRepository.findFilteredProducts(ProductStatus.PENDING_APPROVAL, null, null, null, PAGE)).isNotNull();
+        assertThat(productRepository.findFilteredProducts(null, 1L, null, null, PAGE)).isNotNull();
+        assertThat(productRepository.findFilteredProducts(null, null, 1L, null, PAGE)).isNotNull();
+        assertThat(productRepository.findFilteredProducts(null, null, null, "tomato", PAGE)).isNotNull();
+    }
+
+    @Test
+    void adminProductFilters_shouldMatchEnumNamesAndCountResults() {
+        Product approved = productRepository.save(Product.builder().sellerId(1L).sellerType(SellerType.FARMER)
+                .categoryId(1L).name("Handover-filter-fixture active").unit("kg").price(BigDecimal.TEN)
+                .stockQty(1).reservedQty(0).soldQty(0).minimumOrderQty(1).status(ProductStatus.ACTIVE).build());
+        productRepository.save(Product.builder().sellerId(1L).sellerType(SellerType.FARMER)
+                .categoryId(1L).name("Handover-filter-fixture pending").unit("kg").price(BigDecimal.TEN)
+                .stockQty(1).reservedQty(0).soldQty(0).minimumOrderQty(1).status(ProductStatus.PENDING_APPROVAL).build());
+        entityManager.flush();
+        var result = productRepository.findFilteredProducts(ProductStatus.ACTIVE, 1L, 1L,
+                "Handover-filter-fixture", PageRequest.of(0, 1));
+        assertThat(result.getContent()).extracting(Product::getId).containsExactly(approved.getId());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
 }

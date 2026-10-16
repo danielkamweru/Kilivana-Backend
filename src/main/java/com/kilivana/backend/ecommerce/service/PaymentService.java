@@ -17,6 +17,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.service.DarajaService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ import java.util.Optional;
  * the payment attempt with Daraja metadata for callback reconciliation.
  */
 @Service
+@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class PaymentService {
 
@@ -87,6 +89,7 @@ public class PaymentService {
      * @throws BadRequestException if user not authorized, order not payable, or phone invalid
      */
     @Transactional
+    @PreAuthorize("@resourceAuthorization.sellerPayment(#userId, #userRole, #request.orderId)")
     public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole,
                                                    StkPushInitiateRequest request) {
         Order order = orderRepository.findById(request.getOrderId())
@@ -184,12 +187,14 @@ public class PaymentService {
      *
      * @throws ResourceNotFoundException if the payment does not exist
      */
+    @PreAuthorize("@resourceAuthorization.payment(#id)")
     public Payment getPaymentById(Long id) {
         return paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", id));
     }
 
     /** Returns all payments for a specific order. */
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
     public List<Payment> getPaymentsByOrder(Long orderId) {
         return paymentRepository.findByOrderId(orderId);
     }
@@ -226,6 +231,7 @@ public class PaymentService {
     }
 
     /** Maps a payment entity to its panel-facing response DTO. */
+    @PreAuthorize("@resourceAuthorization.payment(#payment.id)")
     public PaymentResponse mapToResponse(Payment payment) {
         return PaymentResponse.builder()
                 .id(payment.getId())

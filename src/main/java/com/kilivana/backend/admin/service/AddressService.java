@@ -6,6 +6,7 @@ import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ import java.util.List;
 
     private final AddressRepository addressRepository;
 
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public List<AddressResponse> getAddressesByUser(Long userId) {
         return addressRepository.findByUserId(userId).stream()
                 .map(AddressResponse::fromEntity)
@@ -32,6 +34,7 @@ import java.util.List;
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public AddressResponse createAddress(Long userId, AddressRequest request) {
         Address address = Address.builder()
                 .userId(userId)
@@ -46,6 +49,7 @@ import java.util.List;
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public AddressResponse updateAddress(Long userId, Long addressId, AddressRequest request) {
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", addressId));
@@ -63,6 +67,7 @@ import java.util.List;
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.self(#userId)")
     public void deleteAddress(Long userId, Long addressId) {
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", addressId));

@@ -13,6 +13,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.UnauthorizedException;
+import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.service.KenyaCounty;
 import com.kilivana.backend.security.JwtProperties;
@@ -165,22 +166,13 @@ import org.springframework.transaction.annotation.Transactional;
     /** Sends reset instructions for the account behind {@code email}, if it exists. */
     @Transactional
     public String forgotPassword(String email) {
-        userRepository.findByEmailIgnoreCase(normalizeEmail(email))
-                .orElseThrow(() -> new ResourceNotFoundException("User with email not found"));
-        // Same message whether the account exists or not, so an attacker cannot
-        // enumerate registered emails.
+        // Recovery remains disabled; identical response avoids disclosing account existence.
         return "Password reset instructions have been sent if this account exists.";
     }
 
-    /** Replaces the password of the account the request's email belongs to. */
-    @Transactional
+    /** Disabled until account ownership can be verified with a secure recovery flow. */
     public String resetPassword(PasswordResetRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.getEmail()))
-                .orElseThrow(() -> new ResourceNotFoundException("User", 0L));
-
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-        return "Password reset successfully";
+        throw new ServiceUnavailableException("Password reset is currently unavailable.");
     }
 
     /**

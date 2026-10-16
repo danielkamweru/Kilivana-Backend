@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test for Safaricom Daraja API.
- * 
+ *
  * <p>These tests require real Daraja credentials to be set as environment variables:
  * <ul>
  *   <li>DARAJA_CONSUMER_KEY</li>
@@ -24,9 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>DARAJA_PASSKEY</li>
  *   <li>DARAJA_CALLBACK_URL (can be a placeholder for token test)</li>
  * </ul>
- * 
+ *
+ * <p>Live provider calls require explicit KILIVANA_RUN_LIVE_DARAJA_TESTS=true opt-in.
  * <p>Run with: {@code DARAJA_CONSUMER_KEY=xxx DARAJA_CONSUMER_SECRET=xxx DARAJA_PASSKEY=xxx ./mvnw test -Dtest=DarajaServiceTest}
  */
+@EnabledIfEnvironmentVariable(named = "KILIVANA_RUN_LIVE_DARAJA_TESTS", matches = "true")
 @EnabledIfEnvironmentVariable(named = "DARAJA_CONSUMER_KEY", matches = ".*")
 @EnabledIfEnvironmentVariable(named = "DARAJA_CONSUMER_SECRET", matches = ".*")
 @EnabledIfEnvironmentVariable(named = "DARAJA_PASSKEY", matches = ".*")
@@ -55,12 +57,12 @@ class DarajaServiceTest {
     void testOAuthTokenGeneration() {
         // This test validates that credentials are correct and can obtain a token
         String token = darajaService.getValidAccessToken();
-        
+
         assertNotNull(token, "Access token should not be null");
         assertTrue(token.length() > 0, "Access token should not be empty");
         // OAuth tokens from Daraja are typically long base64-like strings
         assertTrue(token.length() > 50, "Access token seems too short");
-        
+
         System.out.println("✓ OAuth token obtained successfully");
         System.out.println("  Token length: " + token.length());
     }
@@ -101,14 +103,14 @@ class DarajaServiceTest {
         // This is a unit test that doesn't require API calls
         String timestamp = "20210628092408";
         String raw = properties.getShortcode() + properties.getPasskey() + timestamp;
-        
+
         // The password should be base64 encoded
         byte[] encodedBytes = java.util.Base64.getEncoder().encode(raw.getBytes());
         String expectedPassword = new String(encodedBytes);
-        
+
         assertNotNull(expectedPassword);
         assertTrue(expectedPassword.length() > 0);
-        
+
         System.out.println("✓ STK password generation format verified");
         System.out.println("  Password length: " + expectedPassword.length());
     }

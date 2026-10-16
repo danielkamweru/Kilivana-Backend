@@ -11,6 +11,10 @@ import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.service.AuthService;
 import com.kilivana.backend.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.kilivana.backend.common.dto.PasswordResetRequest;
+import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -30,6 +34,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AuthController.class)
 @Import(SecurityConfig.class)
 class AuthControllerTest {
+
+    @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/auth/reset-password", "/api/auth/reset-password"})
+    void anonymousPasswordReset_shouldFailClosed(String route) throws Exception {
+        when(authService.resetPassword(any(PasswordResetRequest.class)))
+                .thenThrow(new ServiceUnavailableException("Password reset is currently unavailable."));
+        for (String email : new String[]{"daniel@example.com", "unknown@example.com"}) {
+            mockMvc.perform(post(route).contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(PasswordResetRequest.builder()
+                                    .email(email).newPassword("attacker123").build())))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.code").value("SERVICE_UNAVAILABLE"))
+                    .andExpect(jsonPath("$.message").value("Password reset is currently unavailable."));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/auth/reset-password", "/api/auth/reset-password"})
+    void invalidPasswordReset_shouldRetainValidation(String route) throws Exception {
+        mockMvc.perform(post(route).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"invalid\",\"newPassword\":\"x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
 
     @Autowired
     private MockMvc mockMvc;
