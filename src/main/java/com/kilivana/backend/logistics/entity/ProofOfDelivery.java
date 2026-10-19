@@ -1,6 +1,7 @@
 package com.kilivana.backend.logistics.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -50,6 +51,7 @@ public class ProofOfDelivery {
     private String photoUrl;
 
     /** The delivery code the driver confirmed, for audit. Null when the job had no code. */
+    @JsonIgnore
     private String otpReference;
 
     /** The instant the proof was filed on the server. Always populated. */

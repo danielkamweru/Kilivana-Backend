@@ -47,7 +47,7 @@ public class SendGridMailService {
      */
     private boolean dispatch(String to, String subject, String contentType, String content) {
         if (!properties.isConfigured()) {
-            log.warn("SendGrid is not configured; skipping email to {} with subject '{}'", to, subject);
+            log.warn("SendGrid is not configured; skipping transactional email");
             return false;
         }
 

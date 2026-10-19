@@ -71,10 +71,9 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(message));
     }
 
-    /** Sets a new password for the account the given email belongs to. */
+    /** Consumes a single-use recovery token and sets a new password. */
     @PostMapping("/reset-password")
-    @Operation(summary = "Password reset (disabled)",
-            description = "Fails closed until a verified account recovery flow is available. Valid requests return HTTP 503.")
+    @Operation(summary = "Reset password", description = "Consumes the token from the recovery email and sets a new password.")
     public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
         String message = authService.resetPassword(request);
         return ResponseEntity.ok(ApiResponse.success(message));

@@ -7,13 +7,15 @@ import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.dto.AuthLoginRequest;
 import com.kilivana.backend.common.dto.AuthTokenResponse;
 import com.kilivana.backend.common.dto.PasswordResetRequest;
+import com.kilivana.backend.common.entity.PasswordResetToken;
+import com.kilivana.backend.common.repository.PasswordResetTokenRepository;
+import com.kilivana.backend.mail.SendGridMailService;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.exception.UnauthorizedException;
-import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.service.KenyaCounty;
 import com.kilivana.backend.security.JwtProperties;
@@ -21,9 +23,15 @@ import com.kilivana.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 /**
  * Self-service registration, login, token refresh and password reset.
@@ -42,6 +50,15 @@ import java.time.Duration;
     private final JwtService jwtService;
     private final JwtProperties jwtProperties;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final SendGridMailService sendGridMailService;
+
+    @Value("${app.password-reset.frontend-url:}")
+    private String passwordResetFrontendUrl;
+    @Value("${app.password-reset.token-expiry-minutes:30}")
+    private long passwordResetExpiryMinutes;
+
+    private static final SecureRandom RESET_RANDOM = new SecureRandom();
 
     /**
      * Self-service registration. Refuses staff roles, rejects an email or phone already
@@ -165,17 +182,37 @@ import java.time.Duration;
         return county;
     }
 
-    /** Sends reset instructions for the account behind {@code email}, if it exists. */
+    /** Sends reset instructions without disclosing account existence. */
     @Transactional
     public String forgotPassword(String email) {
-        // Recovery remains disabled; identical response avoids disclosing account existence.
-        return "Password reset instructions have been sent if this account exists.";
+        userRepository.findByEmailIgnoreCase(normalizeEmail(email)).ifPresent(user -> {
+            if (passwordResetFrontendUrl == null || passwordResetFrontendUrl.isBlank()) return;
+            String raw = newResetToken();
+            passwordResetTokenRepository.deleteByUserId(user.getId());
+            PasswordResetToken token = PasswordResetToken.builder().userId(user.getId()).tokenHash(hash(raw))
+                    .expiresAt(LocalDateTime.now().plusMinutes(passwordResetExpiryMinutes)).createdAt(LocalDateTime.now()).build();
+            passwordResetTokenRepository.save(token);
+            String joiner = passwordResetFrontendUrl.contains("?") ? "&" : "?";
+            boolean sent = sendGridMailService.sendHtml(user.getEmail(), "Reset your Kilivana password",
+                    "<p>Use this link within " + passwordResetExpiryMinutes + " minutes: <a href=\"" + passwordResetFrontendUrl + joiner + "token=" + raw + "\">Reset password</a></p>");
+            if (!sent) passwordResetTokenRepository.delete(token);
+        });
+        return "If the account exists and email delivery is available, reset instructions will be sent.";
     }
 
-    /** Disabled until account ownership can be verified with a secure recovery flow. */
+    @Transactional
     public String resetPassword(PasswordResetRequest request) {
-        throw new ServiceUnavailableException("Password reset is currently unavailable.");
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenHashForUpdate(hash(request.getToken()))
+                .orElseThrow(() -> new BadRequestException("Invalid or expired password reset token"));
+        if (token.getUsedAt() != null || !token.getExpiresAt().isAfter(LocalDateTime.now())) throw new BadRequestException("Invalid or expired password reset token");
+        User user = userRepository.findById(token.getUserId()).orElseThrow(() -> new BadRequestException("Invalid or expired password reset token"));
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        token.setUsedAt(LocalDateTime.now());
+        return "Password has been reset successfully.";
     }
+
+    private static String newResetToken() { byte[] bytes = new byte[32]; RESET_RANDOM.nextBytes(bytes); return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); }
+    private static String hash(String value) { try { return Base64.getUrlEncoder().withoutPadding().encodeToString(MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8))); } catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); } }
 
     /**
      * Issues a new token pair from a refresh token. Refuses tokens of the wrong type,

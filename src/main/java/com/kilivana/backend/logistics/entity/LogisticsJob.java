@@ -1,6 +1,7 @@
 package com.kilivana.backend.logistics.entity;
 
 import com.kilivana.backend.common.enums.DeliveryStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,7 +61,9 @@ public class LogisticsJob {
      * The code itself is never stored: it is emailed to the buyer and held nowhere else,
      * so a database read cannot reveal a code that is still live. Cleared once consumed.
      */
+    @JsonIgnore
     private String deliveryOtpHash;
+    @JsonIgnore
     private LocalDateTime deliveryOtpExpiresAt;
 
     /**
@@ -76,7 +79,9 @@ public class LogisticsJob {
      * limit is passed; locking rather than regenerating keeps a legitimate driver from
      * invalidating the code a customer is reading out.
      */
+    @JsonIgnore
     private Integer deliveryOtpAttempts;
+    @JsonIgnore
     private LocalDateTime deliveryOtpLockedUntil;
 
     @Enumerated(EnumType.STRING)

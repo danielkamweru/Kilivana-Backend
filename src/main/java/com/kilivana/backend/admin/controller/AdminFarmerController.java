@@ -35,6 +35,10 @@ import jakarta.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Administrator-only operations for farmer accounts, profiles and farm summaries.
+ * Filtering is kept here because the admin roster combines account and farm information.
+ */
 @Tag(name = "Administration", description = "User management, audit trail and administration reporting")
 @RestController
 @RequestMapping("/api/v1/admin/farmers")
@@ -224,7 +228,7 @@ public class AdminFarmerController {
         );
     }
 
-private FarmerListItem toListItem(User user) {
+    private FarmerListItem toListItem(User user) {
         List<Farm> farms = farmRepository.findByFarmerId(user.getId());
         return FarmerListItem.of(
                 user.getId(),

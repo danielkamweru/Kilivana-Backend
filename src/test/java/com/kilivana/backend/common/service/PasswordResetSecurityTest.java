@@ -2,45 +2,40 @@ package com.kilivana.backend.common.service;
 
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.dto.PasswordResetRequest;
-import com.kilivana.backend.common.exception.ServiceUnavailableException;
+import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.repository.PasswordResetTokenRepository;
+import com.kilivana.backend.mail.SendGridMailService;
 import com.kilivana.backend.security.JwtProperties;
 import com.kilivana.backend.security.JwtService;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
+import java.util.Optional;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class PasswordResetSecurityTest {
-    @ParameterizedTest
-    @ValueSource(strings = {"known@example.com", "unknown@example.com"})
-    void forgotResponseDoesNotRevealOrReadAccountExistence(String email) {
-        UserRepository repository = mock(UserRepository.class);
-        AuthService service = new AuthService(repository, mock(PasswordEncoder.class), mock(JwtService.class),
-                new JwtProperties(), mock(UserReferenceCodeGenerator.class));
-        org.assertj.core.api.Assertions.assertThat(service.forgotPassword(email))
-                .isEqualTo("Password reset instructions have been sent if this account exists.");
-        verifyNoInteractions(repository);
+    @Test
+    void unknownEmailGetsGenericRecoveryResponse() {
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
+        AuthService service = service(users, mock(PasswordResetTokenRepository.class), mock(PasswordEncoder.class));
+        assertThat(service.forgotPassword("unknown@example.com"))
+                .isEqualTo("If the account exists and email delivery is available, reset instructions will be sent.");
     }
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = {"daniel@example.com", "unknown@example.com", " DANIEL@EXAMPLE.COM ", ""})
-    void resetIsDisabledWithoutReadingOrMutatingAccounts(String email) {
-        UserRepository repository = mock(UserRepository.class);
-        PasswordEncoder encoder = mock(PasswordEncoder.class);
-        JwtService jwt = mock(JwtService.class);
-        UserReferenceCodeGenerator codes = mock(UserReferenceCodeGenerator.class);
-        AuthService service = new AuthService(repository, encoder, jwt, new JwtProperties(), codes);
 
-        assertThatThrownBy(() -> service.resetPassword(
-                PasswordResetRequest.builder().email(email).newPassword("attacker123").build()))
-                .isInstanceOf(ServiceUnavailableException.class)
-                .hasMessage("Password reset is currently unavailable.");
-        assertThatThrownBy(() -> service.resetPassword(null))
-                .isInstanceOf(ServiceUnavailableException.class);
-        verifyNoInteractions(repository, encoder, jwt, codes);
+    @Test
+    void invalidTokenCannotChangePassword() {
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        when(tokens.findByTokenHashForUpdate(anyString())).thenReturn(Optional.empty());
+        PasswordEncoder encoder = mock(PasswordEncoder.class);
+        assertThatThrownBy(() -> service(mock(UserRepository.class), tokens, encoder).resetPassword(
+                PasswordResetRequest.builder().token("invalid").newPassword("attacker123").build()))
+                .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(encoder);
+    }
+
+    private static AuthService service(UserRepository users, PasswordResetTokenRepository tokens, PasswordEncoder encoder) {
+        return new AuthService(users, encoder, mock(JwtService.class), new JwtProperties(),
+                mock(UserReferenceCodeGenerator.class), tokens, mock(SendGridMailService.class));
     }
 }

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import com.kilivana.backend.common.dto.PasswordResetRequest;
-import com.kilivana.backend.common.exception.ServiceUnavailableException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -39,17 +39,16 @@ class AuthControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"/api/v1/auth/reset-password", "/api/auth/reset-password"})
-    void anonymousPasswordReset_shouldFailClosed(String route) throws Exception {
+    void anonymousPasswordReset_shouldForwardTokenRequest(String route) throws Exception {
         when(authService.resetPassword(any(PasswordResetRequest.class)))
-                .thenThrow(new ServiceUnavailableException("Password reset is currently unavailable."));
+                .thenReturn("Password has been reset successfully.");
         for (String email : new String[]{"daniel@example.com", "unknown@example.com"}) {
             mockMvc.perform(post(route).contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(PasswordResetRequest.builder()
-                                    .email(email).newPassword("attacker123").build())))
-                    .andExpect(status().isServiceUnavailable())
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.code").value("SERVICE_UNAVAILABLE"))
-                    .andExpect(jsonPath("$.message").value("Password reset is currently unavailable."));
+                                    .token("valid-test-token").newPassword("attacker123").build())))
+                    .andExpect(status().isOk())
+                    
+                    .andExpect(jsonPath("$.success").value(true));
         }
     }
 

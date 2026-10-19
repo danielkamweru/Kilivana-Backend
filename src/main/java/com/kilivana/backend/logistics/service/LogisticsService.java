@@ -71,9 +71,12 @@ public class LogisticsService {
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
-    private static final int OTP_VALIDITY_HOURS = 24;
-    private static final int OTP_MAX_ATTEMPTS = 5;
-    private static final int OTP_LOCKOUT_MINUTES = 15;
+    @org.springframework.beans.factory.annotation.Value("${app.delivery-otp.expiry-minutes:10}")
+    private long otpValidityMinutes = 10;
+    @org.springframework.beans.factory.annotation.Value("${app.delivery-otp.max-attempts:5}")
+    private int otpMaxAttempts = 5;
+    @org.springframework.beans.factory.annotation.Value("${app.delivery-otp.lockout-minutes:15}")
+    private long otpLockoutMinutes = 15;
 
     /**
      * The platform keeps this share of what the buyer paid; the rest
@@ -85,19 +88,14 @@ public class LogisticsService {
     public LogisticsJob createLogisticsJob(Long orderId, String pickupAddress, String destinationAddress) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
-        String otp = generateOtp();
         LogisticsJob job = LogisticsJob.builder()
                 .orderId(orderId)
                 .pickupAddress(pickupAddress)
                 .destinationAddress(destinationAddress)
                 .payoutAmount(sellerPayout(order))
                 .status(DeliveryStatus.PENDING_ASSIGNMENT)
-                .deliveryOtpHash(passwordEncoder.encode(otp))
-                .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(OTP_VALIDITY_HOURS))
-                .deliveryOtpAttempts(0)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(job);
-        deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
         return saved;
     }
 
@@ -109,7 +107,6 @@ public class LogisticsService {
         // OTP are ours; everything else is client-supplied and copied across.
         Order order = orderRepository.findById(job.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", job.getOrderId()));
-        String otp = generateOtp();
         LogisticsJob toSave = LogisticsJob.builder()
                 .orderId(job.getOrderId())
                 .pickupAddress(job.getPickupAddress())
@@ -132,12 +129,8 @@ public class LogisticsService {
                 .estimatedMinutes(job.getEstimatedMinutes())
                 .status(job.getStatus() == null ? DeliveryStatus.PENDING_ASSIGNMENT : job.getStatus())
                 .driverId(null)
-                .deliveryOtpHash(passwordEncoder.encode(otp))
-                .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(OTP_VALIDITY_HOURS))
-                .deliveryOtpAttempts(0)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(toSave);
-        deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
         return saved;
     }
 
@@ -192,6 +185,9 @@ public class LogisticsService {
         if (job.getDeliveryOtpHash() == null) {
             throw new BadRequestException("This job has no delivery code to verify");
         }
+        if (job.getStatus() != DeliveryStatus.ARRIVED_AT_DESTINATION) {
+            throw new BadRequestException("Delivery code can only be verified at the delivery destination");
+        }
         if (job.getDeliveryOtpLockedUntil() != null
                 && job.getDeliveryOtpLockedUntil().isAfter(LocalDateTime.now())) {
             throw new TooManyRequestsException("Too many incorrect delivery codes. Try again later.");
@@ -203,13 +199,13 @@ public class LogisticsService {
         if (!passwordEncoder.matches(otp == null ? "" : otp.trim(), job.getDeliveryOtpHash())) {
             int attempts = job.getDeliveryOtpAttempts() == null ? 1 : job.getDeliveryOtpAttempts() + 1;
             job.setDeliveryOtpAttempts(attempts);
-            if (attempts >= OTP_MAX_ATTEMPTS) {
-                job.setDeliveryOtpLockedUntil(LocalDateTime.now().plusMinutes(OTP_LOCKOUT_MINUTES));
+            if (attempts >= otpMaxAttempts) {
+                job.setDeliveryOtpLockedUntil(LocalDateTime.now().plusMinutes(otpLockoutMinutes));
                 job.setDeliveryOtpAttempts(0);
                 logisticsJobRepository.save(job);
                 throw new TooManyRequestsException(
                         "Too many incorrect delivery codes. The code is locked for "
-                                + OTP_LOCKOUT_MINUTES + " minutes.");
+                                + otpLockoutMinutes + " minutes.");
             }
             logisticsJobRepository.save(job);
             throw new BadRequestException("Incorrect delivery code");
@@ -217,6 +213,8 @@ public class LogisticsService {
         job.setDeliveryOtpHash(null);
         job.setDeliveryOtpExpiresAt(null);
         job.setDeliveryOtpVerified(true);
+        job.setStatus(DeliveryStatus.DELIVERED);
+        syncOrderStatus(job);
         return logisticsJobRepository.save(job);
     }
 
@@ -319,6 +317,16 @@ public class LogisticsService {
                     + status.wire());
         }
         job.setStatus(status);
+        if (status == DeliveryStatus.IN_TRANSIT && job.getDeliveryOtpHash() == null) {
+            String otp = generateOtp();
+            job.setDeliveryOtpHash(passwordEncoder.encode(otp));
+            job.setDeliveryOtpExpiresAt(LocalDateTime.now().plusMinutes(otpValidityMinutes));
+            job.setDeliveryOtpAttempts(0);
+            LogisticsJob saved = logisticsJobRepository.save(job);
+            deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
+            syncOrderStatus(saved);
+            return saved;
+        }
         LogisticsJob saved = logisticsJobRepository.save(job);
         syncOrderStatus(saved);
         // Live tracking stops the moment the job reaches a terminal state, so subscribers
@@ -347,7 +355,7 @@ public class LogisticsService {
             case DELIVERED -> OrderStatus.DELIVERED;
             default -> null;
         };
-        if (target != null && target.ordinal() > order.getStatus().ordinal()) {
+        if (target != null && (order.getStatus() == null || target.ordinal() > order.getStatus().ordinal())) {
             order.setStatus(target);
             orderRepository.save(order);
             orderEventRepository.save(OrderEvent.builder()
@@ -431,7 +439,7 @@ public class LogisticsService {
                 .recipientName(proof.getRecipientName())
                 .signatureUrl(proof.getSignatureUrl())
                 .photoUrl(proof.getPhotoUrl())
-                .otpReference(otp == null ? null : otp.trim())
+                .otpReference(null)
                 .deliveredAt(LocalDateTime.now())
                 .build();
         return proofOfDeliveryRepository.save(toSave);

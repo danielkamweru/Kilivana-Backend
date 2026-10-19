@@ -11,6 +11,10 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Image belonging to an inspector profile.
+ * The user id associates it with the profile without exposing image storage details here.
+ */
 @Entity
 @Table(name = "inspector_profile_images", indexes = {
     @Index(name = "idx_inspector_profile_images_user_id", columnList = "userId")

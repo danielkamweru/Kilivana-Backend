@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -46,7 +47,7 @@ class AuthServiceEmailNormalizationTest {
     void setUp() {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         authService = new AuthService(userRepository, passwordEncoder, jwtService,
-                new JwtProperties(), referenceCodeGenerator);
+                new JwtProperties(), referenceCodeGenerator, mock(com.kilivana.backend.common.repository.PasswordResetTokenRepository.class), mock(com.kilivana.backend.mail.SendGridMailService.class));
     }
 
     @Test void pendingFarmerCanLoginAndRefreshWithoutChangingVerification() {
