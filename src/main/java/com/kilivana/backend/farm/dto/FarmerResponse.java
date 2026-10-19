@@ -1,5 +1,6 @@
 package com.kilivana.backend.farm.dto;
 
+import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -51,10 +52,14 @@ public class FarmerResponse {
     @Schema(description = "List of farms owned by the farmer")
     private List<FarmResponse> farms;
 
+    @Schema(description = "Farmer profile images (separate from farm-specific images)")
+    private List<ImageResponse> profileImages;
+
     // Static factory method to replace @Builder
     public static FarmerResponse of(Long id, String referenceCode, String name, String email, String phone,
                                     String username, String county, VerificationStatus verificationStatus,
-                                    UserStatus accountStatus, LocalDateTime createdAt, List<FarmResponse> farms) {
+                                    UserStatus accountStatus, LocalDateTime createdAt, List<FarmResponse> farms,
+                                    List<ImageResponse> profileImages) {
         FarmerResponse response = new FarmerResponse();
         response.id = id;
         response.referenceCode = referenceCode;
@@ -67,6 +72,7 @@ public class FarmerResponse {
         response.accountStatus = accountStatus;
         response.createdAt = createdAt;
         response.farms = farms;
+        response.profileImages = profileImages;
         return response;
     }
 
@@ -86,6 +92,7 @@ public class FarmerResponse {
         private UserStatus accountStatus;
         private LocalDateTime createdAt;
         private List<FarmResponse> farms;
+        private List<ImageResponse> profileImages;
 
         public FarmerResponseBuilder id(Long id) {
             this.id = id;
@@ -142,6 +149,11 @@ public class FarmerResponse {
             return this;
         }
 
+        public FarmerResponseBuilder profileImages(List<ImageResponse> profileImages) {
+            this.profileImages = profileImages;
+            return this;
+        }
+
         public FarmerResponse build() {
             FarmerResponse response = new FarmerResponse();
             response.id = this.id;
@@ -155,6 +167,7 @@ public class FarmerResponse {
             response.accountStatus = this.accountStatus;
             response.createdAt = this.createdAt;
             response.farms = this.farms;
+            response.profileImages = this.profileImages;
             return response;
         }
     }

@@ -6,7 +6,10 @@ import com.kilivana.backend.admin.service.UserService;
 import com.kilivana.backend.admin.service.ProfileService;
 import com.kilivana.backend.admin.dto.FarmerProfileRequest;
 import com.kilivana.backend.admin.dto.FarmerProfileResponse;
+import com.kilivana.backend.admin.entity.FarmerProfileImage;
+import com.kilivana.backend.admin.repository.FarmerProfileImageRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
@@ -49,6 +52,7 @@ public class AdminFarmerController {
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
     private final FarmImageRepository farmImageRepository;
+    private final FarmerProfileImageRepository farmerProfileImageRepository;
     private final ProfileService profileService;
 
     @Operation(summary = "Suspend a farmer",
@@ -213,6 +217,20 @@ public class AdminFarmerController {
                 })
                 .collect(Collectors.toList());
 
+        List<FarmerProfileImage> profileImages = farmerProfileImageRepository.findByUserIdOrderBySortOrderAsc(user.getId());
+        List<ImageResponse> profileImageResponses = profileImages.stream()
+                .map(img -> ImageResponse.builder()
+                        .id(img.getId())
+                        .url(img.getUrl())
+                        .publicId(img.getPublicId())
+                        .assetId(img.getAssetId())
+                        .sortOrder(img.getSortOrder())
+                        .isPrimary(img.getIsPrimary())
+                        .createdAt(img.getCreatedAt())
+                        .updatedAt(img.getUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
         return FarmerResponse.of(
                 user.getId(),
                 user.getReferenceCode(),
@@ -224,7 +242,8 @@ public class AdminFarmerController {
                 user.getVerificationStatus(),
                 user.getStatus(),
                 user.getCreatedAt(),
-                farmResponses
+                farmResponses,
+                profileImageResponses
         );
     }
 

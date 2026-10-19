@@ -1,7 +1,10 @@
 package com.kilivana.backend.farm.service;
 
 import com.kilivana.backend.admin.entity.User;
+import com.kilivana.backend.admin.entity.FarmerProfileImage;
+import com.kilivana.backend.admin.repository.FarmerProfileImageRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
@@ -41,6 +44,7 @@ import java.util.stream.Collectors;
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
     private final FarmImageRepository farmImageRepository;
+    private final FarmerProfileImageRepository farmerProfileImageRepository;
 
     @Transactional(readOnly = true)
     public Page<FarmerListItem> listFarmers(String search, String county, UserStatus accountStatus,
@@ -163,6 +167,19 @@ import java.util.stream.Collectors;
 
     private FarmerResponse toFarmerResponse(User user) {
             List<Farm> farms = farmRepository.findByFarmerId(user.getId());
+            List<FarmerProfileImage> profileImages = farmerProfileImageRepository.findByUserIdOrderBySortOrderAsc(user.getId());
+            List<ImageResponse> profileImageResponses = profileImages.stream()
+                    .map(img -> ImageResponse.builder()
+                            .id(img.getId())
+                            .url(img.getUrl())
+                            .publicId(img.getPublicId())
+                            .assetId(img.getAssetId())
+                            .sortOrder(img.getSortOrder())
+                            .isPrimary(img.getIsPrimary())
+                            .createdAt(img.getCreatedAt())
+                            .updatedAt(img.getUpdatedAt())
+                            .build())
+                    .collect(Collectors.toList());
 
             return FarmerResponse.builder()
                     .id(user.getId())
@@ -175,6 +192,7 @@ import java.util.stream.Collectors;
                     .verificationStatus(user.getVerificationStatus())
                     .accountStatus(user.getStatus())
                     .createdAt(user.getCreatedAt())
+                    .profileImages(profileImageResponses)
                     .farms(farms.stream()
                             .map(f -> FarmResponse.builder()
                                     .id(f.getId())

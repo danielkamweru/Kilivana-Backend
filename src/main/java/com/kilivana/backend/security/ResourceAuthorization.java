@@ -4,6 +4,7 @@ import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.*;
 import com.kilivana.backend.common.enums.*;
 import com.kilivana.backend.ecommerce.repository.*;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,6 +25,7 @@ public class ResourceAuthorization {
     private final CartRepository carts;
     private final NotificationRepository notifications;
     private final com.kilivana.backend.logistics.repository.LogisticsJobRepository jobs;
+    private final FarmRepository farms;
 
     private User actor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -101,5 +103,11 @@ public class ResourceAuthorization {
     }
     public boolean jobRead(Long id) {
         return jobWrite(id) || jobs.findById(id).map(j -> order(j.getOrderId())).orElse(false);
+    }
+    public boolean farm(Long id) {
+        User u = actor();
+        if (u == null) return false;
+        if (u.getRole() == UserRole.ADMIN) return true;
+        return farms.findById(id).map(f -> u.getRole() == UserRole.FARMER && Objects.equals(f.getFarmerId(), u.getId())).orElse(false);
     }
 }
