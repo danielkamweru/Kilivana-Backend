@@ -1,117 +1,64 @@
 package com.kilivana.backend.service;
 
 import com.kilivana.backend.config.DarajaProperties;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
+import com.kilivana.backend.common.exception.ServiceUnavailableException;
+import com.kilivana.backend.dto.StkPushResponse;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.support.WebClientAdapter;
-import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Base64;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 /**
- * Integration test for Safaricom Daraja API.
+ * Unit tests for {@link DarajaService} that do not require a live Safaricom call.
  *
- * <p>These tests require real Daraja credentials to be set as environment variables:
- * <ul>
- *   <li>DARAJA_CONSUMER_KEY</li>
- *   <li>DARAJA_CONSUMER_SECRET</li>
- *   <li>DARAJA_SHORTCODE (default: 174379 for sandbox)</li>
- *   <li>DARAJA_PASSKEY</li>
- *   <li>DARAJA_CALLBACK_URL (can be a placeholder for token test)</li>
- * </ul>
- *
- * <p>Live provider calls require explicit KILIVANA_RUN_LIVE_DARAJA_TESTS=true opt-in.
- * <p>Run with: {@code DARAJA_CONSUMER_KEY=xxx DARAJA_CONSUMER_SECRET=xxx DARAJA_PASSKEY=xxx ./mvnw test -Dtest=DarajaServiceTest}
+ * <p>The STK password is a pure function of shortcode, passkey and timestamp, so it
+ * is verified directly against the documented formula. The missing-credentials path
+ * is checked because it must fail loudly rather than returning a null token.
  */
-@EnabledIfEnvironmentVariable(named = "KILIVANA_RUN_LIVE_DARAJA_TESTS", matches = "true")
-@EnabledIfEnvironmentVariable(named = "DARAJA_CONSUMER_KEY", matches = ".*")
-@EnabledIfEnvironmentVariable(named = "DARAJA_CONSUMER_SECRET", matches = ".*")
-@EnabledIfEnvironmentVariable(named = "DARAJA_PASSKEY", matches = ".*")
 class DarajaServiceTest {
 
-    private DarajaService darajaService;
-    private DarajaProperties properties;
-
-    @BeforeEach
-    void setUp() {
-        properties = new DarajaProperties();
-        properties.setConsumerKey(System.getenv("DARAJA_CONSUMER_KEY"));
-        properties.setConsumerSecret(System.getenv("DARAJA_CONSUMER_SECRET"));
-        properties.setShortcode(System.getenv().getOrDefault("DARAJA_SHORTCODE", "174379"));
-        properties.setPasskey(System.getenv("DARAJA_PASSKEY"));
-        properties.setCallbackUrl(System.getenv().getOrDefault("DARAJA_CALLBACK_URL", "https://example.com/callback"));
-        properties.setEnvironment(System.getenv().getOrDefault("DARAJA_ENVIRONMENT", "sandbox"));
-        properties.setTimeoutSeconds(30);
-
-        WebClient webClient = WebClient.builder().build();
-        darajaService = new DarajaService(properties, webClient);
-    }
-
     @Test
-    @DisplayName("should successfully obtain OAuth access token from Daraja")
-    void testOAuthTokenGeneration() {
-        // This test validates that credentials are correct and can obtain a token
-        String token = darajaService.getValidAccessToken();
+    void generateStkPasswordMatchesTheDarajaSpecification() {
+        DarajaProperties properties = new DarajaProperties();
+        properties.setShortcode("174379");
+        properties.setPasskey("bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919");
 
-        assertNotNull(token, "Access token should not be null");
-        assertTrue(token.length() > 0, "Access token should not be empty");
-        // OAuth tokens from Daraja are typically long base64-like strings
-        assertTrue(token.length() > 50, "Access token seems too short");
+        DarajaService service = new DarajaService(properties, mock(WebClient.class));
 
-        System.out.println("✓ OAuth token obtained successfully");
-        System.out.println("  Token length: " + token.length());
-    }
-
-    @Test
-    @DisplayName("should successfully initiate STK Push request")
-    void testStkPushInitiation() {
-        // Note: This will send a real STK Push to the phone number if it's a valid Safaricom number
-        // For testing, use a test number from the Daraja simulator
-        String testPhone = System.getenv().getOrDefault("DARAJA_TEST_PHONE", "254722000000");
-        int testAmount = 1;
-        String accountRef = "TEST001";
-        String transactionDesc = "Test Payment";
-
-        try {
-            com.kilivana.backend.dto.StkPushResponse response = darajaService.initiateStkPush(
-                testPhone, testAmount, accountRef, transactionDesc);
-
-            assertNotNull(response, "STK Push response should not be null");
-            assertNotNull(response.getCheckoutRequestID(), "CheckoutRequestID should not be null");
-            assertNotNull(response.getMerchantRequestID(), "MerchantRequestID should not be null");
-            assertEquals("0", response.getResponseCode(), "ResponseCode should be 0 for success");
-
-            System.out.println("✓ STK Push initiated successfully");
-            System.out.println("  MerchantRequestID: " + response.getMerchantRequestID());
-            System.out.println("  CheckoutRequestID: " + response.getCheckoutRequestID());
-            System.out.println("  ResponseDescription: " + response.getResponseDescription());
-        } catch (Exception e) {
-            // This is expected if using an invalid phone number or if the API returns an error
-            System.out.println("STK Push failed (this may be expected with test credentials): " + e.getMessage());
-            // We still pass the test if OAuth worked, which we tested above
-        }
-    }
-
-    @Test
-    @DisplayName("should generate valid STK password format")
-    void testStkPasswordGeneration() {
-        // This is a unit test that doesn't require API calls
         String timestamp = "20210628092408";
         String raw = properties.getShortcode() + properties.getPasskey() + timestamp;
+        String expected = new String(Base64.getEncoder().encode(raw.getBytes()));
 
-        // The password should be base64 encoded
-        byte[] encodedBytes = java.util.Base64.getEncoder().encode(raw.getBytes());
-        String expectedPassword = new String(encodedBytes);
+        String actual = invokeGenerateStkPassword(service, timestamp);
 
-        assertNotNull(expectedPassword);
-        assertTrue(expectedPassword.length() > 0);
+        assertThat(actual).isEqualTo(expected);
+        // Daraja rejects an empty password, so the helper must never yield one.
+        assertThat(actual).isNotEmpty();
+    }
 
-        System.out.println("✓ STK password generation format verified");
-        System.out.println("  Password length: " + expectedPassword.length());
+    @Test
+    void missingCredentialsAreRejectedBeforeAnyNetworkCall() {
+        DarajaProperties properties = new DarajaProperties();
+        // consumer key/secret/passkey left blank
+        DarajaService service = new DarajaService(properties, mock(WebClient.class));
+
+        assertThatThrownBy(service::getValidAccessToken)
+                .isInstanceOf(ServiceUnavailableException.class)
+                .hasMessageContaining("not configured");
+    }
+
+    private static String invokeGenerateStkPassword(DarajaService service, String timestamp) {
+        try {
+            java.lang.reflect.Method m = DarajaService.class.getDeclaredMethod(
+                    "generateStkPassword", String.class);
+            m.setAccessible(true);
+            return (String) m.invoke(service, timestamp);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

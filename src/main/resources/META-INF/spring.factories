@@ -2,3 +2,9 @@
 # so a Render PostgreSQL service needs no committed credentials.
 org.springframework.boot.env.EnvironmentPostProcessor=\
 com.kilivana.backend.config.DatabaseUrlEnvironmentPostProcessor
+
+# Loads a project-local .env file as a low-precedence fallback, so local
+# development does not require exporting every secret by hand and a reset
+# working tree cannot silently empty the local credentials.
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.kilivana.backend.config.DotenvEnvironmentPostProcessor

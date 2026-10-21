@@ -131,6 +131,12 @@ public class DarajaService {
 
     /** Obtains a fresh OAuth token from Daraja and caches it. */
     private String fetchAndCacheNewToken() {
+        if (properties.getConsumerKey() == null || properties.getConsumerKey().isBlank()
+                || properties.getConsumerSecret() == null || properties.getConsumerSecret().isBlank()) {
+            throw new ServiceUnavailableException(
+                    "Failed to obtain M-PESA access token: DARAJA_CONSUMER_KEY/SECRET not configured");
+        }
+
         String credentials = properties.getConsumerKey() + ":" + properties.getConsumerSecret();
         String encoded = Base64.getEncoder().encodeToString(credentials.getBytes());
 

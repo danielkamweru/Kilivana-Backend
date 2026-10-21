@@ -222,8 +222,14 @@ public class PaymentService {
         }
         Payment saved = paymentRepository.save(payment);
         // The order's payment status is a view of its payments, so it follows
-        // the payment rather than being set separately and drifting.
+        // the payment rather than being set separately and drifting. Only forward
+        // moves are applied: an accepted STK Push (PENDING) must not flip the order
+        // to paid, and a failure must not regress it either.
         orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+            PaymentStatus current = order.getPaymentStatus();
+            if (current != null && status.ordinal() <= current.ordinal()) {
+                return;
+            }
             order.setPaymentStatus(status);
             orderRepository.save(order);
         });

@@ -56,7 +56,14 @@ import java.util.Base64;
     @Value("${app.password-reset.frontend-url:}")
     private String passwordResetFrontendUrl;
     @Value("${app.password-reset.token-expiry-minutes:30}")
-    private long passwordResetExpiryMinutes;
+    private long passwordResetExpiryMinutes = 30L;
+    /**
+     * Overrides the configured reset-link base URL. Package-private so the test
+     * suite can drive the reset flow without a real deployment value.
+     */
+    void setPasswordResetFrontendUrl(String url) {
+        this.passwordResetFrontendUrl = url;
+    }
 
     private static final SecureRandom RESET_RANDOM = new SecureRandom();
 

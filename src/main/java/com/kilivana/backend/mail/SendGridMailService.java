@@ -6,11 +6,12 @@ import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.function.Function;
 
 /**
  * Sends transactional email through SendGrid.
@@ -18,13 +19,28 @@ import java.io.IOException;
  * <p>A thin wrapper over the SendGrid SDK: it builds the message, posts it to the
  * {@code mail/send} endpoint and reports the outcome as a boolean, so callers can
  * treat a mail outage as a non-failure.
+ *
+ * <p>The {@link SendGrid} instance is produced by a factory rather than constructed
+ * inline so the failure paths are testable without a live network call. The default
+ * factory is {@code SendGrid::new}; tests substitute one that throws.
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SendGridMailService {
 
     private final SendGridProperties properties;
+    private final Function<String, SendGrid> sendGridFactory;
+
+    
+    @Autowired
+    public SendGridMailService(SendGridProperties properties) {
+        this(properties, SendGrid::new);
+    }
+
+    public SendGridMailService(SendGridProperties properties, Function<String, SendGrid> sendGridFactory) {
+        this.properties = properties;
+        this.sendGridFactory = sendGridFactory;
+    }
 
     /**
      * Sends a single plain-text message. Delivery problems are logged rather than thrown:
@@ -59,7 +75,7 @@ public class SendGridMailService {
 
         try {
             // Built per send: keeps the service stateless and always uses the current key.
-            SendGrid sendGrid = new SendGrid(properties.getApiKey());
+            SendGrid sendGrid = sendGridFactory.apply(properties.getApiKey());
             Request request = new Request();
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");

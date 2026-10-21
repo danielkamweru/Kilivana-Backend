@@ -131,6 +131,16 @@ public class LogisticsService {
                 .driverId(null)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(toSave);
+        // A job is created with a live handover code so the buyer can be told it
+        // before the driver is even assigned. The code is generated here rather
+        // than on the IN_TRANSIT transition so a job that never reaches transit
+        // still has a code to verify, and so the notifier can address the buyer.
+        String otp = generateOtp();
+        saved.setDeliveryOtpHash(passwordEncoder.encode(otp));
+        saved.setDeliveryOtpExpiresAt(LocalDateTime.now().plusMinutes(otpValidityMinutes));
+        saved.setDeliveryOtpAttempts(0);
+        saved = logisticsJobRepository.save(saved);
+        deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
         return saved;
     }
 
@@ -185,8 +195,12 @@ public class LogisticsService {
         if (job.getDeliveryOtpHash() == null) {
             throw new BadRequestException("This job has no delivery code to verify");
         }
-        if (job.getStatus() != DeliveryStatus.ARRIVED_AT_DESTINATION) {
-            throw new BadRequestException("Delivery code can only be verified at the delivery destination");
+        // The code is verified once the goods are on the road and at the point of
+        // handover. It is refused for jobs that have not started, because there is
+        // no driver to receive it and no point in confirming a delivery early.
+        if (job.getStatus() != DeliveryStatus.IN_TRANSIT
+                && job.getStatus() != DeliveryStatus.ARRIVED_AT_DESTINATION) {
+            throw new BadRequestException("Delivery code can only be verified once the job is underway");
         }
         if (job.getDeliveryOtpLockedUntil() != null
                 && job.getDeliveryOtpLockedUntil().isAfter(LocalDateTime.now())) {
