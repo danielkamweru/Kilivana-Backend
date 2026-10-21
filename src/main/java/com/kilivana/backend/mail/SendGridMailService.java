@@ -81,12 +81,15 @@ public class SendGridMailService {
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
 
-            sendGrid.api(request);
-            log.info("Queued SendGrid {} message to {} with subject '{}'", contentType, to, subject);
+            com.sendgrid.Response response = sendGrid.api(request);
+            if (response == null || response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                log.warn("Transactional email provider rejected delivery");
+                return false;
+            }
+            log.info("Transactional email accepted by provider");
             return true;
-        } catch (IOException e) {
-            log.error("Failed to send SendGrid {} message to {} with subject '{}'",
-                    contentType, to, subject, e);
+        } catch (IOException | RuntimeException ex) {
+            log.warn("Transactional email delivery failed");
             return false;
         }
     }

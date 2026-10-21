@@ -48,8 +48,17 @@ public class UserResponse {
     @Schema(description = "Account status", example = "ACTIVE")
     private UserStatus status;
 
-    @Schema(description = "Verification status", example = "VERIFIED")
+    @Schema(description = "Administrator verification/approval status; independent of emailVerified", example = "VERIFIED")
     private VerificationStatus verificationStatus;
+
+    @Schema(description = "Email verification gate, independent of administrator approval")
+    private boolean emailVerified;
+
+    @Schema(description = "Email confirmation time; null for pending or grandfathered accounts")
+    private java.time.Instant emailVerifiedAt;
+
+    @Schema(description = "Challenge for initial email verification; returned only on successful account creation")
+    private java.util.UUID emailVerificationChallengeId;
 
     @Schema(description = "Timestamp when the account was created", example = "2026-01-15T10:30:00")
     private LocalDateTime createdAt;

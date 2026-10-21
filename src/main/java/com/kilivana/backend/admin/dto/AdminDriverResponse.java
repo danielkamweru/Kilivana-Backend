@@ -23,6 +23,11 @@ import java.time.LocalDateTime;
 @Schema(description = "Admin view of a driver with profile, vehicle, KYC and delivery summary")
 public class AdminDriverResponse {
 
+    @Schema(description = "Email verification gate, independent of approval")
+    private boolean emailVerified;
+    @Schema(description = "Initial email verification challenge; only present on creation")
+    private java.util.UUID emailVerificationChallengeId;
+
     @Schema(description = "User account ID", example = "20")
     private Long userId;
 

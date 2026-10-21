@@ -65,6 +65,8 @@ class LogisticsServiceTest {
     @Spy
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    @Mock private com.kilivana.backend.ecommerce.repository.OrderEventRepository orderEventRepository;
+
     @InjectMocks
     private LogisticsService logisticsService;
 
@@ -326,6 +328,7 @@ class LogisticsServiceTest {
         LogisticsJob job = LogisticsJob.builder()
                 .id(1L)
                 .orderId(1L)
+                .status(DeliveryStatus.IN_TRANSIT)
                 .deliveryOtpHash(passwordEncoder.encode(JOB_OTP))
                 .deliveryOtpExpiresAt(LocalDateTime.now().plusHours(1))
                 .deliveryOtpLockedUntil(LocalDateTime.now().plusMinutes(10))

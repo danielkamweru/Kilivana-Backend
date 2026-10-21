@@ -41,6 +41,7 @@ public class AdminSupplierService {
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
+    private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
     /**
      * Registers a supplier: the login account and the profile in one call.
@@ -50,6 +51,7 @@ public class AdminSupplierService {
      * with nothing recorded.
      */
     @Transactional
+    @org.springframework.security.access.prepost.PreAuthorize("@resourceAuthorization.admin()")
     public AdminSupplierResponse registerSupplier(SupplierRegistrationRequest request) {
         validateSupplierRequest(request, true);
 
@@ -80,6 +82,7 @@ public class AdminSupplierService {
         User user = userRepository.save(User.builder()
                 .name(request.getContactPerson().trim())
                 .email(email)
+                .emailVerified(false)
                 .phone(phone)
                 .username(request.getUsername() != null ? request.getUsername().trim() : null)
                 .region(county)
@@ -99,7 +102,10 @@ public class AdminSupplierService {
                 .contractEndDate(request.getContractEndDate())
                 .build());
 
-        return toResponse(user, profile);
+        var challenge = emailVerificationService.startForNewAccount(user);
+        var response = toResponse(user, profile);
+        response.setEmailVerificationChallengeId(challenge.challengeId());
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -257,7 +263,7 @@ public class AdminSupplierService {
                 ? 0
                 : productRepository.findBySellerIdAndSellerType(user.getId(), SellerType.SUPPLIER).size();
 
-        return AdminSupplierResponse.of(
+        AdminSupplierResponse response = AdminSupplierResponse.of(
                 user.getId(),
                 profile == null ? null : profile.getId(),
                 user.getReferenceCode(),
@@ -276,6 +282,8 @@ public class AdminSupplierService {
                 null,
                 user.getCreatedAt()
         );
+        response.setEmailVerified(user.isEmailVerified());
+        return response;
     }
 
     private static String normalizeEmail(String email) {

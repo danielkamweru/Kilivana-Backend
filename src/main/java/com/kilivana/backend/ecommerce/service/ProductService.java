@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
     private final UserService userService;
     private final com.kilivana.backend.security.ProductVisibility visibility;
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     @PreAuthorize("@resourceAuthorization.seller(#userId)")
     public ProductResponse createProduct(ProductRequest request, Long userId) {
         UserResponse user = userService.getUserById(userId);
@@ -99,13 +99,13 @@ import java.util.stream.Collectors;
     public void ensureProductOwnership(Long productId, Long userId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
-        UserResponse user = userService.getUserById(userId);
-        if (!product.getSellerId().equals(userId) && !user.getRole().isStaff()) {
-            throw new BadRequestException("You do not have permission to modify this product");
+        if (!visibility.canReviewSeller(product.getSellerId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Only the seller or administrator may modify this product");
         }
+        requireNotDeleted(product);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     @PreAuthorize("@resourceAuthorization.seller(#userId)")
     public ProductResponse createProductWithImages(ProductRequest request, List<MultipartFile> images, Long userId) throws IOException {
         ProductResponse productResponse = createProduct(request, userId);
@@ -135,6 +135,7 @@ import java.util.stream.Collectors;
     public List<ProductResponse> getProductsBySeller(Long sellerId) {
         boolean review = visibility.canReviewSeller(sellerId);
         return productRepository.findBySellerId(sellerId).stream()
+                .filter(p -> p.getStatus() != ProductStatus.DELETED)
                 .filter(p -> review || p.getStatus() == ProductStatus.ACTIVE)
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -152,10 +153,12 @@ import java.util.stream.Collectors;
                 .map(this::mapToResponse);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#id)")
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        requireNotDeleted(product);
         if (request.getCategoryId() != null
                 || (request.getCategory() != null && !request.getCategory().isBlank())) {
             product.setCategoryId(resolveCategoryId(request, product.getSellerType()));
@@ -171,12 +174,12 @@ import java.util.stream.Collectors;
         return mapToResponse(productRepository.save(product));
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#id)")
     public ProductResponse updateProductWithImages(Long id, ProductRequest request, List<MultipartFile> images) throws IOException {
         ProductResponse productResponse = updateProduct(id, request);
         
         if (images != null && !images.isEmpty()) {
-            deleteAllProductImages(id);
             uploadImages(id, images);
             productResponse = getProductById(id);
         }
@@ -184,10 +187,13 @@ import java.util.stream.Collectors;
         return productResponse;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#productId)")
     public ProductImageResponse uploadProductImage(Long productId, MultipartFile image, Integer sortOrder, Boolean isPrimary) throws IOException {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
+        Product product = lockEditable(productId);
+        validateImage(image);
+        if (productImageRepository.findByProductId(productId).size() >= MAX_PRODUCT_IMAGES)
+            throw new BadRequestException("At most " + MAX_PRODUCT_IMAGES + " product images are allowed");
 
         if (Boolean.TRUE.equals(isPrimary)) {
             // Demote the current primary so only one image wears the badge.
@@ -199,7 +205,7 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/products/" + productId;
-        Map<String, Object> uploadResult = imageStorage.uploadImage(image, folder);
+        Map<String, Object> uploadResult = uploadTracked(image, folder);
         
         String secureUrl = imageStorage.getSecureUrl(uploadResult);
         String publicId = imageStorage.getPublicId(uploadResult);
@@ -218,8 +224,10 @@ import java.util.stream.Collectors;
         return mapToImageResponse(saved);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#productId)")
     public void deleteProductImage(Long productId, Long imageId) throws IOException {
+        lockEditable(productId);
         ProductImage productImage = productImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("ProductImage", imageId));
         
@@ -227,12 +235,14 @@ import java.util.stream.Collectors;
             throw new BadRequestException("Image does not belong to this product");
         }
         
-        imageStorage.deleteImage(productImage.getPublicId());
+        deleteStoredImage(productImage.getPublicId());
         productImageRepository.delete(productImage);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#productId)")
     public ProductImageResponse updateProductImage(Long productId, Long imageId, MultipartFile newImage, Integer sortOrder, Boolean isPrimary) throws IOException {
+        lockEditable(productId);
         ProductImage productImage = productImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("ProductImage", imageId));
         
@@ -250,7 +260,10 @@ import java.util.stream.Collectors;
         }
 
         String folder = "kilivana/products/" + productId;
-        Map<String, Object> uploadResult = imageStorage.replaceImage(productImage.getPublicId(), newImage, folder);
+        validateImage(newImage);
+        String oldPublicId = productImage.getPublicId();
+        Map<String, Object> uploadResult = uploadTracked(newImage, folder);
+        deleteStoredImage(oldPublicId);
         
         String secureUrl = imageStorage.getSecureUrl(uploadResult);
         String publicId = imageStorage.getPublicId(uploadResult);
@@ -270,8 +283,10 @@ import java.util.stream.Collectors;
         return mapToImageResponse(saved);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#productId)")
     public void setPrimaryImage(Long productId, Long imageId) {
+        lockEditable(productId);
         ProductImage productImage = productImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("ProductImage", imageId));
         
@@ -290,10 +305,16 @@ import java.util.stream.Collectors;
         productImageRepository.save(productImage);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#productId)")
     public void reorderImages(Long productId, List<Long> imageIdsInOrder) {
+        lockEditable(productId);
         List<ProductImage> images = productImageRepository.findByProductIdOrderBySortOrderAsc(productId);
         
+        if (imageIdsInOrder == null
+                || new java.util.HashSet<>(imageIdsInOrder).size() != imageIdsInOrder.size()
+                || !imageIdsInOrder.stream().allMatch(id -> images.stream().anyMatch(img -> img.getId().equals(id))))
+            throw new BadRequestException("Image IDs must be unique and belong to this product");
         for (int i = 0; i < imageIdsInOrder.size(); i++) {
             final int sortOrder = i;
             Long imageId = imageIdsInOrder.get(i);
@@ -307,20 +328,47 @@ import java.util.stream.Collectors;
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#id)")
+    public ProductResponse updateSellerProductStatus(Long id, ProductStatus status) {
+        Product product = lockEditable(id);
+        if (visibility.canModerate()) {
+            validateAdminStatus(product, status);
+            product.setStatus(status);
+            return mapToResponse(productRepository.save(product));
+        }
+        ProductStatus current = product.getStatus();
+        boolean valid = (status == ProductStatus.UNLISTED && current == ProductStatus.ACTIVE)
+                || (status == ProductStatus.ARCHIVED && (current == ProductStatus.ACTIVE
+                    || current == ProductStatus.UNLISTED || current == ProductStatus.PENDING_APPROVAL
+                    || current == ProductStatus.REJECTED))
+                || (status == ProductStatus.PENDING_APPROVAL
+                    && (current == ProductStatus.UNLISTED || current == ProductStatus.ARCHIVED));
+        if (!valid) throw new BadRequestException("Invalid seller product status transition");
+        product.setStatus(status);
+        product.setStatusReason(null);
+        product.setStatusChangedAt(LocalDateTime.now());
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        product.setStatusChangedBy(auth != null && auth.getPrincipal() instanceof Long actor ? actor : null);
+        return mapToResponse(productRepository.save(product));
+    }
+
+    @Transactional(rollbackFor = IOException.class)
     @PreAuthorize("@resourceAuthorization.admin()")
     public ProductResponse updateProductStatus(Long id, ProductStatus status) {
         Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        validateAdminStatus(product, status);
         product.setStatus(status);
         return mapToResponse(productRepository.save(product));
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     @PreAuthorize("@resourceAuthorization.admin()")
     public ProductResponse updateProductStatusWithReason(Long id, ProductStatus status, String reason, Long adminId) {
         Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        validateAdminStatus(product, status);
         product.setStatus(status);
         product.setStatusReason(reason);
         product.setStatusChangedAt(LocalDateTime.now());
@@ -350,22 +398,32 @@ import java.util.stream.Collectors;
         return stats;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
+    @PreAuthorize("@productVisibility.canModifyProduct(#id)")
     public void deleteProduct(Long id) throws IOException {
-        if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Product", id);
-        }
-        
+        Product product = lockEditable(id);
+        if (product.getStatus() != ProductStatus.ARCHIVED)
+            throw new BadRequestException("Archive the product before deleting it");
+        if (product.getReservedQty() != null && product.getReservedQty() > 0)
+            throw new BadRequestException("Product has reserved stock and cannot be deleted");
         deleteAllProductImages(id);
-        productRepository.deleteById(id);
+        product.setStatus(ProductStatus.DELETED);
+        product.setStatusChangedAt(LocalDateTime.now());
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        product.setStatusChangedBy(auth != null && auth.getPrincipal() instanceof Long actor ? actor : null);
+        productRepository.save(product);
     }
 
     private void uploadImages(Long productId, List<MultipartFile> images) throws IOException {
+        if (productImageRepository.findByProductId(productId).size() + images.size() > MAX_PRODUCT_IMAGES)
+            throw new BadRequestException("At most " + MAX_PRODUCT_IMAGES + " product images are allowed");
+        images.forEach(this::validateImage);
+        int offset = productImageRepository.findByProductId(productId).size();
         for (int i = 0; i < images.size(); i++) {
             MultipartFile image = images.get(i);
             if (!image.isEmpty()) {
-                boolean isPrimary = (i == 0);
-                uploadProductImage(productId, image, i, isPrimary);
+                boolean isPrimary = (offset == 0 && i == 0);
+                uploadProductImage(productId, image, offset + i, isPrimary);
             }
         }
     }
@@ -373,9 +431,76 @@ import java.util.stream.Collectors;
     private void deleteAllProductImages(Long productId) throws IOException {
         List<ProductImage> images = productImageRepository.findByProductId(productId);
         for (ProductImage image : images) {
-            imageStorage.deleteImage(image.getPublicId());
+            deleteStoredImage(image.getPublicId());
         }
         productImageRepository.deleteAll(images);
+    }
+
+    private static final int MAX_PRODUCT_IMAGES = 10;
+
+    private void requireNotDeleted(Product product) {
+        if (product.getStatus() == ProductStatus.DELETED)
+            throw new ResourceNotFoundException("Product", product.getId());
+    }
+
+    private Product lockEditable(Long id) {
+        Product product = productRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        requireNotDeleted(product);
+        return product;
+    }
+
+    private void validateAdminStatus(Product product, ProductStatus status) {
+        requireNotDeleted(product);
+        if (status == null || status == ProductStatus.DELETED)
+            throw new BadRequestException("Use archived product deletion for terminal removal");
+    }
+
+    private void validateImage(MultipartFile file) {
+        if (file == null || file.isEmpty() || file.getSize() > 10L * 1024 * 1024)
+            throw new BadRequestException("A nonempty image of at most 10 MiB is required");
+        String type = file.getContentType() == null ? "" : file.getContentType().toLowerCase(java.util.Locale.ROOT);
+        try (var stream = file.getInputStream()) {
+            byte[] h = stream.readNBytes(12);
+            boolean valid = switch (type) {
+                case "image/jpeg" -> h.length >= 3 && (h[0] & 255) == 255 && (h[1] & 255) == 216 && (h[2] & 255) == 255;
+                case "image/png" -> h.length >= 8 && java.util.Arrays.equals(java.util.Arrays.copyOf(h, 8), new byte[]{(byte)137,80,78,71,13,10,26,10});
+                case "image/gif" -> h.length >= 6 && (new String(h, 0, 6, java.nio.charset.StandardCharsets.US_ASCII).matches("GIF8[79]a"));
+                case "image/webp" -> h.length >= 12 && new String(h, 0, 4, java.nio.charset.StandardCharsets.US_ASCII).equals("RIFF") && new String(h, 8, 4, java.nio.charset.StandardCharsets.US_ASCII).equals("WEBP");
+                default -> false;
+            };
+            if (!valid) throw new BadRequestException("Image content must match JPEG, PNG, GIF or WebP type");
+        } catch (IOException ex) {
+            throw new BadRequestException("Cannot read image file");
+        }
+    }
+
+    private Map<String, Object> uploadTracked(MultipartFile image, String folder) throws IOException {
+        Map<String, Object> result = imageStorage.uploadImage(image, folder);
+        if (imageStorage instanceof com.kilivana.backend.common.service.LocalImageStorage
+                && org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            String publicId = imageStorage.getPublicId(result);
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void afterCompletion(int status) {
+                            if (status != STATUS_COMMITTED) imageStorage.deleteImage(publicId);
+                        }
+                    });
+        }
+        return result;
+    }
+
+    private void deleteStoredImage(String publicId) {
+        if (imageStorage instanceof com.kilivana.backend.common.service.LocalImageStorage
+                && org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void afterCommit() { imageStorage.deleteImage(publicId); }
+                    });
+        } else {
+            // PostgreSQL image rows participate in the same transaction as product metadata.
+            imageStorage.deleteImage(publicId);
+        }
     }
 
     private ProductResponse mapToResponse(Product product) {

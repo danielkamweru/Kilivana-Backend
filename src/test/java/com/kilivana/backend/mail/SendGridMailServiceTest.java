@@ -64,7 +64,7 @@ class SendGridMailServiceTest {
             @Override
             public Response api(Request request) {
                 receivedEndpoint.set(request.getEndpoint());
-                return new Response();
+                Response response = new Response(); response.setStatusCode(202); return response;
             }
         };
 
@@ -78,6 +78,24 @@ class SendGridMailServiceTest {
         assertThat(sent).isTrue();
         assertThat(receivedKey.get()).isEqualTo("SG.test");
         assertThat(receivedEndpoint.get()).isEqualTo("mail/send");
+    }
+
+
+    @Test void rejectedAndRuntimeProviderResponsesFailWithoutLoggingRequestSecrets() {
+        SendGridProperties p=new SendGridProperties();p.setEnabled(true);p.setApiKey("test-provider-secret");
+        var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(SendGridMailService.class);
+        var appender=new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();logger.addAppender(appender);
+        try {
+            SendGrid rejected=new SendGrid("test") { @Override public Response api(Request r) {
+                Response response=new Response();response.setStatusCode(429);return response;
+            }};
+            assertThat(new SendGridMailService(p,k->rejected).sendHtml("test@example.invalid","Verification","123456")).isFalse();
+            var failed=new SendGridMailService(p,k->{throw new IllegalArgumentException("test-provider-secret 123456");});
+            assertThat(failed.sendHtml("test@example.invalid","Verification","123456")).isFalse();
+            assertThat(appender.list).allMatch(e->!e.getFormattedMessage().contains("123456")
+                && !e.getFormattedMessage().contains("test-provider-secret") && e.getThrowableProxy()==null);
+        } finally {logger.detachAppender(appender);appender.stop();}
     }
 
     /** A SendGrid whose {@code api()} always fails with a checked IOException. */

@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /** ACTIVE is the canonical approved status. Stock and moderation transitions are unchanged. */
-@Component
+@Component("productVisibility")
 @RequiredArgsConstructor
 public class ProductVisibility {
     private final ResourceAuthorization authorization;
@@ -17,7 +17,14 @@ public class ProductVisibility {
     private final ProductImageRepository images;
 
     public boolean canRead(Product product) {
-        return product.getStatus() == ProductStatus.ACTIVE || authorization.seller(product.getSellerId());
+        return product.getStatus() != ProductStatus.DELETED &&
+                (product.getStatus() == ProductStatus.ACTIVE || authorization.seller(product.getSellerId()));
+    }
+
+    public boolean canModerate() { return authorization.admin(); }
+
+    public boolean canModifyProduct(Long id) {
+        return products.findById(id).map(p -> authorization.seller(p.getSellerId())).orElse(false);
     }
 
     public boolean canReviewSeller(Long sellerId) {

@@ -36,6 +36,6 @@ class PasswordResetSecurityTest {
 
     private static AuthService service(UserRepository users, PasswordResetTokenRepository tokens, PasswordEncoder encoder) {
         return new AuthService(users, encoder, mock(JwtService.class), new JwtProperties(),
-                mock(UserReferenceCodeGenerator.class), tokens, mock(SendGridMailService.class));
+                mock(UserReferenceCodeGenerator.class), tokens, mock(SendGridMailService.class), mock(EmailVerificationService.class));
     }
 }

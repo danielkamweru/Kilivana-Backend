@@ -22,6 +22,11 @@ import java.time.LocalDateTime;
 @Schema(description = "Admin view of a supplier with profile and product summary")
 public class AdminSupplierResponse {
 
+    @Schema(description = "Email verification gate, independent of approval")
+    private boolean emailVerified;
+    @Schema(description = "Initial email verification challenge; only present on creation")
+    private java.util.UUID emailVerificationChallengeId;
+
     @Schema(description = "User account ID", example = "30")
     private Long userId;
 

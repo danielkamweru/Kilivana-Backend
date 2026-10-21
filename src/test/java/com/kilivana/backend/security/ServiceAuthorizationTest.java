@@ -45,6 +45,8 @@ class ServiceAuthorizationTest {
             NotificationService.class, ProductService.class, CategoryService.class, UserService.class, LogisticsService.class})
     static class Config {
         @Bean com.kilivana.backend.logistics.service.TrackingStopService trackingStop() { return mock(com.kilivana.backend.logistics.service.TrackingStopService.class); }
+        @Bean com.kilivana.backend.farm.repository.FarmRepository farms() { return mock(com.kilivana.backend.farm.repository.FarmRepository.class); }
+        @Bean com.kilivana.backend.common.service.EmailVerificationService emailVerification() { return mock(com.kilivana.backend.common.service.EmailVerificationService.class); }
         @Bean UserRepository users() { return mock(UserRepository.class); }
         @Bean InspectionRepository inspections() { return mock(InspectionRepository.class); }
         @Bean InspectionEvidenceImageRepository evidence() { return mock(InspectionEvidenceImageRepository.class); }

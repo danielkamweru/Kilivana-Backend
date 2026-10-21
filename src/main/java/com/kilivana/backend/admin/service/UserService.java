@@ -36,8 +36,10 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final com.kilivana.backend.common.service.UserReferenceCodeGenerator referenceCodeGenerator;
     private final DriverProfileRepository driverProfileRepository;
+    private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public UserResponse createUser(UserRegistrationRequest request) {
         String email = normalizeEmail(request.getEmail());
         String phone = normalizePhone(request.getPhone());
@@ -51,6 +53,7 @@ public class UserService {
         User user = User.builder()
                 .name(request.getName())
                 .email(email)
+                .emailVerified(false)
                 .phone(phone)
                 // Both of these were accepted in the request and then dropped, so an account
                 // created from the admin panel arrived with no username or region to display.
@@ -64,7 +67,10 @@ public class UserService {
                 .build();
 
         User saved = userRepository.save(user);
-        return mapToResponse(saved);
+        var challenge = emailVerificationService.startForNewAccount(saved);
+        UserResponse response = mapToResponse(saved);
+        response.setEmailVerificationChallengeId(challenge.challengeId());
+        return response;
     }
 
     @PreAuthorize("@resourceAuthorization.self(#id)")
@@ -94,7 +100,7 @@ public class UserService {
 
     @Transactional
     public UserResponse updateUser(Long id, UserRegistrationRequest request) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
         String email = normalizeEmail(request.getEmail());
         user.setName(request.getName());
@@ -216,6 +222,8 @@ public class UserService {
                 .role(user.getRole())
                 .status(user.getStatus())
                 .verificationStatus(user.getVerificationStatus())
+                .emailVerified(user.isEmailVerified())
+                .emailVerifiedAt(user.getEmailVerifiedAt())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

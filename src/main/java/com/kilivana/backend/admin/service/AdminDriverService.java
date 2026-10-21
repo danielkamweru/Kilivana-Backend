@@ -45,6 +45,7 @@ public class AdminDriverService {
     private final LogisticsJobRepository logisticsJobRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
+    private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
     /**
      * Registers a driver: the login account and the profile in one call.
@@ -54,6 +55,7 @@ public class AdminDriverService {
      * a driver with nothing recorded.
      */
     @Transactional
+    @org.springframework.security.access.prepost.PreAuthorize("@resourceAuthorization.admin()")
     public AdminDriverResponse registerDriver(DriverRegistrationRequest request) {
         String email = normalizeEmail(request.getEmail());
         String phone = normalizePhone(request.getPhone());
@@ -83,6 +85,7 @@ public class AdminDriverService {
         User user = userRepository.save(User.builder()
                 .name(request.getFullName().trim())
                 .email(email)
+                .emailVerified(false)
                 .phone(phone)
                 .username(request.getUsername() == null ? null : request.getUsername().trim())
                 .region(county)
@@ -114,7 +117,10 @@ public class AdminDriverService {
                         : request.getAvailabilityStatus())
                 .build());
 
-        return toResponse(user, profile, Map.of(user.getId(), 0L));
+        var challenge = emailVerificationService.startForNewAccount(user);
+        var response = toResponse(user, profile, Map.of(user.getId(), 0L));
+        response.setEmailVerificationChallengeId(challenge.challengeId());
+        return response;
     }
 
     @Transactional
@@ -243,6 +249,7 @@ public class AdminDriverService {
                 .orElse(null);
 
         return AdminDriverResponse.builder()
+                .emailVerified(user.isEmailVerified())
                 .userId(user.getId())
                 .profileId(profile == null ? null : profile.getId())
                 .code(user.getReferenceCode())

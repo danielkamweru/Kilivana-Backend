@@ -32,4 +32,13 @@ class AccountAccessValidatorTest {
         when(users.findById(1L)).thenReturn(Optional.of(User.builder().role(UserRole.BUYER).status(UserStatus.ACTIVE).build()));
         assertThrows(UnauthorizedException.class, () -> validator.validate(1L, UserRole.ADMIN));
     }
+
+    @Test void unverifiedEmailCannotUseExistingBearerTokenAndChangingEmailRevokesGate() {
+        var user=User.builder().id(1L).email("old@example.invalid").role(UserRole.FARMER).status(UserStatus.ACTIVE).emailVerified(false).build();
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        assertThrows(UnauthorizedException.class,()->validator.validate(1L,UserRole.FARMER));
+        user.setEmailVerified(true);assertDoesNotThrow(()->validator.validate(1L,UserRole.FARMER));
+        user.setEmail("new@example.invalid");assertFalse(user.isEmailVerified());
+        assertThrows(UnauthorizedException.class,()->validator.validate(1L,UserRole.FARMER));
+    }
 }

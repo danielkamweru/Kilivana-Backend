@@ -41,13 +41,15 @@ class AuthServiceEmailNormalizationTest {
     @Mock
     private UserReferenceCodeGenerator referenceCodeGenerator;
 
+    @Mock private EmailVerificationService verification;
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
+        when(verification.startForNewAccount(any())).thenReturn(com.kilivana.backend.common.dto.EmailOtpChallengeResponse.accepted(java.util.UUID.randomUUID()));
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         authService = new AuthService(userRepository, passwordEncoder, jwtService,
-                new JwtProperties(), referenceCodeGenerator, mock(com.kilivana.backend.common.repository.PasswordResetTokenRepository.class), mock(com.kilivana.backend.mail.SendGridMailService.class));
+                new JwtProperties(), referenceCodeGenerator, mock(com.kilivana.backend.common.repository.PasswordResetTokenRepository.class), mock(com.kilivana.backend.mail.SendGridMailService.class), verification);
     }
 
     @Test void pendingFarmerCanLoginAndRefreshWithoutChangingVerification() {

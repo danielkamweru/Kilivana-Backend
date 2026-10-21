@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class UserProfileController {
 
+    private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final UserService userService;
     private final AuthService authService;
 
@@ -48,6 +49,7 @@ public class UserProfileController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody UserRegistrationRequest request) {
+        emailOtpRequestLimiter.acquireSend(request.getEmail());
         UserResponse user = authService.register(request);
         return ResponseEntity.status(201).body(ApiResponse.success(user));
     }

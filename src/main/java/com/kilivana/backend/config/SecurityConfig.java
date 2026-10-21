@@ -42,6 +42,8 @@ public class SecurityConfig {
     private static final String[] PUBLIC_POST_ENDPOINTS = {
         "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
         "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",
+        "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/resend", "/api/v1/auth/email-verification/verify",
+        "/api/auth/email-verification/request", "/api/auth/email-verification/resend", "/api/auth/email-verification/verify",
         "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
         "/api/auth/forgot-password", "/api/auth/reset-password", "/api/v1/users", "/api/users"
     };

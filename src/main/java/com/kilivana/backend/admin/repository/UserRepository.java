@@ -24,6 +24,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // accounts, so the second registration failed as a conflict and login failed as unknown.
     Optional<User> findByEmailIgnoreCase(String email);
 
+    /** Shared account lock for OTP attempts, consumption, issuance and email edits. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
+
     Optional<User> findByPhone(String phone);
 
     /** Finds a user by id and verifies the role in one query. */
