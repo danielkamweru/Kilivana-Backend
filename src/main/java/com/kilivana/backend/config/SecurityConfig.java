@@ -50,7 +50,12 @@ public class SecurityConfig {
         "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/resend", "/api/v1/auth/email-verification/verify",
         "/api/auth/email-verification/request", "/api/auth/email-verification/resend", "/api/auth/email-verification/verify",
         "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
-        "/api/auth/forgot-password", "/api/auth/reset-password", "/api/v1/users", "/api/users"
+        "/api/auth/forgot-password", "/api/auth/reset-password", "/api/v1/users", "/api/users",
+        // Safaricom posts the STK Push result here and cannot present a token, so the
+        // endpoint is public. It is defended in the callback service instead: the
+        // callback must match a payment that was really initiated (checkout request
+        // and merchant request ids) and is applied idempotently.
+        "/api/v1/payments/daraja/callback"
     };
 
     @Bean
