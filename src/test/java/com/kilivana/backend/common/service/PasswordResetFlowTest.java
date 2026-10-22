@@ -228,10 +228,13 @@ class PasswordResetFlowTest {
 
         AuthService service = service(users, tokens, mail, passwordEncoder);
         service.setDevLogResetLink(true);
+        service.setPasswordResetCooldownMinutes(60);
         service.forgotPassword("daniel@example.com");
 
         // The link is in the log, so the token must survive for the flow to be completed.
         verify(tokens, never()).delete(any(PasswordResetToken.class));
+        // No mail was sent, so the caller is not throttled for trying again.
+        assertThat(service.forgotPassword("daniel@example.com")).contains("reset instructions");
     }
 
     @Test

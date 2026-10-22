@@ -250,13 +250,16 @@ import java.util.concurrent.ConcurrentHashMap;
             boolean sent = sendGridMailService.sendHtml(user.getEmail(), "Reset your Kilivana password",
                     "<p>Use this link within " + passwordResetExpiryMinutes + " minutes: <a href=\"" + resetLink + "\">Reset password</a></p>");
             if (!sent) {
+                // Nothing left the building, so the throttle has no flood to prevent:
+                // the caller may try again at once. A cooldown that survived a refused
+                // delivery would only make an unworking mailer look like a broken
+                // request.
+                resetRequestCooldowns.remove(address);
                 if (devLogResetLink) {
                     log.warn("DEVELOPMENT ONLY: the mail provider refused the recovery message, "
                             + "so the reset link is written here instead: {}", resetLink);
                 } else {
                     passwordResetTokenRepository.delete(token);
-                    // Nothing was delivered, so the caller should be able to try again at once.
-                    resetRequestCooldowns.remove(address);
                 }
             }
         });
