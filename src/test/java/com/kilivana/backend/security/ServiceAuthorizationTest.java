@@ -51,6 +51,7 @@ class ServiceAuthorizationTest {
         @Bean OrderRepository orders() { return mock(OrderRepository.class); }
         @Bean OrderItemRepository items() { return mock(OrderItemRepository.class); }
         @Bean OrderEventRepository events() { return mock(OrderEventRepository.class); }
+        @Bean com.kilivana.backend.farm.repository.FarmRepository farms() { return mock(com.kilivana.backend.farm.repository.FarmRepository.class); }
         @Bean com.kilivana.backend.service.DarajaService daraja() { return mock(com.kilivana.backend.service.DarajaService.class); }
         @Bean PaymentRepository payments() { return mock(PaymentRepository.class); }
         @Bean DisputeRepository disputes() { return mock(DisputeRepository.class); }

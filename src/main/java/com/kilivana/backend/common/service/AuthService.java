@@ -15,23 +15,28 @@ import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.common.exception.UnauthorizedException;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.service.KenyaCounty;
 import com.kilivana.backend.security.JwtProperties;
 import com.kilivana.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Self-service registration, login, token refresh and password reset.
@@ -42,6 +47,7 @@ import java.util.Base64;
  * means the token carries no expiry and stays valid until the signing secret changes.
  */
 @Service
+@Slf4j
     @RequiredArgsConstructor
     public class AuthService {
 
@@ -58,11 +64,46 @@ import java.util.Base64;
     @Value("${app.password-reset.token-expiry-minutes:30}")
     private long passwordResetExpiryMinutes = 30L;
     /**
+     * Minimum gap between two recovery requests for the same address. Recovery mail is
+     * the expensive part of the flow, and every new request also replaces the previous
+     * token, so an unthrottled caller can flood a mailbox and invalidate a link that
+     * the owner is still reading.
+     */
+    @Value("${app.password-reset.request-cooldown-minutes:2}")
+    private long passwordResetCooldownMinutes = 2L;
+    /**
+     * Development-only escape hatch. When the mail provider refuses a recovery message,
+     * the reset link is written to the log instead, so the flow can still be completed
+     * on a workstation where the sender identity has not been verified yet. It is off
+     * unless it is switched on explicitly, and it must stay off outside development:
+     * the log then holds a live recovery token.
+     */
+    @Value("${app.password-reset.dev-log-link:false}")
+    private boolean devLogResetLink = false;
+    /** Normalized address -> instant of the last accepted recovery request. */
+    private final Map<String, Instant> resetRequestCooldowns = new ConcurrentHashMap<>();
+    /**
      * Overrides the configured reset-link base URL. Package-private so the test
      * suite can drive the reset flow without a real deployment value.
      */
     void setPasswordResetFrontendUrl(String url) {
         this.passwordResetFrontendUrl = url;
+    }
+
+    /**
+     * Overrides the configured recovery cooldown. Package-private so the test suite can
+     * drive the reset flow without waiting for a real cooldown to elapse.
+     */
+    void setPasswordResetCooldownMinutes(long minutes) {
+        this.passwordResetCooldownMinutes = minutes;
+    }
+
+    /**
+     * Overrides the development-only link logging. Package-private so the test suite can
+     * drive the recovery flow in both modes.
+     */
+    void setDevLogResetLink(boolean enabled) {
+        this.devLogResetLink = enabled;
     }
 
     private static final SecureRandom RESET_RANDOM = new SecureRandom();
@@ -192,7 +233,12 @@ import java.util.Base64;
     /** Sends reset instructions without disclosing account existence. */
     @Transactional
     public String forgotPassword(String email) {
-        userRepository.findByEmailIgnoreCase(normalizeEmail(email)).ifPresent(user -> {
+        String address = normalizeEmail(email);
+        if (!acceptRecoveryRequest(address)) {
+            throw new TooManyRequestsException(
+                    "A password reset was requested recently. Please wait before asking again.");
+        }
+        userRepository.findByEmailIgnoreCase(address).ifPresent(user -> {
             if (passwordResetFrontendUrl == null || passwordResetFrontendUrl.isBlank()) return;
             String raw = newResetToken();
             passwordResetTokenRepository.deleteByUserId(user.getId());
@@ -200,15 +246,48 @@ import java.util.Base64;
                     .expiresAt(LocalDateTime.now().plusMinutes(passwordResetExpiryMinutes)).createdAt(LocalDateTime.now()).build();
             passwordResetTokenRepository.save(token);
             String joiner = passwordResetFrontendUrl.contains("?") ? "&" : "?";
+            String resetLink = passwordResetFrontendUrl + joiner + "token=" + raw;
             boolean sent = sendGridMailService.sendHtml(user.getEmail(), "Reset your Kilivana password",
-                    "<p>Use this link within " + passwordResetExpiryMinutes + " minutes: <a href=\"" + passwordResetFrontendUrl + joiner + "token=" + raw + "\">Reset password</a></p>");
-            if (!sent) passwordResetTokenRepository.delete(token);
+                    "<p>Use this link within " + passwordResetExpiryMinutes + " minutes: <a href=\"" + resetLink + "\">Reset password</a></p>");
+            if (!sent) {
+                if (devLogResetLink) {
+                    log.warn("DEVELOPMENT ONLY: the mail provider refused the recovery message, "
+                            + "so the reset link is written here instead: {}", resetLink);
+                } else {
+                    passwordResetTokenRepository.delete(token);
+                    // Nothing was delivered, so the caller should be able to try again at once.
+                    resetRequestCooldowns.remove(address);
+                }
+            }
         });
         return "If the account exists and email delivery is available, reset instructions will be sent.";
     }
 
+    /**
+     * Accepts a recovery request unless the same address asked recently. The cooldown is
+     * keyed by address alone, so it applies to unknown addresses exactly as it applies to
+     * registered ones and cannot be used to probe for an account.
+     */
+    private boolean acceptRecoveryRequest(String address) {
+        if (passwordResetCooldownMinutes <= 0) {
+            return true;
+        }
+        Instant now = Instant.now();
+        Instant previous = resetRequestCooldowns.put(address, now);
+        if (previous == null) {
+            return true;
+        }
+        Instant cutoff = now.minus(Duration.ofMinutes(passwordResetCooldownMinutes));
+        if (previous.isAfter(cutoff)) {
+            resetRequestCooldowns.put(address, previous);
+            return false;
+        }
+        return true;
+    }
+
     @Transactional
     public String resetPassword(PasswordResetRequest request) {
+        PasswordPolicy.requireAcceptable(request.getNewPassword());
         PasswordResetToken token = passwordResetTokenRepository.findByTokenHashForUpdate(hash(request.getToken()))
                 .orElseThrow(() -> new BadRequestException("Invalid or expired password reset token"));
         if (token.getUsedAt() != null || !token.getExpiresAt().isAfter(LocalDateTime.now())) throw new BadRequestException("Invalid or expired password reset token");

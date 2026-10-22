@@ -4,6 +4,8 @@ import com.kilivana.backend.admin.entity.FarmerProfileImage;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.FarmerProfileImageRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.admin.service.ProfileService;
+import com.kilivana.backend.admin.service.UserService;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
@@ -11,6 +13,8 @@ import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.entity.FarmImage;
 import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.config.SecurityConfig;
+import com.kilivana.backend.security.AccountAccessValidator;
 import com.kilivana.backend.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,8 +37,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminFarmerController.class)
-@Import(JwtService.class)
+@Import(SecurityConfig.class)
 class AdminFarmerControllerTest {
+
+    @MockBean
+    private AccountAccessValidator accountAccessValidator;
+
+    @MockBean
+    private ProfileService profileService;
+
+    @MockBean
+    private UserService userService;
 
     @Autowired
     private MockMvc mockMvc;

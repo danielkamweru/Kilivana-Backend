@@ -64,7 +64,7 @@ class SendGridMailServiceTest {
             @Override
             public Response api(Request request) {
                 receivedEndpoint.set(request.getEndpoint());
-                return new Response();
+                return new Response(202, "", null);
             }
         };
 
@@ -78,6 +78,30 @@ class SendGridMailServiceTest {
         assertThat(sent).isTrue();
         assertThat(receivedKey.get()).isEqualTo("SG.test");
         assertThat(receivedEndpoint.get()).isEqualTo("mail/send");
+    }
+
+    @Test
+    void providerRefusal_returnsFalseRatherThanReportingASend() {
+        SendGridProperties properties = new SendGridProperties();
+        properties.setEnabled(true);
+        properties.setApiKey("SG.test");
+        properties.setFromEmail("no-reply@kilivana.com");
+        properties.setFromName("Kilivana");
+
+        // SendGrid reports an unverified sender as 403 with the reason in the body.
+        SendGrid refusing = new SendGrid("SG.test") {
+            @Override
+            public Response api(Request request) {
+                return new Response(403,
+                        "{\"errors\":[{\"message\":\"The from address does not match a verified "
+                                + "Sender Identity.\"}]}",
+                        null);
+            }
+        };
+
+        SendGridMailService service = new SendGridMailService(properties, key -> refusing);
+
+        assertThat(service.sendHtml("buyer@example.com", "Subject", "<p>body</p>")).isFalse();
     }
 
     /** A SendGrid whose {@code api()} always fails with a checked IOException. */
