@@ -10,17 +10,22 @@ import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.common.service.ImageStorage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +41,7 @@ public class FarmerFarmController {
 
     private final FarmRepository farmRepository;
     private final FarmImageRepository farmImageRepository;
+    private final ImageStorage imageStorage;
 
     @Operation(summary = "Create a farm",
             description = "Creates a new farm for the authenticated farmer.")
@@ -135,6 +141,47 @@ public class FarmerFarmController {
         farm.setDescription(request.getDescription());
         Farm saved = farmRepository.save(farm);
         return ResponseEntity.ok(ApiResponse.success(toFullResponse(saved)));
+    }
+
+    @Operation(summary = "Upload a farm image",
+            description = "Uploads an image for one of the authenticated farmer's farms. "
+                    + "The first image is made primary automatically.")
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<FarmImageResponse>> uploadFarmImage(
+            @AuthenticationPrincipal Long authenticatedUserId,
+            @PathVariable Long id,
+            @RequestPart("image") MultipartFile image,
+            @RequestParam(required = false) Integer sortOrder,
+            @RequestParam(required = false) Boolean isPrimary) throws IOException {
+        Farm farm = farmRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Farm", id));
+        if (!farm.getFarmerId().equals(authenticatedUserId)) {
+            throw new org.springframework.security.access.AccessDeniedException("You can only add images to your own farms");
+        }
+
+        boolean primary = Boolean.TRUE.equals(isPrimary)
+                || farmImageRepository.findByFarmIdAndIsPrimaryTrue(id).isEmpty();
+        if (primary) {
+            farmImageRepository.findByFarmIdAndIsPrimaryTrue(id).ifPresent(existing -> {
+                existing.setIsPrimary(false);
+                farmImageRepository.save(existing);
+            });
+        }
+
+        Map<String, Object> upload = imageStorage.uploadImage(image, "kilivana/farms/" + id);
+        FarmImage saved = farmImageRepository.save(FarmImage.builder()
+                .farmId(id)
+                .url(imageStorage.getSecureUrl(upload))
+                .sortOrder(sortOrder == null ? 0 : sortOrder)
+                .isPrimary(primary)
+                .build());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
+                FarmImageResponse.builder()
+                        .id(saved.getId())
+                        .url(saved.getUrl())
+                        .isPrimary(saved.getIsPrimary())
+                        .build()));
     }
 
     private FarmResponse toFullResponse(Farm farm) {

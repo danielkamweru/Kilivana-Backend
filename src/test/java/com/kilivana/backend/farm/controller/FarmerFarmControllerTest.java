@@ -7,6 +7,7 @@ import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.config.SecurityConfig;
+import com.kilivana.backend.common.service.ImageStorage;
 import com.kilivana.backend.security.AccountAccessValidator;
 import com.kilivana.backend.security.JwtService;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -56,6 +58,9 @@ class FarmerFarmControllerTest {
 
     @MockBean
     private FarmImageRepository farmImageRepository;
+
+    @MockBean
+    private ImageStorage imageStorage;
 
     @Test
     void createFarm_existingFarmerWithNoFarm_shouldCreateFarm() throws Exception {
@@ -233,5 +238,27 @@ class FarmerFarmControllerTest {
                 .content("{\"name\":\"Farm\",\"county\":\"Nairobi\",\"sizeAcres\":1,\"ownershipType\":\"OWNED\"}"))
                 .andExpect(status().isForbidden());
         org.mockito.Mockito.verify(farmRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void uploadFarmImage_farmerCanUploadToOwnFarm() throws Exception {
+        Farm farm = Farm.builder().id(1L).farmerId(10L).name("Farm")
+                .county("Nairobi").sizeAcres(1.0).ownershipType(OwnershipType.OWNED).build();
+        MockMultipartFile image = new MockMultipartFile("image", "farm.jpg", "image/jpeg", new byte[]{1, 2});
+        com.kilivana.backend.farm.entity.FarmImage saved = com.kilivana.backend.farm.entity.FarmImage.builder()
+                .id(3L).farmId(1L).url("/api/v1/images/farm-photo").isPrimary(true).build();
+
+        when(farmRepository.findById(1L)).thenReturn(Optional.of(farm));
+        when(farmImageRepository.findByFarmIdAndIsPrimaryTrue(1L)).thenReturn(Optional.empty());
+        when(imageStorage.uploadImage(any(), any())).thenReturn(java.util.Map.of("public_id", "farm-photo"));
+        when(imageStorage.getSecureUrl(any())).thenReturn("/api/v1/images/farm-photo");
+        when(farmImageRepository.save(any(com.kilivana.backend.farm.entity.FarmImage.class))).thenReturn(saved);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/farmers/me/farms/1/images")
+                        .file(image)
+                        .with(asFarmer(jwtService, 10L)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").value(3))
+                .andExpect(jsonPath("$.data.isPrimary").value(true));
     }
 }

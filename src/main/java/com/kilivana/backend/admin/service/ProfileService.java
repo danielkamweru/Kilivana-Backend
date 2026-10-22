@@ -7,12 +7,15 @@ import com.kilivana.backend.admin.repository.*;
 import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.entity.BaseImageEntity;
 import com.kilivana.backend.common.enums.DriverStatus;
+import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.common.enums.KycStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.service.ImageStorage;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +50,7 @@ import java.util.stream.Collectors;
     private final DriverProfileImageRepository driverProfileImageRepository;
     private final InspectorProfileImageRepository inspectorProfileImageRepository;
     private final ImageStorage imageStorage;
+    private final FarmRepository farmRepository;
 
     @Transactional(readOnly = true)
     public FarmerProfileResponse getFarmerProfile(Long authenticatedUserId, Long userId) {
@@ -73,7 +77,9 @@ import java.util.stream.Collectors;
                 .verificationInfo(request.getVerificationInfo())
                 .updatedAt(LocalDateTime.now())
                 .build();
-        return FarmerProfileResponse.fromEntity(farmerProfileRepository.save(profile));
+        FarmerProfile saved = farmerProfileRepository.save(profile);
+        createLinkedFarmIfMissing(userId, request);
+        return FarmerProfileResponse.fromEntity(saved);
     }
 
     @Transactional
@@ -82,12 +88,15 @@ import java.util.stream.Collectors;
         FarmerProfile profile = farmerProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer profile", userId));
         ensureRole(userId, UserRole.FARMER);
+        String previousFarmName = profile.getFarmName();
         profile.setFarmName(request.getFarmName());
         profile.setLocation(request.getLocation());
         profile.setFarmDetails(request.getFarmDetails());
         profile.setVerificationInfo(request.getVerificationInfo());
         profile.setUpdatedAt(LocalDateTime.now());
-        return FarmerProfileResponse.fromEntity(farmerProfileRepository.save(profile));
+        FarmerProfile saved = farmerProfileRepository.save(profile);
+        syncOrCreateLinkedFarm(userId, previousFarmName, request);
+        return FarmerProfileResponse.fromEntity(saved);
     }
 
     @Transactional
@@ -653,5 +662,58 @@ import java.util.stream.Collectors;
         if (!role.isStaff()) {
             throw new ForbiddenException("You do not have permission to access this resource");
         }
+    }
+
+    /**
+     * A farmer profile's farm name represents the farmer's primary farm. Keep
+     * a real Farm row behind it so the admin farm roster sees the same farm.
+     */
+    private void createLinkedFarmIfMissing(Long userId, FarmerProfileRequest request) {
+        boolean nameAlreadyExists = farmRepository.findByFarmerId(userId).stream()
+                .anyMatch(farm -> farm.getName().equalsIgnoreCase(request.getFarmName()));
+        if (!nameAlreadyExists) {
+            createLinkedFarm(userId, request);
+        }
+    }
+
+    private void syncOrCreateLinkedFarm(Long userId, String previousFarmName, FarmerProfileRequest request) {
+        Farm linkedFarm = farmRepository.findByFarmerId(userId).stream()
+                .filter(farm -> farm.getName().equalsIgnoreCase(previousFarmName))
+                .findFirst()
+                .orElse(null);
+
+        if (linkedFarm == null) {
+            createLinkedFarmIfMissing(userId, request);
+            return;
+        }
+
+        linkedFarm.setName(request.getFarmName());
+        linkedFarm.setAddress(request.getLocation());
+        linkedFarm.setDescription(request.getFarmDetails());
+        farmRepository.save(linkedFarm);
+    }
+
+    private void createLinkedFarm(Long userId, FarmerProfileRequest request) {
+        if (request.getSizeAcres() == null || request.getOwnershipType() == null) {
+            throw new BadRequestException(
+                    "sizeAcres and ownershipType are required when creating a linked farm");
+        }
+
+        String county = userService.getUserById(userId).getRegion();
+        if (county == null || county.isBlank()) {
+            throw new BadRequestException(
+                    "The farmer account must have a county before a farm can be created");
+        }
+
+        farmRepository.save(Farm.builder()
+                .farmerId(userId)
+                .name(request.getFarmName())
+                .county(county)
+                .address(request.getLocation())
+                .sizeAcres(request.getSizeAcres())
+                .ownershipType(request.getOwnershipType())
+                .status(FarmStatus.ACTIVE)
+                .description(request.getFarmDetails())
+                .build());
     }
 }
