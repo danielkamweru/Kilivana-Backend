@@ -7,6 +7,7 @@ import com.kilivana.backend.dto.StkPushInitiateRequest;
 import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.dto.StkPushResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.entity.Payment;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
@@ -92,16 +93,65 @@ public class PaymentService {
     @PreAuthorize("@resourceAuthorization.sellerPayment(#userId, #userRole, #request.orderId)")
     public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole,
                                                    StkPushInitiateRequest request) {
-        Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new ResourceNotFoundException("Order", request.getOrderId()));
+        Order order = loadOrder(request.getOrderId());
 
         // Authorization: only the farmer or supplier who owns items in this order may initiate
-        boolean authorized = order.getOrderItems().stream()
+        List<OrderItem> items = order.getOrderItems() == null ? List.of() : order.getOrderItems();
+        boolean authorized = items.stream()
                 .anyMatch(item -> item.getSellerId().equals(userId));
         if (!authorized) {
             throw new BadRequestException("You are not authorized to request payment for this order");
         }
 
+        return startStkPush(order, request);
+    }
+
+    /**
+     * Initiates an M-PESA STK Push for an order at the buyer's request.
+     *
+     * <p>This is the checkout path: the buyer pays for their own order, so the caller
+     * must be the buyer of that order. The amount is still the order's outstanding
+     * balance, computed on the server: the client cannot choose what to pay.
+     *
+     * @param userId    authenticated user ID (the buyer)
+     * @param userRole  authenticated user role (BUYER)
+     * @param request   STK Push initiation request with order ID and optional phone
+     * @return response containing payment ID and Daraja STK Push response
+     * @throws ResourceNotFoundException if the order does not exist
+     * @throws BadRequestException if the caller is not the buyer, the order is not
+     *         payable, there is no outstanding balance, or the phone is invalid
+     */
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.buyerPayment(#userId, #userRole, #request.orderId)")
+    public StkPushInitiateResponse initiateStkPushForBuyer(Long userId, UserRole userRole,
+                                                           StkPushInitiateRequest request) {
+        Order order = loadOrder(request.getOrderId());
+
+        // Authorization: only the buyer of this order may pay for it. Checked here as
+        // well as in the authorization rule, so the service holds the rule even when it
+        // is reached without the secured proxy.
+        if (order.getBuyerId() == null || !order.getBuyerId().equals(userId)) {
+            throw new BadRequestException("You are not authorized to pay for this order");
+        }
+
+        return startStkPush(order, request);
+    }
+
+    /** Loads the order an STK Push is requested for. */
+    private Order loadOrder(Long orderId) {
+        if (orderId == null) {
+            throw new BadRequestException("Order ID is required");
+        }
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+    }
+
+    /**
+     * The shared STK Push path: the order must be payable, the amount is the order's
+     * outstanding balance, the phone is the buyer's, and the attempt is recorded as
+     * PENDING for the callback to reconcile.
+     */
+    private StkPushInitiateResponse startStkPush(Order order, StkPushInitiateRequest request) {
         // Order must be in a payable state
         if (order.getStatus() == com.kilivana.backend.common.enums.OrderStatus.CANCELLED
                 || order.getStatus() == com.kilivana.backend.common.enums.OrderStatus.COMPLETED) {

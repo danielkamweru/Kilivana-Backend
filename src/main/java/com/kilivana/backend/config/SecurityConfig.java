@@ -2,10 +2,12 @@ package com.kilivana.backend.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kilivana.backend.config.RequestLoggingFilter;
+import com.kilivana.backend.security.AuthRateLimiter;
 import com.kilivana.backend.security.JwtAuthenticationFilter;
 import com.kilivana.backend.security.JwtProperties;
 import com.kilivana.backend.security.JwtService;
 import com.kilivana.backend.security.RestAuthenticationErrorHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +20,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.time.Duration;
+import java.util.Map;
 
 /**
  * Declares the whole authentication graph here rather than as component-scanned
@@ -76,6 +81,24 @@ public class SecurityConfig {
     @Bean
     public RestAuthenticationErrorHandler restAuthenticationErrorHandler(ObjectMapper objectMapper) {
         return new RestAuthenticationErrorHandler(objectMapper);
+    }
+
+    @Bean
+    /**
+     * Throttles the credential endpoints per client address, so a single caller cannot
+     * guess passwords or flood a mailbox with recovery mail. Declared here, rather than
+     * component-scanned, so importing this configuration is enough to build the graph.
+     */
+    public AuthRateLimiter authRateLimiter(
+            @Value("${app.auth.rate-limit.window-minutes:1}") long windowMinutes,
+            @Value("${app.auth.rate-limit.login-max-attempts:10}") int loginMaxAttempts,
+            @Value("${app.auth.rate-limit.forgot-password-max-attempts:5}") int forgotPasswordMaxAttempts,
+            @Value("${app.auth.rate-limit.reset-password-max-attempts:10}") int resetPasswordMaxAttempts) {
+        Map<String, Integer> limits = Map.of(
+                AuthRateLimiter.LOGIN, loginMaxAttempts,
+                AuthRateLimiter.FORGOT_PASSWORD, forgotPasswordMaxAttempts,
+                AuthRateLimiter.RESET_PASSWORD, resetPasswordMaxAttempts);
+        return new AuthRateLimiter(Duration.ofMinutes(windowMinutes), limits);
     }
 
     /**

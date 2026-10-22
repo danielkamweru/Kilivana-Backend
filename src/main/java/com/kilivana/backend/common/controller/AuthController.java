@@ -8,6 +8,9 @@ import com.kilivana.backend.common.dto.AuthTokenResponse;
 import com.kilivana.backend.common.dto.PasswordResetRequest;
 import com.kilivana.backend.common.dto.RefreshTokenRequest;
 import com.kilivana.backend.common.service.AuthService;
+import com.kilivana.backend.security.AuthRateLimiter;
+import com.kilivana.backend.security.ClientAddress;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +34,7 @@ public class AuthController {
 
     private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final AuthService authService;
+    private final AuthRateLimiter authRateLimiter;
 
     /** Creates an account. Staff roles are refused here; an administrator creates staff accounts through the admin panel. */
     @PostMapping("/register")
@@ -42,8 +46,12 @@ public class AuthController {
 
     /** Authenticates with email and password and returns a fresh access/refresh token pair plus the user's profile. */
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthTokenResponse>> login(@Valid @RequestBody AuthLoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthTokenResponse>> login(@Valid @RequestBody AuthLoginRequest request,
+                                                                HttpServletRequest httpRequest) {
+        String client = ClientAddress.resolve(httpRequest);
+        authRateLimiter.enforce(AuthRateLimiter.LOGIN, client);
         AuthTokenResponse tokens = authService.login(request);
+        authRateLimiter.reset(AuthRateLimiter.LOGIN, client);
         return ResponseEntity.ok(ApiResponse.success(tokens));
     }
 
@@ -68,7 +76,9 @@ public class AuthController {
      * way, so registered emails cannot be enumerated through this endpoint.
      */
     @PostMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestParam String email) {
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestParam String email,
+                                                              HttpServletRequest httpRequest) {
+        authRateLimiter.enforce(AuthRateLimiter.FORGOT_PASSWORD, ClientAddress.resolve(httpRequest));
         String message = authService.forgotPassword(email);
         return ResponseEntity.ok(ApiResponse.success(message));
     }
@@ -76,7 +86,9 @@ public class AuthController {
     /** Consumes a single-use recovery token and sets a new password. */
     @PostMapping("/reset-password")
     @Operation(summary = "Reset password", description = "Consumes the token from the recovery email and sets a new password.")
-    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request,
+                                                             HttpServletRequest httpRequest) {
+        authRateLimiter.enforce(AuthRateLimiter.RESET_PASSWORD, ClientAddress.resolve(httpRequest));
         String message = authService.resetPassword(request);
         return ResponseEntity.ok(ApiResponse.success(message));
     }

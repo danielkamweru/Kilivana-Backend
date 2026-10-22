@@ -6,6 +6,8 @@ import com.kilivana.backend.farm.dto.FarmRequest;
 import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.config.SecurityConfig;
+import com.kilivana.backend.security.AccountAccessValidator;
 import com.kilivana.backend.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,11 +32,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(FarmerFarmController.class)
+@WebMvcTest(FarmerFarmController.class) feature/supplier-api-updates
 @Import(com.kilivana.backend.config.SecurityConfig.class)
+@Import(SecurityConfig.class) main
 class FarmerFarmControllerTest {
     @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
 
+
+    @MockBean
+    private AccountAccessValidator accountAccessValidator;
 
     @Autowired
     private MockMvc mockMvc;

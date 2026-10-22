@@ -6,6 +6,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
@@ -53,6 +54,10 @@ class LogisticsServiceTest {
     /** A job is always created for an order that exists. */
     @Mock
     private OrderRepository orderRepository;
+
+    /** Order status changes are mirrored onto the order timeline as events. */
+    @Mock
+    private OrderEventRepository orderEventRepository;
 
     /** Only a driver account can be assigned to a job. */
     @Mock

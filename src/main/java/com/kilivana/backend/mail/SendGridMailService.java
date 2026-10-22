@@ -2,6 +2,7 @@ package com.kilivana.backend.mail;
 
 import com.sendgrid.Method;
 import com.sendgrid.Request;
+import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
@@ -58,8 +59,13 @@ public class SendGridMailService {
 
     /**
      * Posts the message to SendGrid. Returns {@code false} when the integration is
-     * unconfigured or the API call fails; never throws, so a mail outage cannot fail
-     * the business operation that triggered the email.
+     * unconfigured, the provider refuses the message, or the API call fails; never
+     * throws, so a mail outage cannot fail the business operation that triggered it.
+     *
+     * <p>The response is inspected, because the provider reports a refusal in the status
+     * code rather than in an exception: a sender that is not a verified identity, for
+     * instance, comes back as 403. Treating that as a success would log a delivery that
+     * never happened and leave the caller believing the mail was sent.
      */
     private boolean dispatch(String to, String subject, String contentType, String content) {
         if (!properties.isConfigured()) {
@@ -81,6 +87,7 @@ public class SendGridMailService {
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
 
+feature/supplier-api-updates
             com.sendgrid.Response response = sendGrid.api(request);
             if (response == null || response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
                 log.warn("Transactional email provider rejected delivery");
@@ -90,7 +97,29 @@ public class SendGridMailService {
             return true;
         } catch (IOException | RuntimeException ex) {
             log.warn("Transactional email delivery failed");
+            Response response = sendGrid.api(request);
+            int status = response == null ? 0 : response.getStatusCode();
+            if (status >= 200 && status < 300) {
+                log.info("Queued SendGrid {} message to {} with subject '{}'", contentType, to, subject);
+                return true;
+            }
+            log.error("SendGrid refused the {} message to {} with subject '{}' (status {}): {}",
+                    contentType, to, subject, status,
+                    summarise(response == null ? null : response.getBody()));
+            return false;
+        } catch (IOException e) {
+            log.error("Failed to send SendGrid {} message to {} with subject '{}'",
+                    contentType, to, subject, e);main
             return false;
         }
+    }
+
+    /** Reduces a provider error body to a single short line for the log. */
+    private String summarise(String body) {
+        if (body == null || body.isBlank()) {
+            return "no response body";
+        }
+        String flattened = body.replaceAll("\\s+", " ").trim();
+        return flattened.length() > 400 ? flattened.substring(0, 400) + "..." : flattened;
     }
 }

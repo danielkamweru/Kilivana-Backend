@@ -53,6 +53,7 @@ class ServiceAuthorizationTest {
         @Bean OrderRepository orders() { return mock(OrderRepository.class); }
         @Bean OrderItemRepository items() { return mock(OrderItemRepository.class); }
         @Bean OrderEventRepository events() { return mock(OrderEventRepository.class); }
+        @Bean com.kilivana.backend.farm.repository.FarmRepository farms() { return mock(com.kilivana.backend.farm.repository.FarmRepository.class); }
         @Bean com.kilivana.backend.service.DarajaService daraja() { return mock(com.kilivana.backend.service.DarajaService.class); }
         @Bean PaymentRepository payments() { return mock(PaymentRepository.class); }
         @Bean DisputeRepository disputes() { return mock(DisputeRepository.class); }
@@ -202,6 +203,35 @@ class ServiceAuthorizationTest {
         actor(4L, UserRole.FARMER);
         denied(() -> paymentService.initiateStkPush(2L, UserRole.FARMER, request));
         denied(() -> paymentService.initiateStkPush(4L, UserRole.FARMER, request));
+        verify(payments, never()).save(any());
+    }
+
+    @Test void buyerStkReachesUpstreamBalanceValidation() {
+        actor(1L, UserRole.BUYER);
+        when(orders.findById(10L)).thenReturn(Optional.of(Order.builder().id(10L).buyerId(1L)
+                .status(OrderStatus.PLACED).total(java.math.BigDecimal.ZERO).build()));
+        var request = new com.kilivana.backend.dto.StkPushInitiateRequest(); request.setOrderId(10L);
+        var error = assertThrows(com.kilivana.backend.common.exception.BadRequestException.class,
+                () -> paymentService.initiateStkPushForBuyer(1L, UserRole.BUYER, request));
+        assertEquals("No outstanding balance on this order", error.getMessage());
+        verify(payments, never()).save(any());
+    }
+
+    @Test void buyerCannotPayForAnotherBuyersOrder() {
+        actor(1L, UserRole.BUYER);
+        var request = new com.kilivana.backend.dto.StkPushInitiateRequest(); request.setOrderId(11L);
+        denied(() -> paymentService.initiateStkPushForBuyer(1L, UserRole.BUYER, request));
+        verify(payments, never()).save(any());
+    }
+
+    @Test void stkCannotTrustSuppliedIdentityOrUnrelatedOrderForTheBuyerRoute() {
+        var request = new com.kilivana.backend.dto.StkPushInitiateRequest(); request.setOrderId(10L);
+        actor(1L, UserRole.BUYER);
+        // A buyer cannot borrow another identity to pay for an order.
+        denied(() -> paymentService.initiateStkPushForBuyer(2L, UserRole.BUYER, request));
+        // A seller cannot use the buyer route to pay for an order it does not buy.
+        actor(4L, UserRole.FARMER);
+        denied(() -> paymentService.initiateStkPushForBuyer(4L, UserRole.BUYER, request));
         verify(payments, never()).save(any());
     }
 

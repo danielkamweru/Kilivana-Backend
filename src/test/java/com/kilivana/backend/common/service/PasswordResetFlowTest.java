@@ -5,6 +5,7 @@ import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.dto.PasswordResetRequest;
 import com.kilivana.backend.common.entity.PasswordResetToken;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.common.repository.PasswordResetTokenRepository;
 import com.kilivana.backend.mail.SendGridMailService;
 import com.kilivana.backend.security.JwtProperties;
@@ -23,8 +24,12 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -141,6 +146,107 @@ class PasswordResetFlowTest {
 
         assertThat(response).contains("reset instructions");
         verify(users).findByEmailIgnoreCase("nobody@example.com");
+    }
+
+    @Test
+    void aSecondRequestInsideTheCooldownIsRefused() {
+        User user = User.builder().id(7L).email("daniel@example.com").build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("daniel@example.com")).thenReturn(Optional.of(user));
+
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        when(tokens.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        SendGridMailService mail = mock(SendGridMailService.class);
+        when(mail.sendHtml(any(), any(), any())).thenReturn(true);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setPasswordResetCooldownMinutes(60);
+        service.forgotPassword("daniel@example.com");
+
+        assertThatThrownBy(() -> service.forgotPassword("daniel@example.com"))
+                .isInstanceOf(TooManyRequestsException.class);
+        verify(tokens, times(1)).save(any());
+    }
+
+    @Test
+    void theCooldownAppliesToUnknownAddressesToo() {
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
+
+        AuthService service = service(users, mock(PasswordResetTokenRepository.class),
+                mock(SendGridMailService.class), passwordEncoder);
+        service.setPasswordResetCooldownMinutes(60);
+        service.forgotPassword("nobody@example.com");
+
+        assertThatThrownBy(() -> service.forgotPassword("nobody@example.com"))
+                .isInstanceOf(TooManyRequestsException.class);
+    }
+
+    @Test
+    void aCooldownOfZeroDisablesTheThrottle() {
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
+
+        AuthService service = service(users, mock(PasswordResetTokenRepository.class),
+                mock(SendGridMailService.class), passwordEncoder);
+        service.setPasswordResetCooldownMinutes(0);
+
+        assertThat(service.forgotPassword("nobody@example.com")).contains("reset instructions");
+        assertThat(service.forgotPassword("nobody@example.com")).contains("reset instructions");
+    }
+
+    @Test
+    void aFailedDeliveryReleasesTheCooldown() {
+        User user = User.builder().id(7L).email("daniel@example.com").build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("daniel@example.com")).thenReturn(Optional.of(user));
+
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        when(tokens.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        SendGridMailService mail = mock(SendGridMailService.class);
+        when(mail.sendHtml(any(), any(), any())).thenReturn(false);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setPasswordResetCooldownMinutes(60);
+        service.forgotPassword("daniel@example.com");
+
+        assertThat(service.forgotPassword("daniel@example.com")).contains("reset instructions");
+        // The undelivered token is withdrawn rather than left usable.
+        verify(tokens, atLeastOnce()).delete(any(PasswordResetToken.class));
+    }
+
+    @Test
+    void aFailedDeliveryKeepsTheTokenWhenTheDevelopmentLinkIsLogged() {
+        User user = User.builder().id(7L).email("daniel@example.com").build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("daniel@example.com")).thenReturn(Optional.of(user));
+
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        when(tokens.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        SendGridMailService mail = mock(SendGridMailService.class);
+        when(mail.sendHtml(any(), any(), any())).thenReturn(false);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setDevLogResetLink(true);
+        service.setPasswordResetCooldownMinutes(60);
+        service.forgotPassword("daniel@example.com");
+
+        // The link is in the log, so the token must survive for the flow to be completed.
+        verify(tokens, never()).delete(any(PasswordResetToken.class));
+        // No mail was sent, so the caller is not throttled for trying again.
+        assertThat(service.forgotPassword("daniel@example.com")).contains("reset instructions");
+    }
+
+    @Test
+    void aPasswordShorterThanThePolicyIsRefused() {
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        PasswordEncoder encoder = mock(PasswordEncoder.class);
+
+        assertThatThrownBy(() -> service(mock(UserRepository.class), tokens, mock(SendGridMailService.class), encoder).resetPassword(
+                PasswordResetRequest.builder().token("raw-token-value").newPassword("short12").build()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("at least 8");
+        verifyNoInteractions(encoder);
     }
 
     private static String hash(String value) {

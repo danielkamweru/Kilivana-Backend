@@ -64,7 +64,10 @@ class SendGridMailServiceTest {
             @Override
             public Response api(Request request) {
                 receivedEndpoint.set(request.getEndpoint());
+feature/supplier-api-updates
                 Response response = new Response(); response.setStatusCode(202); return response;
+
+                return new Response(202, "", null); main
             }
         };
 
@@ -80,6 +83,7 @@ class SendGridMailServiceTest {
         assertThat(receivedEndpoint.get()).isEqualTo("mail/send");
     }
 
+feature/supplier-api-updates
 
     @Test void rejectedAndRuntimeProviderResponsesFailWithoutLoggingRequestSecrets() {
         SendGridProperties p=new SendGridProperties();p.setEnabled(true);p.setApiKey("test-provider-secret");
@@ -96,6 +100,29 @@ class SendGridMailServiceTest {
             assertThat(appender.list).allMatch(e->!e.getFormattedMessage().contains("123456")
                 && !e.getFormattedMessage().contains("test-provider-secret") && e.getThrowableProxy()==null);
         } finally {logger.detachAppender(appender);appender.stop();}
+
+    @Test
+    void providerRefusal_returnsFalseRatherThanReportingASend() {
+        SendGridProperties properties = new SendGridProperties();
+        properties.setEnabled(true);
+        properties.setApiKey("SG.test");
+        properties.setFromEmail("no-reply@kilivana.com");
+        properties.setFromName("Kilivana");
+
+        // SendGrid reports an unverified sender as 403 with the reason in the body.
+        SendGrid refusing = new SendGrid("SG.test") {
+            @Override
+            public Response api(Request request) {
+                return new Response(403,
+                        "{\"errors\":[{\"message\":\"The from address does not match a verified "
+                                + "Sender Identity.\"}]}",
+                        null);
+            }
+        };
+
+        SendGridMailService service = new SendGridMailService(properties, key -> refusing);
+
+        assertThat(service.sendHtml("buyer@example.com", "Subject", "<p>body</p>")).isFalse(); main
     }
 
     /** A SendGrid whose {@code api()} always fails with a checked IOException. */

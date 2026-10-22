@@ -155,9 +155,9 @@ public class DarajaService {
             }
 
             String token = (String) response.get("access_token");
-            int expiresIn = ((Number) response.getOrDefault("expires_in", 3600)).intValue();
+            int expiresIn = parseExpiresIn(response.get("expires_in"));
             // Use 5 minutes before actual expiry as safety margin
-            LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(expiresIn - 300);
+            LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(Math.max(60, expiresIn - 300));
 
             tokenCache.set(new TokenHolder(token, expiresAt));
             log.debug("Cached new Daraja OAuth token, expires at {}", expiresAt);
@@ -170,6 +170,26 @@ public class DarajaService {
             log.error("Daraja OAuth failed unexpectedly", e);
             throw new ServiceUnavailableException("Failed to obtain M-PESA access token: " + e.getMessage());
         }
+    }
+
+    /**
+     * Reads the token lifetime from the OAuth response. Safaricom sends it as a JSON
+     * string ({@code "3599"}), so casting the field to a number fails on the real
+     * response and takes the whole STK Push down with it. A number is accepted too,
+     * and anything unreadable falls back to the documented hour.
+     */
+    private int parseExpiresIn(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.toString().trim());
+            } catch (NumberFormatException ignored) {
+                // Unreadable lifetime: fall back to the documented hour.
+            }
+        }
+        return 3600;
     }
 
     /** Generates the STK password: Base64(Shortcode + Passkey + Timestamp). */
