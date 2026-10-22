@@ -1,3 +1,4 @@
+
 package com.kilivana.backend.farm.dto;
 
 import com.kilivana.backend.common.enums.FarmStatus;
@@ -12,15 +13,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Response DTO representing a farm, including its images, crops, and metadata.
+ * Response DTO representing a farm, including farmer details,
+ * images, crops, and metadata.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Response DTO representing a farm with images, crops, and metadata")
+@Schema(description = "Response DTO representing a farm with farmer details, images, crops, and metadata")
 public class FarmResponse {
+
     @Schema(description = "Unique identifier of the farm", example = "50")
     private Long id;
+
+    @Schema(description = "Details of the farmer who registered this farm")
+    private FarmOwnerResponse farmer;
 
     @Schema(description = "Identifier of the farmer who owns the farm", example = "12")
     private Long farmerId;
@@ -52,26 +58,86 @@ public class FarmResponse {
     @Schema(description = "Current status of the farm", example = "ACTIVE")
     private FarmStatus status;
 
-    @Schema(description = "Description of the farm", example = "A productive farm growing maize and beans")
+    @Schema(description = "Description of the farm",
+            example = "A productive farm growing maize and beans")
     private String description;
 
     @Schema(description = "List of images associated with the farm")
     private List<FarmImageResponse> images = new ArrayList<>();
 
     @Schema(description = "List of crops grown on the farm")
-    private List<CropResponse> crops;
+    private List<CropResponse> crops = new ArrayList<>();
 
-    @Schema(description = "Timestamp when the farm record was created", example = "2024-01-20T09:15:00")
+    @Schema(description = "Timestamp when the farm record was created",
+            example = "2024-01-20T09:15:00")
     private LocalDateTime createdAt;
 
-    // Static factory method to replace @Builder
-    public static FarmResponse of(Long id, Long farmerId, String name, String county, String subCounty,
-                                  String address, Double latitude, Double longitude, Double sizeAcres,
-                                  OwnershipType ownershipType, FarmStatus status, String description,
-                                  List<FarmImageResponse> images, List<CropResponse> crops, LocalDateTime createdAt) {
+    /**
+     * Static factory method.
+     */
+    public static FarmResponse of(
+            Long id,
+            Long farmerId,
+            String name,
+            String county,
+            String subCounty,
+            String address,
+            Double latitude,
+            Double longitude,
+            Double sizeAcres,
+            OwnershipType ownershipType,
+            FarmStatus status,
+            String description,
+            List<FarmImageResponse> images,
+            List<CropResponse> crops,
+            LocalDateTime createdAt) {
+
+        return of(
+                id,
+                farmerId,
+                null,
+                name,
+                county,
+                subCounty,
+                address,
+                latitude,
+                longitude,
+                sizeAcres,
+                ownershipType,
+                status,
+                description,
+                images,
+                crops,
+                createdAt
+        );
+    }
+
+    /**
+     * Static factory method including farmer details.
+     */
+    public static FarmResponse of(
+            Long id,
+            Long farmerId,
+            FarmOwnerResponse farmer,
+            String name,
+            String county,
+            String subCounty,
+            String address,
+            Double latitude,
+            Double longitude,
+            Double sizeAcres,
+            OwnershipType ownershipType,
+            FarmStatus status,
+            String description,
+            List<FarmImageResponse> images,
+            List<CropResponse> crops,
+            LocalDateTime createdAt) {
+
         FarmResponse response = new FarmResponse();
+
         response.id = id;
         response.farmerId = farmerId;
+        response.farmer = farmer;
         response.name = name;
         response.county = county;
         response.subCounty = subCounty;
@@ -83,17 +149,26 @@ public class FarmResponse {
         response.status = status;
         response.description = description;
         response.images = images != null ? images : new ArrayList<>();
-        response.crops = crops;
+        response.crops = crops != null ? crops : new ArrayList<>();
         response.createdAt = createdAt;
+
         return response;
     }
 
+    /**
+     * Creates the custom builder.
+     */
     public static FarmResponseBuilder builder() {
         return new FarmResponseBuilder();
     }
 
+    /**
+     * Custom builder for FarmResponse.
+     */
     public static class FarmResponseBuilder {
+
         private Long id;
+        private FarmOwnerResponse farmer;
         private Long farmerId;
         private String name;
         private String county;
@@ -106,11 +181,16 @@ public class FarmResponse {
         private FarmStatus status;
         private String description;
         private List<FarmImageResponse> images = new ArrayList<>();
-        private List<CropResponse> crops;
+        private List<CropResponse> crops = new ArrayList<>();
         private LocalDateTime createdAt;
 
         public FarmResponseBuilder id(Long id) {
             this.id = id;
+            return this;
+        }
+
+        public FarmResponseBuilder farmer(FarmOwnerResponse farmer) {
+            this.farmer = farmer;
             return this;
         }
 
@@ -186,7 +266,9 @@ public class FarmResponse {
 
         public FarmResponse build() {
             FarmResponse response = new FarmResponse();
+
             response.id = this.id;
+            response.farmer = this.farmer;
             response.farmerId = this.farmerId;
             response.name = this.name;
             response.county = this.county;
@@ -198,9 +280,14 @@ public class FarmResponse {
             response.ownershipType = this.ownershipType;
             response.status = this.status;
             response.description = this.description;
-            response.images = this.images != null ? this.images : new ArrayList<>();
-            response.crops = this.crops;
+            response.images = this.images != null
+                    ? this.images
+                    : new ArrayList<>();
+            response.crops = this.crops != null
+                    ? this.crops
+                    : new ArrayList<>();
             response.createdAt = this.createdAt;
+
             return response;
         }
     }
