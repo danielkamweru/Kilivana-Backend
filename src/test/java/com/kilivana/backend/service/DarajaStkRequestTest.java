@@ -20,6 +20,7 @@ import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Checks the STK Push request the application actually puts on the wire.
@@ -47,6 +48,14 @@ class DarajaStkRequestTest {
         stub.createContext("/mpesa/stkpush/v1/processrequest", exchange -> {
             authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
             requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            if (requestBody.get().contains("\"AccountReference\":\"FAIL\"")) {
+                byte[] refusal = ("{\"requestId\":\"abc\",\"errorCode\":\"404.001.03\","
+                        + "\"errorMessage\":\"Invalid Access Token\"}").getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(404, refusal.length);
+                exchange.getResponseBody().write(refusal);
+                exchange.close();
+                return;
+            }
             respond(exchange, "{\"MerchantRequestID\":\"mr-TEST\",\"CheckoutRequestID\":\"ws_CO_TEST\","
                     + "\"ResponseCode\":\"0\",\"ResponseDescription\":\"Success\"}");
         });
@@ -110,6 +119,23 @@ class DarajaStkRequestTest {
         assertThat(timestamp).hasSize(14);
         LocalDateTime parsed = LocalDateTime.parse(timestamp, DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         assertThat(parsed).isBeforeOrEqualTo(LocalDateTime.now().plusMinutes(1));
+    }
+
+    @Test
+    void aRefusedTokenIsReportedWithTheActionThatFixesIt() {
+        DarajaProperties properties = new DarajaProperties();
+        properties.setConsumerKey("consumer-key");
+        properties.setConsumerSecret("consumer-secret");
+        properties.setShortcode("174379");
+        properties.setPasskey("passkey-123");
+        properties.setCallbackUrl("https://example.test/api/v1/payments/daraja/callback");
+
+        DarajaService service = new DarajaService(properties, stubClient());
+
+        assertThatThrownBy(() -> service.initiateStkPush("254708374149", 1, "FAIL", "Payment"))
+                .isInstanceOf(com.kilivana.backend.common.exception.ServiceUnavailableException.class)
+                .hasMessageContaining("Invalid Access Token")
+                .hasMessageContaining("not enabled for M-PESA Express STK Push");
     }
 
     /** A client whose sandbox calls are redirected to the local stub. */

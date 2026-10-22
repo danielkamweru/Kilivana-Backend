@@ -108,12 +108,45 @@ public class DarajaService {
             return stkResponse;
 
         } catch (WebClientResponseException e) {
-            log.error("Daraja STK Push failed with status {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new ServiceUnavailableException("M-PESA STK Push failed: " + e.getResponseBodyAsString());
+            String body = e.getResponseBodyAsString();
+            String hint = diagnose(body);
+            log.error("Daraja STK Push failed with status {}: {}{}", e.getStatusCode(), body,
+                    hint == null ? "" : " — " + hint);
+            throw new ServiceUnavailableException("M-PESA STK Push failed: " + body
+                    + (hint == null ? "" : " (" + hint + ")"));
         } catch (Exception e) {
             log.error("Daraja STK Push failed unexpectedly", e);
             throw new ServiceUnavailableException("M-PESA STK Push failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * Turns Daraja's error code into the action that fixes it.
+     *
+     * <p>Safaricom reports a refused access token, a mismatched pass key and a disabled
+     * product under nearly identical wording, so the code is what tells them apart.
+     * The most common cause of a refused token is a consumer key whose Daraja
+     * application is not enabled for M-PESA Express, or a short code and pass key that
+     * belong to a different application than the consumer key.
+     *
+     * @return a short explanation, or {@code null} when the body says nothing useful
+     */
+    static String diagnose(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return null;
+        }
+        String body = responseBody.toLowerCase();
+        if (body.contains("404.001.03")) {
+            return "the access token was refused: the consumer key is not enabled for M-PESA Express STK Push, "
+                    + "or the short code and pass key belong to a different Daraja application";
+        }
+        if (body.contains("invalid passkey") || body.contains("404.001.02")) {
+            return "the pass key does not match the short code";
+        }
+        if (body.contains("insufficient") || body.contains("quota") || body.contains("exceeded")) {
+            return "the Daraja account has no remaining request quota";
+        }
+        return null;
     }
 
     /**
