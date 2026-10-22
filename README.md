@@ -125,6 +125,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
+| `RESET_PASSWORD_URL` | *(empty)* | Reset page for web/staff accounts; accepts a `token` query parameter. |
+| `RESET_PASSWORD_MOBILE_URL` | *(empty)* | Driver reset page or mobile deep link; falls back to `RESET_PASSWORD_URL`. |
+| `RESET_PASSWORD_ECOMMERCE_URL` | *(empty)* | Buyer/storefront reset page; falls back to `RESET_PASSWORD_URL`. |
 
 ### Image uploads
 
@@ -154,7 +157,15 @@ docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V4__one_proof_of_delivery_per_job.sql
 docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V6__unique_email_case_insensitive.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V19__payment_status_check_and_lookup_indexes.sql
 ```
+
+`V19` widens the `payments.status` check to the current `PaymentStatus` values and adds
+the callback lookup indexes. The old constraint still carried the values the enum had
+before it was reshaped, so a successful M-PESA callback was rejected by the database
+and no payment could ever be recorded as paid. It only widens the accepted set: no row
+is rewritten and every value the old constraint allowed stays valid.
 
 `V4` deletes duplicate proof-of-delivery rows before adding its unique index, so read the
 comment at the top of that file before running it against anything other than development.

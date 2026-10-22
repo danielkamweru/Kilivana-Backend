@@ -62,6 +62,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
     @Value("${app.password-reset.frontend-url:}")
     private String passwordResetFrontendUrl;
+    /**
+     * Recovery link for the mobile app (drivers). A deep link the app claims, such as
+     * {@code kilivana://reset-password}, or an app link the app intercepts.
+     */
+    @Value("${app.password-reset.client-urls.mobile:}")
+    private String mobileResetUrl = "";
+    /** Recovery link for the ecommerce storefront (buyers). */
+    @Value("${app.password-reset.client-urls.ecommerce:}")
+    private String ecommerceResetUrl = "";
     @Value("${app.password-reset.token-expiry-minutes:30}")
     private long passwordResetExpiryMinutes = 30L;
     /**
@@ -89,6 +98,22 @@ import java.util.concurrent.ConcurrentHashMap;
      */
     void setPasswordResetFrontendUrl(String url) {
         this.passwordResetFrontendUrl = url;
+    }
+
+    /**
+     * Overrides the recovery link for the mobile app. Package-private so the test
+     * suite can drive the reset flow without a real deployment value.
+     */
+    void setMobileResetUrl(String url) {
+        this.mobileResetUrl = url;
+    }
+
+    /**
+     * Overrides the recovery link for the ecommerce storefront. Package-private so the
+     * test suite can drive the reset flow without a real deployment value.
+     */
+    void setEcommerceResetUrl(String url) {
+        this.ecommerceResetUrl = url;
     }
 
     /**
@@ -247,16 +272,17 @@ import java.util.concurrent.ConcurrentHashMap;
                     "A password reset was requested recently. Please wait before asking again.");
         }
         userRepository.findByEmailIgnoreCase(address).ifPresent(user -> {
-            if (passwordResetFrontendUrl == null || passwordResetFrontendUrl.isBlank()) return;
+            String resetUrl = resetUrlFor(user.getRole());
+            if (resetUrl == null || resetUrl.isBlank()) return;
             String raw = newResetToken();
             passwordResetTokenRepository.deleteByUserId(user.getId());
             PasswordResetToken token = PasswordResetToken.builder().userId(user.getId()).tokenHash(hash(raw))
                     .expiresAt(LocalDateTime.now().plusMinutes(passwordResetExpiryMinutes)).createdAt(LocalDateTime.now()).build();
             passwordResetTokenRepository.save(token);
-            String joiner = passwordResetFrontendUrl.contains("?") ? "&" : "?";
-            String resetLink = passwordResetFrontendUrl + joiner + "token=" + raw;
+            String joiner = resetUrl.contains("?") ? "&" : "?";
+            String resetLink = resetUrl + joiner + "token=" + raw;
             boolean sent = sendGridMailService.sendHtml(user.getEmail(), "Reset your Kilivana password",
-                    "<p>Use this link within " + passwordResetExpiryMinutes + " minutes: <a href=\"" + resetLink + "\">Reset password</a></p>");
+                    resetMailBody(resetLink));
             if (!sent) {
                 // Nothing left the building, so the throttle has no flood to prevent:
                 // the caller may try again at once. A cooldown that survived a refused
@@ -294,6 +320,60 @@ import java.util.concurrent.ConcurrentHashMap;
             return false;
         }
         return true;
+    }
+
+    /**
+     * Which client a recovery link points at. Drivers use the mobile app, buyers use the
+     * ecommerce storefront, and everyone else (farmers, suppliers, inspectors, staff) is
+     * sent to the web page. The role decides the client because the account decides
+     * where the user is going to sign in again.
+     */
+    private static final Map<UserRole, String> ROLE_CLIENTS = Map.of(
+            UserRole.DRIVER, "mobile",
+            UserRole.BUYER, "ecommerce");
+
+    /**
+     * The recovery link base URL for a user's client. A client without a configured URL
+     * falls back to the web link, so an unconfigured mobile app never leaves the user
+     * without a way in. An empty result means no link can be built and no mail is sent.
+     */
+    private String resetUrlFor(UserRole role) {
+        String client = role == null ? "web" : ROLE_CLIENTS.getOrDefault(role, "web");
+        String url = switch (client) {
+            case "mobile" -> mobileResetUrl;
+            case "ecommerce" -> ecommerceResetUrl;
+            default -> passwordResetFrontendUrl;
+        };
+        if (url == null || url.isBlank()) {
+            url = passwordResetFrontendUrl;
+        }
+        if (url == null || url.isBlank()) {
+            url = ecommerceResetUrl;
+        }
+        if (url == null || url.isBlank()) {
+            url = mobileResetUrl;
+        }
+        return url == null ? "" : url.trim();
+    }
+
+    /**
+     * The body of the recovery mail. A deep link opens the app, a web link opens the
+     * browser, and the raw link is always included so a mail client that does not
+     * follow links still leaves the user a way in.
+     */
+    private String resetMailBody(String resetLink) {
+        boolean opensApp = !resetLink.startsWith("http://") && !resetLink.startsWith("https://");
+        String instruction = opensApp
+                ? "Tap the button below to reset your password in the Kilivana app."
+                : "Tap the button below to reset your password.";
+        return "<p>Hi,</p>"
+                + "<p>" + instruction + "</p>"
+                + "<p><a href=\"" + resetLink + "\">Reset password</a></p>"
+                + "<p>If the button does not work, paste this link into your browser:<br>"
+                + resetLink + "</p>"
+                + "<p>This link can be used once and expires in " + passwordResetExpiryMinutes + " minutes.</p>"
+                + "<p>If you did not ask to reset your password, you can ignore this email "
+                + "and nothing will change.</p>";
     }
 
     @Transactional

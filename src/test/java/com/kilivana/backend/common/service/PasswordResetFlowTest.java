@@ -7,6 +7,7 @@ import com.kilivana.backend.common.entity.PasswordResetToken;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.common.repository.PasswordResetTokenRepository;
+import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.mail.SendGridMailService;
 import com.kilivana.backend.security.JwtProperties;
 import com.kilivana.backend.security.JwtService;
@@ -78,6 +79,37 @@ class PasswordResetFlowTest {
         verify(mail).sendHtml(org.mockito.ArgumentMatchers.eq("daniel@example.com"),
                 org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.contains("token="));
         assertThat(response).contains("reset instructions");
+    }
+
+    @Test
+    void passwordResetLinksUseTheClientConfiguredForTheUsersRole() {
+        User driver = User.builder().id(7L).email("driver@example.com").role(UserRole.DRIVER).build();
+        User buyer = User.builder().id(8L).email("buyer@example.com").role(UserRole.BUYER).build();
+        User farmer = User.builder().id(9L).email("farmer@example.com").role(UserRole.FARMER).build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("driver@example.com")).thenReturn(Optional.of(driver));
+        when(users.findByEmailIgnoreCase("buyer@example.com")).thenReturn(Optional.of(buyer));
+        when(users.findByEmailIgnoreCase("farmer@example.com")).thenReturn(Optional.of(farmer));
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        when(tokens.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        SendGridMailService mail = mock(SendGridMailService.class);
+        when(mail.sendHtml(any(), any(), any())).thenReturn(true);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setPasswordResetFrontendUrl("http://localhost:4200/reset-password");
+        service.setMobileResetUrl("kilivana://reset-password");
+        service.setEcommerceResetUrl("http://localhost:4220/reset-password");
+        service.setPasswordResetCooldownMinutes(0);
+
+        service.forgotPassword("driver@example.com");
+        service.forgotPassword("buyer@example.com");
+        service.forgotPassword("farmer@example.com");
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(mail, times(3)).sendHtml(any(), any(), bodyCaptor.capture());
+        assertThat(bodyCaptor.getAllValues().get(0)).contains("kilivana://reset-password?token=");
+        assertThat(bodyCaptor.getAllValues().get(1)).contains("http://localhost:4220/reset-password?token=");
+        assertThat(bodyCaptor.getAllValues().get(2)).contains("http://localhost:4200/reset-password?token=");
     }
 
     @Test
