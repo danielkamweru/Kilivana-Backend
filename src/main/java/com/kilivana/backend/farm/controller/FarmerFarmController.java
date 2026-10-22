@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
  */
 @Tag(name = "Farmer · Farms", description = "Farmer-facing farm management")
 @RestController
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('FARMER')")
 @RequestMapping("/api/v1/farmers/me/farms")
 @RequiredArgsConstructor
 public class FarmerFarmController {

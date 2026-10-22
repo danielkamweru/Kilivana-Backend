@@ -58,6 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final SendGridMailService sendGridMailService;
+    private final EmailVerificationService emailVerificationService;
 
     @Value("${app.password-reset.frontend-url:}")
     private String passwordResetFrontendUrl;
@@ -114,9 +115,9 @@ import java.util.concurrent.ConcurrentHashMap;
      */
     @Transactional
     public UserResponse register(UserRegistrationRequest request) {
-        if (request.getRole() != null && request.getRole().isStaff()) {
+        if (request.getRole() == null || request.getRole() == UserRole.ADMIN || request.getRole() == UserRole.INSPECTOR) {
             throw new BadRequestException(
-                    "Administrator accounts cannot be self-registered");
+                    "Staff accounts require authorized administrator provisioning");
         }
         String email = normalizeEmail(request.getEmail());
         String phone = normalizePhone(request.getPhone());
@@ -130,6 +131,7 @@ import java.util.concurrent.ConcurrentHashMap;
         User user = User.builder()
                 .name(request.getName())
                 .email(email)
+                .emailVerified(false)
                 .phone(phone)
                 .username(request.getUsername())
                 .region(normaliseRegion(request.getRegion()))
@@ -140,7 +142,11 @@ import java.util.concurrent.ConcurrentHashMap;
                 .referenceCode(referenceCodeGenerator.nextCode(request.getRole()))
                 .build();
 
-        return mapToResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+        var challenge = emailVerificationService.startForNewAccount(saved);
+        UserResponse response = mapToResponse(saved);
+        response.setEmailVerificationChallengeId(challenge.challengeId());
+        return response;
     }
 
     /**
@@ -164,6 +170,8 @@ import java.util.concurrent.ConcurrentHashMap;
     }
 
     private AuthTokenResponse buildTokenResponse(User user) {
+        if (!user.isEmailVerified())
+            throw new com.kilivana.backend.common.exception.ForbiddenException("Email verification is required before login");
         long expirationHours = jwtProperties.getAccessTokenExpirationHours();
         return AuthTokenResponse.builder()
                 .accessToken(jwtService.generateAccessToken(user))
@@ -186,7 +194,7 @@ import java.util.concurrent.ConcurrentHashMap;
     /** Updates the caller's own contact details, refusing an email or phone now used by a different account. */
     @Transactional
     public UserResponse updateCurrentUser(Long userId, UserRegistrationRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         String email = normalizeEmail(request.getEmail());
@@ -335,6 +343,8 @@ import java.util.concurrent.ConcurrentHashMap;
                 .role(user.getRole())
                 .status(user.getStatus())
                 .verificationStatus(user.getVerificationStatus())
+                .emailVerified(user.isEmailVerified())
+                .emailVerifiedAt(user.getEmailVerifiedAt())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

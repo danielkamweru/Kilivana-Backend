@@ -41,6 +41,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    /** Legacy accounts are grandfathered; all HTTP creation paths explicitly set false. */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean emailVerified = true;
+
+    /** Null for grandfathered accounts; populated only by successful email verification. */
+    private java.time.Instant emailVerifiedAt;
+
     /** Phone number, trimmed on input; unique per account. */
     @Column(nullable = false)
     private String phone;
@@ -114,7 +122,13 @@ public class User {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setEmail(String email) {
+        if (this.email != null && !this.email.trim().equalsIgnoreCase(email == null ? "" : email.trim())) {
+            this.emailVerified = false;
+            this.emailVerifiedAt = null;
+        }
+        this.email = email;
+    }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
     public String getUsername() { return username; }

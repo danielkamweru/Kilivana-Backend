@@ -29,6 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminSupplierController {
 
+    private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final AdminSupplierService adminSupplierService;
 
     /**
@@ -55,6 +56,7 @@ public class AdminSupplierController {
     @PostMapping
     public ResponseEntity<ApiResponse<AdminSupplierResponse>> registerSupplier(
             @Valid @RequestBody SupplierRegistrationRequest request) {
+        emailOtpRequestLimiter.acquireSend(request.getEmail());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(adminSupplierService.registerSupplier(request)));
     }

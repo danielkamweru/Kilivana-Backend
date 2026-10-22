@@ -66,12 +66,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * when the admin list is requested with no filters.
      */
     @Query(value = "SELECT * FROM products p WHERE " +
-           "(CAST(:status AS VARCHAR) IS NULL OR p.status = CAST(:status AS VARCHAR)) AND " +
+           "((CAST(:status AS VARCHAR) IS NULL AND p.status <> 'DELETED') OR p.status = CAST(:status AS VARCHAR)) AND " +
            "(CAST(:categoryId AS BIGINT) IS NULL OR p.category_id = :categoryId) AND " +
            "(CAST(:sellerId AS BIGINT) IS NULL OR p.seller_id = :sellerId) AND " +
            "(CAST(:search AS VARCHAR) IS NULL OR p.name ILIKE '%' || :search || '%' OR p.description ILIKE '%' || :search || '%')",
            countQuery = "SELECT COUNT(*) FROM products p WHERE " +
-           "(CAST(:status AS VARCHAR) IS NULL OR p.status = CAST(:status AS VARCHAR)) AND " +
+           "((CAST(:status AS VARCHAR) IS NULL AND p.status <> 'DELETED') OR p.status = CAST(:status AS VARCHAR)) AND " +
            "(CAST(:categoryId AS BIGINT) IS NULL OR p.category_id = :categoryId) AND " +
            "(CAST(:sellerId AS BIGINT) IS NULL OR p.seller_id = :sellerId) AND " +
            "(CAST(:search AS VARCHAR) IS NULL OR p.name ILIKE '%' || :search || '%' OR p.description ILIKE '%' || :search || '%')",

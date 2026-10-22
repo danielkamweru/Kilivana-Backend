@@ -30,7 +30,7 @@ public class ResourceAuthorization {
     private User actor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof Long id)) return null;
-        return users.findById(id).filter(u -> AccountAccessValidator.permitsAuthentication(u.getStatus())).orElse(null);
+        return users.findById(id).filter(u -> u.isEmailVerified() && AccountAccessValidator.permitsAuthentication(u.getStatus())).orElse(null);
     }
 
     public boolean admin() { User u = actor(); return u != null && u.getRole() == UserRole.ADMIN; }

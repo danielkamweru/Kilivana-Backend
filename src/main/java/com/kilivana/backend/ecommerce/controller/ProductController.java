@@ -141,7 +141,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(products));
     }
 
-    @Operation(summary = "Update product with images", description = "Updates an existing product and optionally its images using multipart form data. Only the product owner may perform this operation.")
+    @Operation(summary = "Update product with images", description = "Updates product fields and appends supplied images, preserving existing images. Remove or replace images through image ID routes. Owner seller or Admin only.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product updated successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload"),
@@ -185,7 +185,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
-    @Operation(summary = "Update product status", description = "Updates the lifecycle status of a product. Only the product owner may perform this operation.")
+    @Operation(summary = "Update product status", description = "Seller transitions: active to unlisted; active/unlisted/pending/rejected to archived; unlisted/archived to pending for Admin approval. Owner seller or Admin only.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product status updated successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required"),
@@ -199,11 +199,11 @@ public class ProductController {
             @Parameter(description = "New product status") @RequestParam ProductStatus status) {
         // Verify ownership before status change to prevent unauthorized status transitions
         productService.ensureProductOwnership(id, userId);
-        ProductResponse product = productService.updateProductStatus(id, status);
+        ProductResponse product = productService.updateSellerProductStatus(id, status);
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
-    @Operation(summary = "Delete product", description = "Deletes a product and its associated images by identifier. Only the product owner may perform this operation.")
+    @Operation(summary = "Delete product", description = "Soft deletes an archived product and cleans up images. Retains historical product references. Owner seller or Admin only; reserved stock is rejected.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product deleted successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required"),

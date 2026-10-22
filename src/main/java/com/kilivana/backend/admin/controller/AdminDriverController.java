@@ -34,6 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminDriverController {
 
+    private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final AdminDriverService adminDriverService;
 
     @Operation(summary = "Register a driver",
@@ -42,6 +43,7 @@ public class AdminDriverController {
     @PostMapping
     public ResponseEntity<ApiResponse<AdminDriverResponse>> registerDriver(
             @Valid @RequestBody DriverRegistrationRequest request) {
+        emailOtpRequestLimiter.acquireSend(request.getEmail());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(adminDriverService.registerDriver(request)));
     }

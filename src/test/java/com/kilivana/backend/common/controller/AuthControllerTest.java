@@ -35,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfig.class)
 class AuthControllerTest {
 
+    @MockBean private com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
 
     @ParameterizedTest

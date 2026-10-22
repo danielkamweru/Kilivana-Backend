@@ -55,6 +55,7 @@ public class CorsConfig {
         // Browsers reject credentialed requests when the allowed origin is a literal "*",
         // which is why the wildcard case above uses patterns instead.
         config.setAllowCredentials(true);
+        config.setExposedHeaders(List.of("Retry-After"));
         // Cache the preflight response so repeat cross-origin calls skip the OPTIONS round trip.
         config.setMaxAge(3600L);
 

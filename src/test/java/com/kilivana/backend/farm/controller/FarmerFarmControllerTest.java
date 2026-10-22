@@ -32,9 +32,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(FarmerFarmController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest(FarmerFarmController.class) feature/supplier-api-updates
+@Import(com.kilivana.backend.config.SecurityConfig.class)
+@Import(SecurityConfig.class) main
 class FarmerFarmControllerTest {
+    @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
+
 
     @MockBean
     private AccountAccessValidator accountAccessValidator;
@@ -221,5 +224,14 @@ class FarmerFarmControllerTest {
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].name").value("Farm 1"))
                 .andExpect(jsonPath("$.data[1].name").value("Farm 2"));
+    }
+
+    @Test void buyerCannotCreateFarm() throws Exception {
+        mockMvc.perform(post("/api/v1/farmers/me/farms")
+                .with(com.kilivana.backend.support.JwtTestSupport.asBuyer(jwtService, 10L))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Farm\",\"county\":\"Nairobi\",\"sizeAcres\":1,\"ownershipType\":\"OWNED\"}"))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verify(farmRepository, org.mockito.Mockito.never()).save(any());
     }
 }

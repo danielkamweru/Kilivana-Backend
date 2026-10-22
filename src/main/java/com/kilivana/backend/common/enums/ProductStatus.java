@@ -6,22 +6,20 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * The lifecycle of a product listing, as the panel draws it: a listing waits for
- * on-site verification, goes live, and can be rejected or suspended by an
- * administrator.
- *
- * <p>INACTIVE and OUT_OF_STOCK were removed: nothing set INACTIVE (suspension is
- * the panel's word for taking a listing down), and out of stock is a property of
- * the stock count, not of the listing, so a product that has sold out stays
- * ACTIVE and the panel derives the out-of-stock state from the stock it already
- * receives.
+ * Admin moderation uses ACTIVE, PENDING_APPROVAL, REJECTED and SUSPENDED.
+ * Sellers use UNLISTED to hide a published product and ARCHIVED before deletion.
+ * Re-listing requires PENDING_APPROVAL; DELETED is terminal and retains history.
+ * Out-of-stock remains a property of stock quantity rather than a lifecycle state.
  */
 @Schema(description = "The lifecycle of a product listing.")
 public enum ProductStatus {
     ACTIVE,
     PENDING_APPROVAL,
     REJECTED,
-    SUSPENDED;
+    SUSPENDED,
+    UNLISTED,
+    ARCHIVED,
+    DELETED;
 
     @JsonCreator
     public static ProductStatus from(String value) {

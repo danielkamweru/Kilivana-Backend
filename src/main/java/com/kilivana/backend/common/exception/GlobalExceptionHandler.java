@@ -140,6 +140,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), error));
     }
 
+    @ExceptionHandler(EmailOtpRateLimitException.class)
+    public ResponseEntity<ApiResponse<Void>> handleEmailOtpRateLimit(EmailOtpRateLimitException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", Long.toString(ex.getRetryAfterSeconds()))
+                .body(ApiResponse.error(ex.getMessage(), ApiResponse.ErrorDetail.builder()
+                        .code("TOO_MANY_REQUESTS").details(ex.getMessage()).build()));
+    }
+
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ApiResponse<Void>> handleTooManyRequests(TooManyRequestsException ex) {
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()

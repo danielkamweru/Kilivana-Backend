@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /**
  * Whether a driver's licence and national ID have been checked by an administrator.
  *
- * <p>Separate from {@link VerificationStatus}, which tracks whether a user's <em>email</em> has
+ * <p>Separate from {@code User.emailVerified}, which tracks whether a user's <em>email</em> has
  * been confirmed. A driver can have a confirmed email and an unverified licence, so the two
  * cannot share a column.
  */

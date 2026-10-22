@@ -32,12 +32,14 @@ import com.kilivana.backend.security.CurrentUser;
 @RequiredArgsConstructor
 public class AuthController {
 
+    private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final AuthService authService;
     private final AuthRateLimiter authRateLimiter;
 
     /** Creates an account. Staff roles are refused here; an administrator creates staff accounts through the admin panel. */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody UserRegistrationRequest request) {
+        emailOtpRequestLimiter.acquireSend(request.getEmail());
         UserResponse user = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(user));
     }

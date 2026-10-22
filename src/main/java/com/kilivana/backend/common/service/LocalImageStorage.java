@@ -62,6 +62,9 @@ public class LocalImageStorage implements ImageStorage {
         Files.createDirectories(target.getParent());
         try (var in = file.getInputStream()) {
             Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException | RuntimeException ex) {
+            Files.deleteIfExists(target);
+            throw ex;
         }
 
         log.info("Stored image locally at {}", target);

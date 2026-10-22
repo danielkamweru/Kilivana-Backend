@@ -34,12 +34,14 @@ class UserServiceUsernameRegionTest {
     @Mock private UserReferenceCodeGenerator referenceCodeGenerator;
     @Mock private DriverProfileRepository driverProfileRepository;
 
+    @Mock private com.kilivana.backend.common.service.EmailVerificationService verification;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         userService = new UserService(
-                userRepository, passwordEncoder, referenceCodeGenerator, driverProfileRepository);
+                userRepository, passwordEncoder, referenceCodeGenerator, driverProfileRepository, verification);
+        when(verification.startForNewAccount(any())).thenReturn(com.kilivana.backend.common.dto.EmailOtpChallengeResponse.accepted(java.util.UUID.randomUUID()));
         when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(referenceCodeGenerator.nextCode(any())).thenReturn("F-001");
         org.mockito.Mockito.lenient().when(userRepository.save(any(User.class))).thenAnswer(inv -> {
@@ -103,7 +105,7 @@ class UserServiceUsernameRegionTest {
                 .passwordHash("hashed")
                 .role(UserRole.FARMER)
                 .build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(existing));
 
         userService.updateUser(1L, request("Murang'a"));
 

@@ -46,7 +46,7 @@ class PasswordResetFlowTest {
                                 SendGridMailService mail, PasswordEncoder encoder) {
         AuthService s = new AuthService(users, encoder, mock(JwtService.class), new JwtProperties(),
                 mock(com.kilivana.backend.common.service.UserReferenceCodeGenerator.class),
-                tokens, mail);
+                tokens, mail, mock(EmailVerificationService.class));
         // The reset link is only built when a frontend URL is configured; the default
         // test environment has none, so point it at a placeholder host.
         s.setPasswordResetFrontendUrl("https://example.com/reset");

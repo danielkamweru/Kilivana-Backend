@@ -87,6 +87,16 @@ public class SendGridMailService {
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
 
+feature/supplier-api-updates
+            com.sendgrid.Response response = sendGrid.api(request);
+            if (response == null || response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                log.warn("Transactional email provider rejected delivery");
+                return false;
+            }
+            log.info("Transactional email accepted by provider");
+            return true;
+        } catch (IOException | RuntimeException ex) {
+            log.warn("Transactional email delivery failed");
             Response response = sendGrid.api(request);
             int status = response == null ? 0 : response.getStatusCode();
             if (status >= 200 && status < 300) {
@@ -99,7 +109,7 @@ public class SendGridMailService {
             return false;
         } catch (IOException e) {
             log.error("Failed to send SendGrid {} message to {} with subject '{}'",
-                    contentType, to, subject, e);
+                    contentType, to, subject, e);main
             return false;
         }
     }

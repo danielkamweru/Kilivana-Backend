@@ -30,6 +30,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequiredArgsConstructor
 public class UserController {
 
+    private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final UserService userService;
 
     @Operation(summary = "Create a new user", description = "Registers a new user account with the provided details. Returns the created user.")
@@ -40,7 +41,8 @@ public class UserController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
-    public ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody UserRegistrationRequest request) {
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(@jakarta.validation.Valid @RequestBody UserRegistrationRequest request) {
+        emailOtpRequestLimiter.acquireSend(request.getEmail());
         UserResponse user = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(user));
     }

@@ -37,8 +37,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminFarmerController.class)
+feature/supplier-api-updates
+@Import(com.kilivana.backend.config.SecurityConfig.class)
 @Import(SecurityConfig.class)
+main
 class AdminFarmerControllerTest {
+    @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
+    @MockBean private com.kilivana.backend.admin.service.UserService userService;
+    @MockBean private com.kilivana.backend.admin.service.ProfileService profileService;
+
 
     @MockBean
     private AccountAccessValidator accountAccessValidator;

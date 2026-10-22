@@ -44,9 +44,13 @@ public interface FarmRepository extends JpaRepository<Farm, Long> {
            "AND (CAST(:status AS VARCHAR) IS NULL OR f.status = CAST(:status AS VARCHAR)) " +
            "AND (CAST(:farmerId AS BIGINT) IS NULL OR f.farmer_id = :farmerId)",
            nativeQuery = true)
-    Page<Farm> searchFarms(@Param("search") String search,
+    Page<Farm> searchFarmsByStatusName(@Param("search") String search,
                            @Param("county") String county,
-                           @Param("status") com.kilivana.backend.common.enums.FarmStatus status,
+                           @Param("status") String status,
                            @Param("farmerId") Long farmerId,
                            Pageable pageable);
+    default Page<Farm> searchFarms(String search, String county,
+            com.kilivana.backend.common.enums.FarmStatus status, Long farmerId, Pageable pageable) {
+        return searchFarmsByStatusName(search, county, status == null ? null : status.name(), farmerId, pageable);
+    }
 }

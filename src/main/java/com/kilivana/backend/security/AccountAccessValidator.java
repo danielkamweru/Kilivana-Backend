@@ -20,7 +20,7 @@ public class AccountAccessValidator {
 
     public void validate(Long id, UserRole tokenRole) {
         var user = users.findById(id).orElseThrow(() -> new UnauthorizedException("Invalid access token"));
-        if (!permitsAuthentication(user.getStatus()) || user.getRole() != tokenRole) {
+        if (!user.isEmailVerified() || !permitsAuthentication(user.getStatus()) || user.getRole() != tokenRole) {
             throw new UnauthorizedException("Invalid access token");
         }
     }
