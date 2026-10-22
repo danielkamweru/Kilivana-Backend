@@ -1,71 +1,82 @@
 #!/bin/bash
 
-# Standalone script to test Daraja API integration
-# This script tests OAuth token generation and STK Push initiation
-# Usage: ./test-daraja.sh
+# Standalone script to test the Daraja (M-PESA Express / STK Push) integration.
+#
+# Reads the credentials from the environment, falling back to the .env file in the
+# project root, so it can be run without exporting anything first.
+#
+#   ./test-daraja.sh                 # OAuth token + STK Push against the configured environment
+#   DARAJA_TEST_PHONE=2547... ./test-daraja.sh
+#
+# Exits non-zero when Daraja refuses the request, so it can gate a deploy.
+
+set -u
+cd "$(dirname "$0")" || exit 1
+
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+fi
 
 echo "=== Daraja API Test Script ==="
 echo ""
 
-# Check for required environment variables
-if [ -z "$DARAJA_CONSUMER_KEY" ]; then
-    echo "ERROR: DARAJA_CONSUMER_KEY environment variable is not set"
-    echo "Please set it: export DARAJA_CONSUMER_KEY=your_consumer_key"
-    exit 1
-fi
-
-if [ -z "$DARAJA_CONSUMER_SECRET" ]; then
-    echo "ERROR: DARAJA_CONSUMER_SECRET environment variable is not set"
-    echo "Please set it: export DARAJA_CONSUMER_SECRET=your_consumer_secret"
-    exit 1
-fi
-
-if [ -z "$DARAJA_PASSKEY" ]; then
-    echo "ERROR: DARAJA_PASSKEY environment variable is not set"
-    echo "Please set it: export DARAJA_PASSKEY=your_passkey"
-    exit 1
-fi
+for required in DARAJA_CONSUMER_KEY DARAJA_CONSUMER_SECRET DARAJA_PASSKEY; do
+    if [ -z "${!required:-}" ]; then
+        echo "ERROR: $required is not set"
+        echo "Put it in .env, or export it before running this script."
+        exit 1
+    fi
+done
 
 # Set defaults
 DARAJA_SHORTCODE=${DARAJA_SHORTCODE:-174379}
 DARAJA_ENVIRONMENT=${DARAJA_ENVIRONMENT:-sandbox}
 DARAJA_CALLBACK_URL=${DARAJA_CALLBACK_URL:-https://example.com/callback}
-DARAJA_TEST_PHONE=${DARAJA_TEST_PHONE:-254722000000}
+# The sandbox test MSISDN. Safaricom prompts this number instead of a real customer.
+DARAJA_TEST_PHONE=${DARAJA_TEST_PHONE:-254708374149}
+DARAJA_TEST_AMOUNT=${DARAJA_TEST_AMOUNT:-1}
+
+if [ "$DARAJA_ENVIRONMENT" = "production" ]; then
+    OAUTH_URL="https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+    STK_URL="https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+else
+    OAUTH_URL="https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+    STK_URL="https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+fi
 
 echo "Configuration:"
 echo "  Environment: $DARAJA_ENVIRONMENT"
 echo "  Shortcode: $DARAJA_SHORTCODE"
+echo "  Callback: $DARAJA_CALLBACK_URL"
 echo "  Test Phone: $DARAJA_TEST_PHONE"
+echo "  Consumer key: ${DARAJA_CONSUMER_KEY:0:4}***"
 echo ""
 
 # Test 1: OAuth Token Generation
 echo "Test 1: OAuth Token Generation"
 echo "-------------------------------"
 
-if [ "$DARAJA_ENVIRONMENT" = "production" ]; then
-    OAUTH_URL="https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-else
-    OAUTH_URL="https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-fi
-
 CREDENTIALS="$DARAJA_CONSUMER_KEY:$DARAJA_CONSUMER_SECRET"
-ENCODED_CREDENTIALS=$(echo -n "$CREDENTIALS" | base64)
+ENCODED_CREDENTIALS=$(printf '%s' "$CREDENTIALS" | base64 | tr -d '\n')
 
-echo "Requesting OAuth token from: $OAUTH_URL"
-
-TOKEN_RESPONSE=$(curl -s -X GET "$OAUTH_URL" \
+TOKEN_RESPONSE=$(curl -s -m 30 -X GET "$OAUTH_URL" \
   -H "Authorization: Basic $ENCODED_CREDENTIALS" \
   -H "Content-Type: application/json")
 
-ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
+# Safaricom formats the token with or without a space after the colon, so the
+# value is read loosely instead of with a fixed pattern.
+ACCESS_TOKEN=$(printf '%s' "$TOKEN_RESPONSE" | grep -oE '"access_token"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$ACCESS_TOKEN" ]; then
-    echo "❌ Failed to obtain OAuth token"
-    echo "Response: $TOKEN_RESPONSE"
+    echo "✗ Failed to obtain OAuth token"
+    echo "Response: $(printf '%s' "$TOKEN_RESPONSE" | head -c 400)"
     exit 1
 fi
 
-echo "✓ OAuth token obtained successfully"
+echo "✓ OAuth token obtained"
 echo "  Token (first 20 chars): ${ACCESS_TOKEN:0:20}..."
 echo ""
 
@@ -75,27 +86,22 @@ echo "----------------------------"
 
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 PASSWORD_RAW="$DARAJA_SHORTCODE$DARAJA_PASSKEY$TIMESTAMP"
-PASSWORD=$(echo -n "$PASSWORD_RAW" | base64)
-
-if [ "$DARAJA_ENVIRONMENT" = "production" ]; then
-    STK_URL="https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-else
-    STK_URL="https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-fi
+PASSWORD=$(printf '%s' "$PASSWORD_RAW" | base64 | tr -d '\n')
 
 echo "Initiating STK Push to: $DARAJA_TEST_PHONE"
 echo "Timestamp: $TIMESTAMP"
 echo "STK URL: $STK_URL"
+echo ""
 
 STK_PAYLOAD=$(cat <<EOF
 {
-  "BusinessShortCode": $DARAJA_SHORTCODE,
+  "BusinessShortCode": "$DARAJA_SHORTCODE",
   "Password": "$PASSWORD",
   "Timestamp": "$TIMESTAMP",
   "TransactionType": "CustomerPayBillOnline",
-  "Amount": 1,
+  "Amount": $DARAJA_TEST_AMOUNT,
   "PartyA": "$DARAJA_TEST_PHONE",
-  "PartyB": $DARAJA_SHORTCODE,
+  "PartyB": "$DARAJA_SHORTCODE",
   "PhoneNumber": "$DARAJA_TEST_PHONE",
   "CallBackURL": "$DARAJA_CALLBACK_URL",
   "AccountReference": "TEST001",
@@ -104,7 +110,7 @@ STK_PAYLOAD=$(cat <<EOF
 EOF
 )
 
-STK_RESPONSE=$(curl -s -X POST "$STK_URL" \
+STK_RESPONSE=$(curl -s -m 40 -X POST "$STK_URL" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "$STK_PAYLOAD")
@@ -112,29 +118,42 @@ STK_RESPONSE=$(curl -s -X POST "$STK_URL" \
 echo "Response: $STK_RESPONSE"
 echo ""
 
-# Parse response
-RESPONSE_CODE=$(echo "$STK_RESPONSE" | grep -o '"ResponseCode":"[^"]*' | cut -d'"' -f4)
-CHECKOUT_REQUEST_ID=$(echo "$STK_RESPONSE" | grep -o '"CheckoutRequestID":"[^"]*' | cut -d'"' -f4)
-MERCHANT_REQUEST_ID=$(echo "$STK_RESPONSE" | grep -o '"MerchantRequestID":"[^"]*' | cut -d'"' -f4)
+RESPONSE_CODE=$(printf '%s' "$STK_RESPONSE" | grep -oE '"ResponseCode"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+ERROR_CODE=$(printf '%s' "$STK_RESPONSE" | grep -oE '"errorCode"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+ERROR_MESSAGE=$(printf '%s' "$STK_RESPONSE" | grep -oE '"errorMessage"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+CHECKOUT_REQUEST_ID=$(printf '%s' "$STK_RESPONSE" | grep -oE '"CheckoutRequestID"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+MERCHANT_REQUEST_ID=$(printf '%s' "$STK_RESPONSE" | grep -oE '"MerchantRequestID"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
 
 if [ "$RESPONSE_CODE" = "0" ]; then
-    echo "✓ STK Push initiated successfully"
+    echo "✓ STK Push accepted"
     echo "  MerchantRequestID: $MERCHANT_REQUEST_ID"
     echo "  CheckoutRequestID: $CHECKOUT_REQUEST_ID"
     echo ""
-    echo "Note: If $DARAJA_TEST_PHONE is a real Safaricom number, you should receive an STK prompt."
-    echo "Enter your M-PESA PIN to complete the test transaction."
-else
-    echo "⚠ STK Push request failed or returned an error"
-    echo "  ResponseCode: $RESPONSE_CODE"
-    echo ""
-    echo "This is expected if:"
-    echo "  - Using test credentials (phone number may not be valid)"
-    echo "  - Phone number is not a Safaricom M-PESA number"
-    echo "  - Test environment has restrictions"
-    echo ""
-    echo "The OAuth token test passed, so your credentials are valid."
+    echo "Safaricom now calls back $DARAJA_CALLBACK_URL with the result."
+    exit 0
 fi
 
+echo "✗ STK Push refused"
+echo "  ResponseCode: ${RESPONSE_CODE:-none}"
+echo "  errorCode: ${ERROR_CODE:-none}"
+echo "  errorMessage: ${ERROR_MESSAGE:-none}"
 echo ""
-echo "=== Test Complete ==="
+
+case "$ERROR_CODE" in
+    404.001.03)
+        echo "The access token was refused. Either the consumer key is not enabled for"
+        echo "M-PESA Express STK Push in the Daraja portal, or the short code and pass key"
+        echo "belong to a different Daraja application than the consumer key."
+        ;;
+    404.001.02)
+        echo "The pass key does not match the short code. Copy both from the same"
+        echo "application in the Daraja portal."
+        ;;
+    *)
+        echo "Safaricom refused the request. The OAuth token was issued, so the"
+        echo "credentials are valid; check the short code, pass key and the products"
+        echo "enabled for the application in the Daraja portal."
+        ;;
+esac
+
+exit 1
