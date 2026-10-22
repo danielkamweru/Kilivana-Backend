@@ -173,6 +173,37 @@ public class PaymentController {
     // ==================== DARAJA STK PUSH ENDPOINTS ====================
 
     /**
+     * Initiates an M-PESA STK Push for an order at the buyer's request (checkout).
+     *
+     * <p>The caller must be the buyer of the order. The amount is the order's
+     * outstanding balance, computed on the server — the client cannot choose what to
+     * pay. The buyer receives the STK prompt on their phone (the supplied number, or
+     * their registered one) and enters their M-PESA PIN. The final result arrives
+     * via the callback; poll the payment status endpoint for it.
+     *
+     * @param request order ID and optional buyer phone (falls back to registered phone)
+     * @return payment record ID and Daraja STK Push response
+     */
+    @Operation(summary = "Initiate STK Push for own order (buyer checkout)",
+            description = "Buyer initiates M-PESA STK Push for an order they bought. " +
+                    "Amount is the outstanding balance; buyer phone is optional (uses registered phone). " +
+                    "Returns payment ID and Daraja response. Final outcome arrives via callback.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "STK Push initiated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request, no outstanding balance, or invalid phone"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Caller is not the buyer of this order"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "M-PESA service unavailable")
+    })
+    @PostMapping("/stk-push/buyer")
+    public ResponseEntity<ApiResponse<StkPushInitiateResponse>> initiateStkPushBuyer(
+            @Parameter(description = "STK Push initiation details") @RequestBody StkPushInitiateRequest request) {
+        StkPushInitiateResponse response = paymentService.initiateStkPushForBuyer(
+                CurrentUser.id(), UserRole.BUYER, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
      * Initiates an M-PESA STK Push for an order (Farmer endpoint).
      *
      * <p>Only the farmer who owns items in the order may call this. The amount

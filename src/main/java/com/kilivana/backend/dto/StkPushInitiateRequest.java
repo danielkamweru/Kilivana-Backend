@@ -9,8 +9,8 @@ import jakarta.validation.constraints.Positive;
 /**
  * Request to initiate an M-PESA STK Push for an order.
  *
- * <p>Used by farmers and suppliers to prompt the buyer for payment.
- * The amount is calculated server-side from the order's outstanding balance
+ * <p>Used by buyers at checkout and by farmers and suppliers to prompt the buyer for
+ * payment. The amount is calculated server-side from the order's outstanding balance
  * — the client cannot supply an arbitrary amount.
  */
 @Schema(description = "Request to initiate an M-PESA STK Push for an order")

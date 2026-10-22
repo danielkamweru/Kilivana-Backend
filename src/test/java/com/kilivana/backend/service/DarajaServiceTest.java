@@ -51,6 +51,44 @@ class DarajaServiceTest {
                 .hasMessageContaining("not configured");
     }
 
+    @Test
+    void theTokenLifetimeIsReadFromSafaricomStringForm() {
+        // Safaricom sends the lifetime as a JSON string, not a number. Reading it as
+        // a number took the whole STK Push down with a cast failure.
+        DarajaProperties properties = new DarajaProperties();
+        properties.setConsumerKey("consumer-key");
+        properties.setConsumerSecret("consumer-secret");
+
+        DarajaService service = new DarajaService(properties, webClientReturning(
+                "{\"access_token\":\"token-1\",\"expires_in\":\"3599\",\"token_type\":\"Bearer\"}"));
+
+        assertThat(service.getValidAccessToken()).isEqualTo("token-1");
+    }
+
+    @Test
+    void theTokenLifetimeIsAlsoReadFromNumericForm() {
+        DarajaProperties properties = new DarajaProperties();
+        properties.setConsumerKey("consumer-key");
+        properties.setConsumerSecret("consumer-secret");
+
+        DarajaService service = new DarajaService(properties, webClientReturning(
+                "{\"access_token\":\"token-2\",\"expires_in\":1800}"));
+
+        assertThat(service.getValidAccessToken()).isEqualTo("token-2");
+    }
+
+    /** A client that always answers the OAuth request with the given JSON body. */
+    private static WebClient webClientReturning(String body) {
+        return WebClient.builder()
+                .exchangeFunction(request -> reactor.core.publisher.Mono.just(
+                        org.springframework.web.reactive.function.client.ClientResponse
+                                .create(org.springframework.http.HttpStatus.OK)
+                                .header("Content-Type", "application/json")
+                                .body(body)
+                                .build()))
+                .build();
+    }
+
     private static String invokeGenerateStkPassword(DarajaService service, String timestamp) {
         try {
             java.lang.reflect.Method m = DarajaService.class.getDeclaredMethod(
