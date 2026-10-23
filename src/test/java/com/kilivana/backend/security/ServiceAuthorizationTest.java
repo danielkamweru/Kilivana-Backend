@@ -254,7 +254,7 @@ class ServiceAuthorizationTest {
     @Test void orderIsolationAndBuyerPlacementUnavailable() {
         denied(() -> orderService.getOrderById(11L));
         denied(() -> orderService.getOrdersByBuyer(2L));
-        denied(() -> orderService.searchOrders(null, null, org.springframework.data.domain.Pageable.unpaged()));
+        denied(() -> orderService.searchOrders(null, null, null, org.springframework.data.domain.Pageable.unpaged()));
         denied(() -> orderService.confirmReceipt(11L));
         denied(() -> orderService.updateOrderStatus(10L, OrderStatus.COMPLETED));
         denied(() -> orderService.createOrder(1L, 1L, null, List.of(), null, null));

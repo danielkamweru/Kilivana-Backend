@@ -68,7 +68,7 @@ public class AdminOperationsController {
             @RequestParam(required = false) Long buyerId,
             @RequestParam(required = false) String status,
             Pageable pageable) {
-        Page<OrderResponse> orders = orderService.searchOrders(buyerId, status, pageable)
+        Page<OrderResponse> orders = orderService.searchOrders(buyerId, null, status, pageable)
                 .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -105,7 +105,7 @@ public class AdminOperationsController {
     @GetMapping("/reports")
     public ResponseEntity<ApiResponse<Map<String, Long>>> reports() {
         Map<String, Long> report = new LinkedHashMap<>();
-        report.put("orders", orderService.searchOrders(null, null, Pageable.unpaged()).getTotalElements());
+        report.put("orders", orderService.searchOrders(null, null, null, Pageable.unpaged()).getTotalElements());
         report.put("logisticsJobs", (long) logisticsService.getAllJobs().size());
         report.put("payments", (long) paymentService.getAllPayments().size());
         return ResponseEntity.ok(ApiResponse.success(report));

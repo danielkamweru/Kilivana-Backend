@@ -41,7 +41,8 @@ public class ResourceAuthorization {
     public boolean buyer(Long id) {
         User u = actor();
         return u != null && (u.getRole() == UserRole.ADMIN ||
-                (u.getRole() == UserRole.BUYER && Objects.equals(u.getId(), id)));
+                ((u.getRole() == UserRole.BUYER || u.getRole() == UserRole.FARMER || u.getRole() == UserRole.SUPPLIER)
+                 && Objects.equals(u.getId(), id)));
     }
 
     /** Authorization for searching orders as a seller (farmer or supplier). */

@@ -51,7 +51,6 @@ import java.util.List;
  * product is renamed or deleted.
  */
 @Service
-@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -95,12 +94,16 @@ public class OrderService {
      *     computed ones
      */
     @Transactional
-    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId) || @resourceAuthorization.admin()")
     public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
                              List<OrderItemRequest> items,
                              BigDecimal claimedSubtotal, BigDecimal claimedTotal) {
-        if (!userRepository.existsByIdAndRole(buyerId, UserRole.BUYER)) {
-            throw new BadRequestException("Buyer ID must belong to a buyer account");
+        if (!userRepository.existsById(buyerId)) {
+            throw new BadRequestException("Buyer ID must exist");
+        }
+        User buyer = userRepository.findById(buyerId).orElseThrow();
+        if (buyer.getRole() != UserRole.BUYER && buyer.getRole() != UserRole.FARMER && buyer.getRole() != UserRole.SUPPLIER) {
+            throw new BadRequestException("Buyer ID must belong to a buyer, farmer, or supplier account");
         }
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address", addressId));

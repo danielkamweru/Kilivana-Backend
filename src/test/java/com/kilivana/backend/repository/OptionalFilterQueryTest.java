@@ -82,10 +82,10 @@ class OptionalFilterQueryTest {
 
     @Test
     void searchOrders_shouldAcceptFiltersOmitted() {
-        assertThat(orderRepository.searchOrders(null, null, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(1L, null, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(null, OrderStatus.PLACED, PAGE)).isNotNull();
-        assertThat(orderRepository.searchOrders(1L, OrderStatus.PLACED, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(null, null, null, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(1L, null, null, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(null, null, OrderStatus.PLACED, PAGE)).isNotNull();
+        assertThat(orderRepository.searchOrders(1L, null, OrderStatus.PLACED, PAGE)).isNotNull();
     }
 
     @Test
