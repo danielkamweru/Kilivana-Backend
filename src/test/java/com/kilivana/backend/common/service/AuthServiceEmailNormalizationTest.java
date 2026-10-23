@@ -70,6 +70,21 @@ class AuthServiceEmailNormalizationTest {
         assertThat(user.getVerificationStatus()).isEqualTo(com.kilivana.backend.common.enums.VerificationStatus.PENDING);
     }
 
+
+    @Test
+    void unverifiedUserReceivesOtpChallengeWithoutJwt() {
+        var challengeId = java.util.UUID.randomUUID();
+        User user = User.builder().id(8L).email("unverified@example.com").role(UserRole.FARMER).emailVerified(false).passwordHash(new BCryptPasswordEncoder().encode("probe12345")).build();
+        when(userRepository.findByEmailIgnoreCase("unverified@example.com")).thenReturn(Optional.of(user));
+        when(verification.request("unverified@example.com")).thenReturn(com.kilivana.backend.common.dto.EmailOtpChallengeResponse.accepted(challengeId));
+        AuthLoginRequest login = new AuthLoginRequest();
+        login.setEmail("unverified@example.com"); login.setPassword("probe12345");
+        var response = authService.login(login);
+        assertThat(response.isEmailVerificationRequired()).isTrue();
+        assertThat(response.getEmailVerificationChallengeId()).isEqualTo(challengeId);
+        assertThat(response.getAccessToken()).isNull();
+        org.mockito.Mockito.verify(verification).request("unverified@example.com");
+    }
     private static UserRegistrationRequest request(String email, String phone) {
         UserRegistrationRequest request = new UserRegistrationRequest();
         request.setName("Case Probe");

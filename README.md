@@ -126,8 +126,36 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
 | `RESET_PASSWORD_URL` | *(empty)* | Reset page for web/staff accounts; accepts a `token` query parameter. |
-| `RESET_PASSWORD_MOBILE_URL` | *(empty)* | Driver reset page or mobile deep link; falls back to `RESET_PASSWORD_URL`. |
+| `RESET_PASSWORD_MOBILE_URL` | *(empty)* | Driver public HTTPS reset page/App Link; falls back to `RESET_PASSWORD_URL`. |
 | `RESET_PASSWORD_ECOMMERCE_URL` | *(empty)* | Buyer/storefront reset page; falls back to `RESET_PASSWORD_URL`. |
+| `RESET_PASSWORD_FARMER_URL` | *(empty)* | Farmer portal reset page; falls back to `RESET_PASSWORD_URL`. |
+| `RESET_PASSWORD_SUPPLIER_URL` | *(empty)* | Supplier portal reset page; falls back to `RESET_PASSWORD_URL`. |
+| `RESET_PASSWORD_INSPECTOR_URL` | *(empty)* | Inspector portal reset page; falls back to `RESET_PASSWORD_URL`. |
+| `RESET_PASSWORD_ADMIN_URL` | *(empty)* | Admin dashboard reset page; falls back to `RESET_PASSWORD_URL`. |
+
+### Password-reset links
+
+The API appends a single-use `token` query parameter to a configured **absolute HTTP(S)** reset page. It never builds a production URL in Java. Invalid destinations (custom schemes, fragments, credentials, or malformed URLs) are skipped; if no valid destination exists, no recovery mail is sent.
+
+For local development, use `RESET_PASSWORD_URL=http://localhost:4200/reset-password` and run the frontend separately from the API. The reset page must `POST` `{ "token": "...", "newPassword": "..." }` to `http://localhost:8080/api/v1/auth/reset-password`.
+
+For ngrok testing, tunnel both services (or serve the frontend through one public host), then set the reset-page value independently, for example `RESET_PASSWORD_URL=https://frontend-tunnel.ngrok-free.app/reset-password`. Configure that page to call `https://api-tunnel.ngrok-free.app/api/v1/auth/reset-password`. ngrok addresses are temporary unless a reserved domain is used and must never be treated as production URLs.
+
+For production, set every deployed client to its stable HTTPS page, for example:
+
+```dotenv
+RESET_PASSWORD_URL=https://app.example.com/reset-password
+RESET_PASSWORD_MOBILE_URL=https://driver.example.com/reset-password
+RESET_PASSWORD_ECOMMERCE_URL=https://shop.example.com/reset-password
+RESET_PASSWORD_FARMER_URL=https://farmer.example.com/reset-password
+RESET_PASSWORD_SUPPLIER_URL=https://supplier.example.com/reset-password
+RESET_PASSWORD_INSPECTOR_URL=https://inspector.example.com/reset-password
+RESET_PASSWORD_ADMIN_URL=https://admin.example.com/reset-password
+```
+
+The forgot-password caller can select `application=driver`, `ecommerce`, `farmer`, `supplier`, `inspector`, `admin`, or `web`; the server allowlists these values and otherwise uses the account role. Do not accept a redirect URL from the client.
+
+Android integration remains a client-side step: host the driver reset page at `RESET_PASSWORD_MOBILE_URL`, add its host/path as an Android App Link intent filter, publish `/.well-known/assetlinks.json` for the signing certificate, and route the received `token` to the reset screen. The HTTPS page must remain a complete browser fallback and submit the existing reset endpoint; deep-link behavior is not verified by this backend repository.
 
 ### Image uploads
 
@@ -409,7 +437,8 @@ Login body:
 
 Every successful response uses `{ "success": true, "message": "Success", "data": ... }`. Validation and business errors use `{ "success": false, "message": ..., "data": ..., "error": { "code": ..., "details": ... } }`.
 
-The current development login response contains `accessToken`, `refreshToken`, `tokenType`, and `user`. The values are development demo tokens, not JWTs. Do not implement frontend JWT refresh or protected-route assumptions until a real JWT provider/filter is added.
+A verified account receives `200 OK` with `accessToken`, `refreshToken`, `tokenType`, and `user`.
+For an unverified account with valid credentials, login sends an email-verification OTP and returns `202 Accepted` with `emailVerificationRequired: true` and `emailVerificationChallengeId`; it does not return JWTs. Submit the email, challenge id, and six-digit code to `POST /api/v1/auth/email-verification/verify`, then retry the normal login request.
 
 For the current development `/me` and own-resource routes, send:
 
@@ -572,7 +601,7 @@ This project is currently configured for internal development use. Add a license
 ## Complete API Endpoint Reference
 
 ### Authentication (public)
-- `POST /api/v1/auth/login` — Login with email/password → returns `{accessToken, refreshToken, user}`
+- `POST /api/v1/auth/login` — Login with email/password → `200` JWTs for verified accounts, or `202` email-OTP challenge for unverified accounts
 - `POST /api/v1/auth/register` — Register new user
 - `POST /api/v1/auth/refresh` — Refresh access token
 - `POST /api/v1/auth/forgot-password` — Send password reset email

@@ -27,7 +27,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -71,6 +74,18 @@ import java.util.concurrent.ConcurrentHashMap;
     /** Recovery link for the ecommerce storefront (buyers). */
     @Value("${app.password-reset.client-urls.ecommerce:}")
     private String ecommerceResetUrl = "";
+    /** Recovery link for the farmer portal. */
+    @Value("${app.password-reset.client-urls.farmer:}")
+    private String farmerResetUrl = "";
+    /** Recovery link for the supplier portal. */
+    @Value("${app.password-reset.client-urls.supplier:}")
+    private String supplierResetUrl = "";
+    /** Recovery link for the inspector portal. */
+    @Value("${app.password-reset.client-urls.inspector:}")
+    private String inspectorResetUrl = "";
+    /** Recovery link for the admin dashboard. */
+    @Value("${app.password-reset.client-urls.admin:}")
+    private String adminResetUrl = "";
     @Value("${app.password-reset.token-expiry-minutes:30}")
     private long passwordResetExpiryMinutes = 30L;
     /**
@@ -81,15 +96,6 @@ import java.util.concurrent.ConcurrentHashMap;
      */
     @Value("${app.password-reset.request-cooldown-minutes:2}")
     private long passwordResetCooldownMinutes = 2L;
-    /**
-     * Development-only escape hatch. When the mail provider refuses a recovery message,
-     * the reset link is written to the log instead, so the flow can still be completed
-     * on a workstation where the sender identity has not been verified yet. It is off
-     * unless it is switched on explicitly, and it must stay off outside development:
-     * the log then holds a live recovery token.
-     */
-    @Value("${app.password-reset.dev-log-link:false}")
-    private boolean devLogResetLink = false;
     /** Normalized address -> instant of the last accepted recovery request. */
     private final Map<String, Instant> resetRequestCooldowns = new ConcurrentHashMap<>();
     /**
@@ -116,6 +122,26 @@ import java.util.concurrent.ConcurrentHashMap;
         this.ecommerceResetUrl = url;
     }
 
+    /** Overrides the recovery link for the farmer portal. */
+    void setFarmerResetUrl(String url) {
+        this.farmerResetUrl = url;
+    }
+
+    /** Overrides the recovery link for the supplier portal. */
+    void setSupplierResetUrl(String url) {
+        this.supplierResetUrl = url;
+    }
+
+    /** Overrides the recovery link for the inspector portal. */
+    void setInspectorResetUrl(String url) {
+        this.inspectorResetUrl = url;
+    }
+
+    /** Overrides the recovery link for the admin dashboard. */
+    void setAdminResetUrl(String url) {
+        this.adminResetUrl = url;
+    }
+
     /**
      * Overrides the configured recovery cooldown. Package-private so the test suite can
      * drive the reset flow without waiting for a real cooldown to elapse.
@@ -124,13 +150,6 @@ import java.util.concurrent.ConcurrentHashMap;
         this.passwordResetCooldownMinutes = minutes;
     }
 
-    /**
-     * Overrides the development-only link logging. Package-private so the test suite can
-     * drive the recovery flow in both modes.
-     */
-    void setDevLogResetLink(boolean enabled) {
-        this.devLogResetLink = enabled;
-    }
 
     private static final SecureRandom RESET_RANDOM = new SecureRandom();
 
@@ -191,6 +210,14 @@ import java.util.concurrent.ConcurrentHashMap;
             throw new UnauthorizedException("This account is " + user.getStatus().name().toLowerCase());
         }
 
+        if (!user.isEmailVerified()) {
+            var challenge = emailVerificationService.request(user.getEmail());
+            return AuthTokenResponse.builder()
+                    .emailVerificationRequired(true)
+                    .emailVerificationChallengeId(challenge.challengeId())
+                    .user(mapToResponse(user))
+                    .build();
+        }
         return buildTokenResponse(user);
     }
 
@@ -263,24 +290,35 @@ import java.util.concurrent.ConcurrentHashMap;
         return county;
     }
 
+    public String forgotPassword(String email) {
+        return forgotPassword(email, null);
+    }
+
     /** Sends reset instructions without disclosing account existence. */
     @Transactional
-    public String forgotPassword(String email) {
+    public String forgotPassword(String email, String application) {
+        // Validate the application identifier up front, before any user lookup, so an
+        // unknown identifier is rejected without disclosing whether the email exists.
+        if (application != null && !application.isBlank()) {
+            String app = application.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!ALLOWED_RESET_APPLICATIONS.contains(app)) {
+                throw new BadRequestException("Unknown password-reset application: " + application);
+            }
+        }
         String address = normalizeEmail(email);
         if (!acceptRecoveryRequest(address)) {
             throw new TooManyRequestsException(
                     "A password reset was requested recently. Please wait before asking again.");
         }
         userRepository.findByEmailIgnoreCase(address).ifPresent(user -> {
-            String resetUrl = resetUrlFor(user.getRole());
+            String resetUrl = resolveResetUrl(application, user.getRole());
             if (resetUrl == null || resetUrl.isBlank()) return;
             String raw = newResetToken();
             passwordResetTokenRepository.deleteByUserId(user.getId());
             PasswordResetToken token = PasswordResetToken.builder().userId(user.getId()).tokenHash(hash(raw))
                     .expiresAt(LocalDateTime.now().plusMinutes(passwordResetExpiryMinutes)).createdAt(LocalDateTime.now()).build();
             passwordResetTokenRepository.save(token);
-            String joiner = resetUrl.contains("?") ? "&" : "?";
-            String resetLink = resetUrl + joiner + "token=" + raw;
+            String resetLink = appendResetToken(resetUrl, raw);
             boolean sent = sendGridMailService.sendHtml(user.getEmail(), "Reset your Kilivana password",
                     resetMailBody(resetLink));
             if (!sent) {
@@ -289,12 +327,7 @@ import java.util.concurrent.ConcurrentHashMap;
                 // delivery would only make an unworking mailer look like a broken
                 // request.
                 resetRequestCooldowns.remove(address);
-                if (devLogResetLink) {
-                    log.warn("DEVELOPMENT ONLY: the mail provider refused the recovery message, "
-                            + "so the reset link is written here instead: {}", resetLink);
-                } else {
-                    passwordResetTokenRepository.delete(token);
-                }
+                passwordResetTokenRepository.delete(token);
             }
         });
         return "If the account exists and email delivery is available, reset instructions will be sent.";
@@ -323,37 +356,78 @@ import java.util.concurrent.ConcurrentHashMap;
     }
 
     /**
-     * Which client a recovery link points at. Drivers use the mobile app, buyers use the
-     * ecommerce storefront, and everyone else (farmers, suppliers, inspectors, staff) is
-     * sent to the web page. The role decides the client because the account decides
-     * where the user is going to sign in again.
+     * Which client a recovery link points at. Every account role has its own configured
+     * destination, with the generic web page as its only fallback. The account role
+     * decides where the user is going to sign in again.
      */
     private static final Map<UserRole, String> ROLE_CLIENTS = Map.of(
             UserRole.DRIVER, "mobile",
-            UserRole.BUYER, "ecommerce");
+            UserRole.BUYER, "ecommerce",
+            UserRole.FARMER, "farmer",
+            UserRole.SUPPLIER, "supplier",
+            UserRole.INSPECTOR, "inspector",
+            UserRole.ADMIN, "admin");
 
     /**
      * The recovery link base URL for a user's client. A client without a configured URL
      * falls back to the web link, so an unconfigured mobile app never leaves the user
      * without a way in. An empty result means no link can be built and no mail is sent.
      */
-    private String resetUrlFor(UserRole role) {
-        String client = role == null ? "web" : ROLE_CLIENTS.getOrDefault(role, "web");
-        String url = switch (client) {
-            case "mobile" -> mobileResetUrl;
-            case "ecommerce" -> ecommerceResetUrl;
+    private static final java.util.Set<String> ALLOWED_RESET_APPLICATIONS =
+            java.util.Set.of("driver", "ecommerce", "farmer", "supplier", "inspector", "admin", "web",
+                    "mobile", "buyer");
+
+    /**
+     * Resolves the recovery-link base URL for the requested application, falling back
+     * to the user's role when no application is supplied. An unknown application
+     * identifier is rejected rather than silently ignored.
+     */
+    private String resolveResetUrl(String application, UserRole role) {
+        String client = application == null || application.isBlank()
+                ? (role == null ? "web" : ROLE_CLIENTS.getOrDefault(role, "web"))
+                : application.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!ALLOWED_RESET_APPLICATIONS.contains(client)) {
+            throw new BadRequestException("Unknown password-reset application: " + application);
+        }
+        String preferredUrl = switch (client) {
+            case "mobile", "driver" -> mobileResetUrl;
+            case "ecommerce", "buyer" -> ecommerceResetUrl;
+            case "farmer" -> farmerResetUrl;
+            case "supplier" -> supplierResetUrl;
+            case "inspector" -> inspectorResetUrl;
+            case "admin" -> adminResetUrl;
             default -> passwordResetFrontendUrl;
         };
-        if (url == null || url.isBlank()) {
-            url = passwordResetFrontendUrl;
+        return firstUsableResetUrl(preferredUrl, passwordResetFrontendUrl);
+    }
+
+    private String firstUsableResetUrl(String... candidates) {
+        for (String candidate : candidates) {
+            if (isSafeResetUrl(candidate)) {
+                return candidate.trim();
+            }
         }
-        if (url == null || url.isBlank()) {
-            url = ecommerceResetUrl;
+        log.error("No valid password-reset destination is configured; recovery email was not sent");
+        return "";
+    }
+
+    private static boolean isSafeResetUrl(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
         }
-        if (url == null || url.isBlank()) {
-            url = mobileResetUrl;
+        try {
+            URI uri = new URI(value.trim());
+            return ("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null && uri.getUserInfo() == null && uri.getFragment() == null;
+        } catch (URISyntaxException ignored) {
+            return false;
         }
-        return url == null ? "" : url.trim();
+    }
+
+    private static String appendResetToken(String resetUrl, String rawToken) {
+        return UriComponentsBuilder.fromUriString(resetUrl)
+                .replaceQueryParam("token", rawToken)
+                .build().encode().toUriString();
     }
 
     /**

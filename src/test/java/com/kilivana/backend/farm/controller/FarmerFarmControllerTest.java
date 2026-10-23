@@ -34,13 +34,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(FarmerFarmController.class) feature/supplier-api-updates
+@WebMvcTest(FarmerFarmController.class)
 @Import(com.kilivana.backend.config.SecurityConfig.class)
-@Import(SecurityConfig.class) main
 class FarmerFarmControllerTest {
-    @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
-
-
     @MockBean
     private AccountAccessValidator accountAccessValidator;
 

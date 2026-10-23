@@ -52,7 +52,9 @@ public class AuthController {
         authRateLimiter.enforce(AuthRateLimiter.LOGIN, client);
         AuthTokenResponse tokens = authService.login(request);
         authRateLimiter.reset(AuthRateLimiter.LOGIN, client);
-        return ResponseEntity.ok(ApiResponse.success(tokens));
+        return tokens.isEmailVerificationRequired()
+                ? ResponseEntity.accepted().body(ApiResponse.success(tokens))
+                : ResponseEntity.ok(ApiResponse.success(tokens));
     }
 
     /**
@@ -77,9 +79,10 @@ public class AuthController {
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestParam String email,
-                                                              HttpServletRequest httpRequest) {
+                                                                  @RequestParam(required = false) String application,
+                                                                  HttpServletRequest httpRequest) {
         authRateLimiter.enforce(AuthRateLimiter.FORGOT_PASSWORD, ClientAddress.resolve(httpRequest));
-        String message = authService.forgotPassword(email);
+        String message = authService.forgotPassword(email, application);
         return ResponseEntity.ok(ApiResponse.success(message));
     }
 

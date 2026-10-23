@@ -70,8 +70,6 @@ class LogisticsServiceTest {
     @Spy
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    @Mock private com.kilivana.backend.ecommerce.repository.OrderEventRepository orderEventRepository;
-
     @InjectMocks
     private LogisticsService logisticsService;
 

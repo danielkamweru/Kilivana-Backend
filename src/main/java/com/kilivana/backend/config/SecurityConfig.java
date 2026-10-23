@@ -42,7 +42,7 @@ public class SecurityConfig {
         "/uploads/**", "/api/v1/images/**", "/api/v1/products/**", "/ws", "/ws/**",
         "/api/v1/users/farmers/**", "/api/v1/categories/**", "/api/v1/crop-types/**", "/api/v1/regions", "/api/v1/regions/**",
         "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**",
-        "/api-docs", "/api-docs/**"
+        "/api-docs", "/api-docs/**", "/reset-password"
     };
     private static final String[] PUBLIC_POST_ENDPOINTS = {
         "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",

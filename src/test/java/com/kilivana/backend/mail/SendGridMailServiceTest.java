@@ -64,10 +64,7 @@ class SendGridMailServiceTest {
             @Override
             public Response api(Request request) {
                 receivedEndpoint.set(request.getEndpoint());
-feature/supplier-api-updates
                 Response response = new Response(); response.setStatusCode(202); return response;
-
-                return new Response(202, "", null); main
             }
         };
 
@@ -83,7 +80,6 @@ feature/supplier-api-updates
         assertThat(receivedEndpoint.get()).isEqualTo("mail/send");
     }
 
-feature/supplier-api-updates
 
     @Test void rejectedAndRuntimeProviderResponsesFailWithoutLoggingRequestSecrets() {
         SendGridProperties p=new SendGridProperties();p.setEnabled(true);p.setApiKey("test-provider-secret");
@@ -100,6 +96,7 @@ feature/supplier-api-updates
             assertThat(appender.list).allMatch(e->!e.getFormattedMessage().contains("123456")
                 && !e.getFormattedMessage().contains("test-provider-secret") && e.getThrowableProxy()==null);
         } finally {logger.detachAppender(appender);appender.stop();}
+    }
 
     @Test
     void providerRefusal_returnsFalseRatherThanReportingASend() {
@@ -122,7 +119,7 @@ feature/supplier-api-updates
 
         SendGridMailService service = new SendGridMailService(properties, key -> refusing);
 
-        assertThat(service.sendHtml("buyer@example.com", "Subject", "<p>body</p>")).isFalse(); main
+        assertThat(service.sendHtml("buyer@example.com", "Subject", "<p>body</p>")).isFalse();
     }
 
     /** A SendGrid whose {@code api()} always fails with a checked IOException. */

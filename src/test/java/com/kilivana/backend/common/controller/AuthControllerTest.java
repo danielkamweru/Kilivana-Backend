@@ -127,6 +127,27 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_shouldReturnAcceptedOtpChallengeForUnverifiedAccount() throws Exception {
+        AuthLoginRequest request = AuthLoginRequest.builder()
+                .email("daniel@example.com")
+                .password("secret123")
+                .build();
+        var challengeId = java.util.UUID.randomUUID();
+        when(authService.login(any(AuthLoginRequest.class))).thenReturn(AuthTokenResponse.builder()
+                .emailVerificationRequired(true)
+                .emailVerificationChallengeId(challengeId)
+                .build());
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.emailVerificationRequired").value(true))
+                .andExpect(jsonPath("$.data.emailVerificationChallengeId").value(challengeId.toString()))
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist());
+    }
+
+    @Test
     void legacyAuthAlias_shouldSupportLogin() throws Exception {
         AuthLoginRequest request = AuthLoginRequest.builder()
                 .email("daniel@example.com")

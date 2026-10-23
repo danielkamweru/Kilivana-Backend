@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.UUID;
 
 /**
  * The token pair issued by {@code login} and {@code refresh}.
@@ -29,4 +30,11 @@ public class AuthTokenResponse {
 
     /** Profile of the authenticated user, so the client needs no follow-up call. */
     private UserResponse user;
+
+    /** True when valid credentials require email verification before JWT issuance. */
+    private boolean emailVerificationRequired;
+
+    /** Challenge to submit to the existing email-verification endpoint when required. */
+    private UUID emailVerificationChallengeId;
+
 }

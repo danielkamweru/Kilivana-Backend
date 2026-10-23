@@ -25,6 +25,7 @@ class AuthControllerRateLimitTest {
     @MockBean private com.kilivana.backend.security.AccountAccessValidator accountAccessValidator;
     @MockBean private AuthService authService;
     @MockBean private AuthRateLimiter authRateLimiter;
+    @MockBean private com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
 
     @Autowired
     private MockMvc mockMvc;

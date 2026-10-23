@@ -115,7 +115,7 @@ class EmailVerificationControllerTest {
         when(users.findByEmailIgnoreCase(account.getEmail())).thenReturn(Optional.of(account));
         when(users.findById(7L)).thenReturn(Optional.of(account));when(passwords.matches(any(),any())).thenReturn(true);
         mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"test@example.invalid\",\"password\":\"test-password\"}"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isAccepted());
         String refresh=jwt.generateRefreshToken(account);
         mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\""+refresh+"\"}"))
             .andExpect(status().isForbidden());

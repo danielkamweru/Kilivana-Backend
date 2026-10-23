@@ -65,7 +65,7 @@ class PasswordResetFlowTest {
         SendGridMailService mail = mock(SendGridMailService.class);
         when(mail.sendHtml(any(), any(), any())).thenReturn(true);
 
-        String response = service(users, tokens, mail, passwordEncoder).forgotPassword("Daniel@example.com");
+        String response = service(users, tokens, mail, passwordEncoder).forgotPassword("Daniel@example.com", null);
 
         verify(tokens).deleteByUserId(7L);
         ArgumentCaptor<PasswordResetToken> tokenCaptor =
@@ -97,19 +97,94 @@ class PasswordResetFlowTest {
 
         AuthService service = service(users, tokens, mail, passwordEncoder);
         service.setPasswordResetFrontendUrl("http://localhost:4200/reset-password");
-        service.setMobileResetUrl("kilivana://reset-password");
+        service.setMobileResetUrl("https://driver.example.com/reset-password");
         service.setEcommerceResetUrl("http://localhost:4220/reset-password");
+        service.setFarmerResetUrl("https://farmer.example.com/reset-password");
         service.setPasswordResetCooldownMinutes(0);
 
-        service.forgotPassword("driver@example.com");
-        service.forgotPassword("buyer@example.com");
-        service.forgotPassword("farmer@example.com");
+        service.forgotPassword("driver@example.com", null);
+        service.forgotPassword("buyer@example.com", null);
+        service.forgotPassword("farmer@example.com", null);
 
         ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
         verify(mail, times(3)).sendHtml(any(), any(), bodyCaptor.capture());
-        assertThat(bodyCaptor.getAllValues().get(0)).contains("kilivana://reset-password?token=");
+        assertThat(bodyCaptor.getAllValues().get(0)).contains("https://driver.example.com/reset-password?token=");
         assertThat(bodyCaptor.getAllValues().get(1)).contains("http://localhost:4220/reset-password?token=");
-        assertThat(bodyCaptor.getAllValues().get(2)).contains("http://localhost:4200/reset-password?token=");
+        assertThat(bodyCaptor.getAllValues().get(2)).contains("https://farmer.example.com/reset-password?token=");
+    }
+
+    @Test
+    void passwordResetLinksFollowTheRequestedApplication() {
+        User user = User.builder().id(7L).email("anyone@example.com").role(UserRole.BUYER).build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("anyone@example.com")).thenReturn(Optional.of(user));
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        when(tokens.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        SendGridMailService mail = mock(SendGridMailService.class);
+        when(mail.sendHtml(any(), any(), any())).thenReturn(true);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setPasswordResetFrontendUrl("http://localhost:4200/reset-password");
+        service.setMobileResetUrl("https://driver.example.com/reset-password");
+        service.setEcommerceResetUrl("http://localhost:4220/reset-password");
+        service.setFarmerResetUrl("http://localhost:4230/reset-password");
+        service.setSupplierResetUrl("http://localhost:4240/reset-password");
+        service.setInspectorResetUrl("http://localhost:4250/reset-password");
+        service.setAdminResetUrl("http://localhost:4260/reset-password");
+        service.setPasswordResetCooldownMinutes(0);
+
+        String[] apps = {"driver", "ecommerce", "farmer", "supplier", "inspector", "admin", "web"};
+        String[] expected = {"https://driver.example.com/reset-password", "http://localhost:4220/reset-password",
+                "http://localhost:4230/reset-password", "http://localhost:4240/reset-password",
+                "http://localhost:4250/reset-password", "http://localhost:4260/reset-password",
+                "http://localhost:4200/reset-password"};
+        for (int i = 0; i < apps.length; i++) {
+            service.forgotPassword("anyone@example.com", apps[i]);
+        }
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(mail, times(apps.length)).sendHtml(any(), any(), bodyCaptor.capture());
+        for (int i = 0; i < apps.length; i++) {
+            assertThat(bodyCaptor.getAllValues().get(i)).contains(expected[i] + "?token=");
+        }
+    }
+
+    @Test
+    void unknownResetApplicationIsRejected() {
+        User user = User.builder().id(7L).email("daniel@example.com").role(UserRole.BUYER).build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("daniel@example.com")).thenReturn(Optional.of(user));
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        SendGridMailService mail = mock(SendGridMailService.class);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setPasswordResetFrontendUrl("https://example.com/reset");
+        service.setPasswordResetCooldownMinutes(0);
+
+        assertThatThrownBy(() -> service.forgotPassword("daniel@example.com", "not-an-app"))
+                .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(tokens, mail);
+    }
+
+
+    @Test
+    void invalidDestinationsDoNotSendATokenToAnotherPortal() {
+        User user = User.builder().id(7L).email("farmer@example.com").role(UserRole.FARMER).build();
+        UserRepository users = mock(UserRepository.class);
+        when(users.findByEmailIgnoreCase("farmer@example.com")).thenReturn(Optional.of(user));
+        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
+        SendGridMailService mail = mock(SendGridMailService.class);
+
+        AuthService service = service(users, tokens, mail, passwordEncoder);
+        service.setPasswordResetFrontendUrl("javascript:alert(1)");
+        service.setFarmerResetUrl("ftp://farmer.example.com/reset-password");
+        service.setEcommerceResetUrl("https://shop.example.com/reset-password");
+        service.setPasswordResetCooldownMinutes(0);
+
+        String response = service.forgotPassword("farmer@example.com", null);
+
+        assertThat(response).contains("reset instructions");
+        verifyNoInteractions(tokens, mail);
     }
 
     @Test
@@ -174,7 +249,7 @@ class PasswordResetFlowTest {
         when(users.findByEmailIgnoreCase(any())).thenReturn(Optional.empty());
 
         String response = service(users, mock(PasswordResetTokenRepository.class),
-                mock(SendGridMailService.class), passwordEncoder).forgotPassword("nobody@example.com");
+                mock(SendGridMailService.class), passwordEncoder).forgotPassword("nobody@example.com", null);
 
         assertThat(response).contains("reset instructions");
         verify(users).findByEmailIgnoreCase("nobody@example.com");
@@ -193,9 +268,9 @@ class PasswordResetFlowTest {
 
         AuthService service = service(users, tokens, mail, passwordEncoder);
         service.setPasswordResetCooldownMinutes(60);
-        service.forgotPassword("daniel@example.com");
+        service.forgotPassword("daniel@example.com", null);
 
-        assertThatThrownBy(() -> service.forgotPassword("daniel@example.com"))
+        assertThatThrownBy(() -> service.forgotPassword("daniel@example.com", null))
                 .isInstanceOf(TooManyRequestsException.class);
         verify(tokens, times(1)).save(any());
     }
@@ -208,9 +283,9 @@ class PasswordResetFlowTest {
         AuthService service = service(users, mock(PasswordResetTokenRepository.class),
                 mock(SendGridMailService.class), passwordEncoder);
         service.setPasswordResetCooldownMinutes(60);
-        service.forgotPassword("nobody@example.com");
+        service.forgotPassword("nobody@example.com", null);
 
-        assertThatThrownBy(() -> service.forgotPassword("nobody@example.com"))
+        assertThatThrownBy(() -> service.forgotPassword("nobody@example.com", null))
                 .isInstanceOf(TooManyRequestsException.class);
     }
 
@@ -223,8 +298,8 @@ class PasswordResetFlowTest {
                 mock(SendGridMailService.class), passwordEncoder);
         service.setPasswordResetCooldownMinutes(0);
 
-        assertThat(service.forgotPassword("nobody@example.com")).contains("reset instructions");
-        assertThat(service.forgotPassword("nobody@example.com")).contains("reset instructions");
+        assertThat(service.forgotPassword("nobody@example.com", null)).contains("reset instructions");
+        assertThat(service.forgotPassword("nobody@example.com", null)).contains("reset instructions");
     }
 
     @Test
@@ -240,34 +315,13 @@ class PasswordResetFlowTest {
 
         AuthService service = service(users, tokens, mail, passwordEncoder);
         service.setPasswordResetCooldownMinutes(60);
-        service.forgotPassword("daniel@example.com");
+        service.forgotPassword("daniel@example.com", null);
 
-        assertThat(service.forgotPassword("daniel@example.com")).contains("reset instructions");
+        assertThat(service.forgotPassword("daniel@example.com", null)).contains("reset instructions");
         // The undelivered token is withdrawn rather than left usable.
         verify(tokens, atLeastOnce()).delete(any(PasswordResetToken.class));
     }
 
-    @Test
-    void aFailedDeliveryKeepsTheTokenWhenTheDevelopmentLinkIsLogged() {
-        User user = User.builder().id(7L).email("daniel@example.com").build();
-        UserRepository users = mock(UserRepository.class);
-        when(users.findByEmailIgnoreCase("daniel@example.com")).thenReturn(Optional.of(user));
-
-        PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
-        when(tokens.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        SendGridMailService mail = mock(SendGridMailService.class);
-        when(mail.sendHtml(any(), any(), any())).thenReturn(false);
-
-        AuthService service = service(users, tokens, mail, passwordEncoder);
-        service.setDevLogResetLink(true);
-        service.setPasswordResetCooldownMinutes(60);
-        service.forgotPassword("daniel@example.com");
-
-        // The link is in the log, so the token must survive for the flow to be completed.
-        verify(tokens, never()).delete(any(PasswordResetToken.class));
-        // No mail was sent, so the caller is not throttled for trying again.
-        assertThat(service.forgotPassword("daniel@example.com")).contains("reset instructions");
-    }
 
     @Test
     void aPasswordShorterThanThePolicyIsRefused() {
