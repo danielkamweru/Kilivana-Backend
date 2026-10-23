@@ -3,9 +3,15 @@ package com.kilivana.backend.admin.service;
 import com.kilivana.backend.admin.dto.InspectionRequest;
 import com.kilivana.backend.admin.dto.InspectionResponse;
 import com.kilivana.backend.admin.entity.Inspection;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.entity.InspectionEvidenceImage;
 import com.kilivana.backend.admin.repository.InspectionEvidenceImageRepository;
 import com.kilivana.backend.admin.repository.InspectionRepository;
+import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.farm.dto.FarmResponse;
+import com.kilivana.backend.farm.dto.FarmOwnerResponse;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.dto.ImageResponse;
 import com.kilivana.backend.common.enums.InspectionResult;
@@ -42,6 +48,8 @@ public class InspectionService {
     private final InspectionRepository inspectionRepository;
     private final InspectionEvidenceImageRepository evidenceImageRepository;
     private final ImageStorage imageStorage;
+    private final FarmRepository farmRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public InspectionResponse createInspection(InspectionRequest request) {
@@ -55,38 +63,38 @@ public class InspectionService {
                 .evidenceUrls(request.getEvidenceUrls())
                 .build();
         Inspection saved = inspectionRepository.save(inspection);
-        return InspectionResponse.fromEntity(saved);
+        return enrich(InspectionResponse.fromEntity(saved, null), saved);
     }
 
     @PreAuthorize("@resourceAuthorization.inspection(#id)")
     public InspectionResponse getInspectionById(Long id) {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
-        return InspectionResponse.fromEntity(inspection);
+        return enrich(InspectionResponse.fromEntity(inspection, null), inspection);
     }
 
     public List<InspectionResponse> getAllInspections(Pageable pageable) {
         return inspectionRepository.findAll(pageable).stream()
-                .map(InspectionResponse::fromEntity)
+                 .map(i -> enrich(InspectionResponse.fromEntity(i, null), i))
                 .collect(Collectors.toList());
     }
 
     @PreAuthorize("@resourceAuthorization.inspector(#inspectorId)")
     public List<InspectionResponse> getInspectionsByInspector(Long inspectorId) {
         return inspectionRepository.findByInspectorId(inspectorId).stream()
-                .map(InspectionResponse::fromEntity)
+                 .map(i -> enrich(InspectionResponse.fromEntity(i, null), i))
                 .collect(Collectors.toList());
     }
 
     public List<InspectionResponse> getInspectionsByStatus(InspectionStatus status) {
         return inspectionRepository.findByStatus(status).stream()
-                .map(InspectionResponse::fromEntity)
+                 .map(i -> enrich(InspectionResponse.fromEntity(i, null), i))
                 .collect(Collectors.toList());
     }
 
     public List<InspectionResponse> getInspectionsByTarget(String targetType, Long targetId) {
         return inspectionRepository.findByTargetTypeAndTargetId(targetType, targetId).stream()
-                .map(InspectionResponse::fromEntity)
+                 .map(i -> enrich(InspectionResponse.fromEntity(i, null), i))
                 .collect(Collectors.toList());
     }
 
@@ -96,7 +104,8 @@ public class InspectionService {
         Inspection inspection = inspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
         inspection.setStatus(status);
-        return InspectionResponse.fromEntity(inspectionRepository.save(inspection));
+        Inspection saved = inspectionRepository.save(inspection);
+        return enrich(InspectionResponse.fromEntity(saved, null), saved);
     }
 
     @Transactional
@@ -116,7 +125,8 @@ public class InspectionService {
             inspection.setEvidenceUrls(request.getEvidenceUrls());
         }
         inspection.setInspectedAt(java.time.LocalDateTime.now());
-        return InspectionResponse.fromEntity(inspectionRepository.save(inspection));
+        Inspection saved = inspectionRepository.save(inspection);
+        return enrich(InspectionResponse.fromEntity(saved, null), saved);
     }
 
     @Transactional
@@ -179,6 +189,43 @@ public class InspectionService {
         imageStorage.deleteImage(image.getPublicId());
         evidenceImageRepository.delete(image);
         removeEvidenceUrl(inspectionId, image.getUrl());
+    }
+
+    
+    private InspectionResponse enrich(InspectionResponse response, Inspection inspection) {
+        if (inspection.getTargetType() != null && "FARM".equalsIgnoreCase(inspection.getTargetType()) && inspection.getTargetId() != null) {
+            Farm farm = farmRepository.findById(inspection.getTargetId()).orElse(null);
+            if (farm != null) {
+                FarmOwnerResponse farmer = null;
+                User user = userRepository.findById(farm.getFarmerId()).orElse(null);
+                if (user != null) {
+                    farmer = FarmOwnerResponse.builder()
+                            .id(user.getId())
+                            .name(user.getName())
+                            .email(user.getEmail())
+                            .phone(user.getPhone())
+                            .build();
+                }
+                FarmResponse farmResponse = FarmResponse.builder()
+                        .id(farm.getId())
+                        .farmerId(farm.getFarmerId())
+                        .farmer(farmer)
+                        .name(farm.getName())
+                        .county(farm.getCounty())
+                        .subCounty(farm.getSubCounty())
+                        .address(farm.getAddress())
+                        .latitude(farm.getLatitude())
+                        .longitude(farm.getLongitude())
+                        .sizeAcres(farm.getSizeAcres())
+                        .ownershipType(farm.getOwnershipType())
+                        .status(farm.getStatus())
+                        .description(farm.getDescription())
+                        .createdAt(farm.getCreatedAt())
+                        .build();
+                response.setTargetFarm(farmResponse);
+            }
+        }
+        return response;
     }
 
     private void appendEvidenceUrl(Long inspectionId, String url) {
