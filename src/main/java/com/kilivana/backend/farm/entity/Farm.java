@@ -71,7 +71,9 @@ public class Farm {
      */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private com.kilivana.backend.common.enums.FarmStatus status = com.kilivana.backend.common.enums.FarmStatus.ACTIVE;
+    @Builder.Default
+   private com.kilivana.backend.common.enums.FarmStatus status =
+        com.kilivana.backend.common.enums.FarmStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
     private String description;

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "Whether a farm is actively farmed, resting, or taken out of use.")
 public enum FarmStatus {
+     PENDING,
     ACTIVE,
     FALLOW,
     INACTIVE
