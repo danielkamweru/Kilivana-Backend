@@ -198,8 +198,10 @@ public class PaymentController {
     @PostMapping("/stk-push/buyer")
     public ResponseEntity<ApiResponse<StkPushInitiateResponse>> initiateStkPushBuyer(
             @Parameter(description = "STK Push initiation details") @RequestBody StkPushInitiateRequest request) {
+        String roleStr = CurrentUser.getRole();
+        UserRole userRole = roleStr != null ? UserRole.valueOf(roleStr) : UserRole.BUYER;
         StkPushInitiateResponse response = paymentService.initiateStkPushForBuyer(
-                CurrentUser.id(), UserRole.BUYER, request);
+                CurrentUser.id(), userRole, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

@@ -89,13 +89,13 @@ public class ResourceAuthorization {
 
     /**
      * STK initiation at the buyer's request during checkout. The supplied identity must
-     * match the authenticated actor, who must be the buyer of that order: a buyer pays
-     * for their own order and for nobody else's.
+     * match the authenticated actor, who must be the buyer of that order: a buyer, farmer,
+     * or supplier pays for their own order and for nobody else's.
      */
     public boolean buyerPayment(Long userId, UserRole role, Long orderId) {
         User u = actor();
         return u != null && Objects.equals(u.getId(), userId) && u.getRole() == role &&
-                role == UserRole.BUYER &&
+                (role == UserRole.BUYER || role == UserRole.FARMER || role == UserRole.SUPPLIER) &&
                 orders.findById(orderId).map(o -> Objects.equals(o.getBuyerId(), u.getId())).orElse(false);
     }
 
