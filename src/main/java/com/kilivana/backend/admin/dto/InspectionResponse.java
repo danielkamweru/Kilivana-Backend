@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import com.kilivana.backend.farm.dto.FarmResponse;
 
 /**
  * Response DTO representing an inspection with audit timestamps.
@@ -32,6 +33,9 @@ public class InspectionResponse {
     @Schema(description = "ID of the entity that was inspected", example = "3")
     private Long targetId;
 
+    @Schema(description = "Details of the target farm when the inspection targets a farm")
+    private FarmResponse targetFarm;
+
     @Schema(description = "Current status of the inspection", example = "COMPLETED")
     private InspectionStatus status;
 
@@ -54,11 +58,16 @@ public class InspectionResponse {
     private LocalDateTime updatedAt;
 
     public static InspectionResponse fromEntity(com.kilivana.backend.admin.entity.Inspection inspection) {
+        return fromEntity(inspection, null);
+    }
+
+    public static InspectionResponse fromEntity(com.kilivana.backend.admin.entity.Inspection inspection, com.kilivana.backend.farm.dto.FarmResponse targetFarm) {
         return InspectionResponse.builder()
                 .id(inspection.getId())
                 .inspectorId(inspection.getInspectorId())
                 .targetType(inspection.getTargetType())
                 .targetId(inspection.getTargetId())
+                .targetFarm(targetFarm)
                 .status(inspection.getStatus())
                 .result(inspection.getResult())
                 .notes(inspection.getNotes())
