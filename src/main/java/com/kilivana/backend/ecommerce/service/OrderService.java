@@ -78,10 +78,10 @@ public class OrderService {
         return orderRepository.findByBuyerId(buyerId);
     }
 
-    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
-    public Page<Order> searchOrders(Long buyerId, String status, Pageable pageable) {
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId) || @resourceAuthorization.sellerOrderSearch(#sellerId)")
+    public Page<Order> searchOrders(Long buyerId, Long sellerId, String status, Pageable pageable) {
         OrderStatus orderStatus = status != null ? OrderStatus.from(status) : null;
-        return orderRepository.searchOrders(buyerId, orderStatus, pageable);
+        return orderRepository.searchOrders(buyerId, sellerId, orderStatus, pageable);
     }
 
     /**
@@ -95,7 +95,7 @@ public class OrderService {
      *     computed ones
      */
     @Transactional
-    @PreAuthorize("@resourceAuthorization.admin()")
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
     public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
                              List<OrderItemRequest> items,
                              BigDecimal claimedSubtotal, BigDecimal claimedTotal) {

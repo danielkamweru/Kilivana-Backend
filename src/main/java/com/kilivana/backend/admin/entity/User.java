@@ -42,8 +42,8 @@ public class User {
     private String email;
 
     /** Legacy accounts are grandfathered; all HTTP creation paths explicitly set false. */
+    @Transient
     @Builder.Default
-    @Column(nullable = false)
     private boolean emailVerified = true;
 
     /** Null for grandfathered accounts; populated only by successful email verification. */
@@ -128,6 +128,17 @@ public class User {
             this.emailVerifiedAt = null;
         }
         this.email = email;
+    }
+    public boolean isEmailVerified() {
+        return emailVerified || emailVerifiedAt != null;
+    }
+    public void setEmailVerified(boolean value) {
+        this.emailVerified = value;
+        if (value) {
+            if (this.emailVerifiedAt == null) this.emailVerifiedAt = java.time.Instant.now();
+        } else {
+            this.emailVerifiedAt = null;
+        }
     }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }

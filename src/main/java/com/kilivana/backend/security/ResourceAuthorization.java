@@ -43,6 +43,14 @@ public class ResourceAuthorization {
         return u != null && (u.getRole() == UserRole.ADMIN ||
                 (u.getRole() == UserRole.BUYER && Objects.equals(u.getId(), id)));
     }
+
+    /** Authorization for searching orders as a seller (farmer or supplier). */
+    public boolean sellerOrderSearch(Long sellerId) {
+        User u = actor();
+        return u != null && (u.getRole() == UserRole.ADMIN ||
+                ((u.getRole() == UserRole.FARMER || u.getRole() == UserRole.SUPPLIER) &&
+                 Objects.equals(u.getId(), sellerId)));
+    }
     public boolean seller(Long id) {
         User u = actor();
         return u != null && (u.getRole() == UserRole.ADMIN || (Objects.equals(u.getId(), id) &&

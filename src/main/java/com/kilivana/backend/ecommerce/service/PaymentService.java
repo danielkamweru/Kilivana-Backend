@@ -188,9 +188,9 @@ public class PaymentService {
             }
         }
 
-        // Validate phone format (Kenyan Safaricom: 2547XXXXXXXX or 2541XXXXXXXX)
-        if (!phoneNumber.matches("^254[17]\\d{8}$")) {
-            throw new BadRequestException("Phone number must be in 2547XXXXXXXX or 2541XXXXXXXX format");
+        // Validate phone format (Kenyan Safaricom: 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX)
+        if (!phoneNumber.matches("^254(7\\d{8}|1\\d{8}|11\\d{7})$")) {
+            throw new BadRequestException("Phone number must be a valid Safaricom number in 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX format");
         }
 
         int amountKes = outstanding.setScale(0, java.math.RoundingMode.HALF_UP).intValue();

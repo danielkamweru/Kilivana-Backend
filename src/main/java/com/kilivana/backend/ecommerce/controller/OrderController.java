@@ -74,23 +74,25 @@ public class OrderController {
     }
 
     /**
-     * Returns a paginated list of orders, optionally filtered by buyer and/or status.
+     * Returns a paginated list of orders, optionally filtered by buyer, seller, and/or status.
      *
      * @param buyerId optional buyer ID filter
+     * @param sellerId optional seller ID filter (for farmers/suppliers to view their orders)
      * @param status optional status filter (e.g., CONFIRMED, SHIPPED)
      * @param pageable pagination and sorting parameters
      * @return paginated orders
      */
-    @Operation(summary = "List orders", description = "Returns a paginated list of orders, optionally filtered by buyer and/or status.")
+    @Operation(summary = "List orders", description = "Returns a paginated list of orders, optionally filtered by buyer, seller, and/or status.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Orders retrieved successfully")
     })
     @GetMapping
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> getOrders(
             @Parameter(description = "Filter orders by buyer ID") @RequestParam(required = false) Long buyerId,
+            @Parameter(description = "Filter orders by seller ID (farmer/supplier)") @RequestParam(required = false) Long sellerId,
             @Parameter(description = "Filter orders by status") @RequestParam(required = false) String status,
             @Parameter(description = "Pagination and sorting parameters") Pageable pageable) {
-        Page<OrderResponse> orders = orderService.searchOrders(buyerId, status, pageable)
+        Page<OrderResponse> orders = orderService.searchOrders(buyerId, sellerId, status, pageable)
                 .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -113,24 +115,26 @@ public class OrderController {
     }
 
     /**
-     * Searches orders with optional buyer and status filters, paginated.
+     * Searches orders with optional buyer, seller, and status filters, paginated.
      * Alias for the main list endpoint with identical behavior.
      *
      * @param buyerId optional buyer ID filter
+     * @param sellerId optional seller ID filter (for farmers/suppliers to view their orders)
      * @param status optional status filter
      * @param pageable pagination and sorting parameters
      * @return paginated orders
      */
-    @Operation(summary = "Search orders", description = "Searches orders with optional buyer and status filters, paginated.")
+    @Operation(summary = "Search orders", description = "Searches orders with optional buyer, seller, and status filters, paginated.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Search results retrieved successfully")
     })
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> searchOrders(
             @Parameter(description = "Filter orders by buyer ID") @RequestParam(required = false) Long buyerId,
+            @Parameter(description = "Filter orders by seller ID (farmer/supplier)") @RequestParam(required = false) Long sellerId,
             @Parameter(description = "Filter orders by status") @RequestParam(required = false) String status,
             @Parameter(description = "Pagination and sorting parameters") Pageable pageable) {
-        Page<OrderResponse> responses = orderService.searchOrders(buyerId, status, pageable)
+        Page<OrderResponse> responses = orderService.searchOrders(buyerId, sellerId, status, pageable)
                 .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(responses));
     }

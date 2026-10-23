@@ -50,12 +50,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Optional-filter search. The {@code IS NULL} branch parameters are cast
      * explicitly: an uncast parameter used only in a null check has no type
      * PostgreSQL can infer, and the statement is rejected at execution time.
+     * When sellerId is provided, returns orders where the seller has items.
      */
-    @Query("SELECT o FROM Order o WHERE " +
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN OrderItem oi ON o.id = oi.orderId WHERE " +
            "(CAST(:buyerId AS Long) IS NULL OR o.buyerId = :buyerId) AND " +
+           "(CAST(:sellerId AS Long) IS NULL OR oi.sellerId = :sellerId) AND " +
            "(CAST(:status AS String) IS NULL OR o.status = :status) " +
            "ORDER BY o.createdAt DESC")
     Page<Order> searchOrders(@Param("buyerId") Long buyerId,
+                             @Param("sellerId") Long sellerId,
                              @Param("status") OrderStatus status,
                              Pageable pageable);
 

@@ -238,6 +238,7 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", id));
     }
 
+    @PreAuthorize("isAuthenticated()")
     public List<LogisticsJob> getAllJobs() {
         return logisticsJobRepository.findAll();
     }

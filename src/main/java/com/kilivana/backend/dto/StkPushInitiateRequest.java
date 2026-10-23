@@ -24,8 +24,8 @@ public class StkPushInitiateRequest {
      * Buyer's phone number in 2547XXXXXXXX format.
      * If not provided, the buyer's registered phone is used.
      */
-    @Schema(description = "Buyer's phone in 2547XXXXXXXX format (optional; uses buyer's registered phone if omitted)", example = "254708374149")
-    @Pattern(regexp = "^254[17]\\d{8}$", message = "Phone must be in 2547XXXXXXXX or 2541XXXXXXXX format")
+    @Schema(description = "Buyer's phone in 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX format (optional; uses buyer's registered phone if omitted)", example = "254708374149")
+    @Pattern(regexp = "^254(7\\d{8}|1\\d{8}|11\\d{7})$", message = "Phone must be a valid Safaricom number in 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX format")
     private String phoneNumber;
 
     public Long getOrderId() {
