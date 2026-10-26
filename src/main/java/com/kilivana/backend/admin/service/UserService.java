@@ -67,10 +67,21 @@ public class UserService {
                 .build();
 
         User saved = userRepository.save(user);
-        var challenge = emailVerificationService.startForNewAccount(saved);
-        UserResponse response = mapToResponse(saved);
-        response.setEmailVerificationChallengeId(challenge.challengeId());
-        return response;
+
+        // Staff roles (ADMIN, INSPECTOR, DRIVER) created by admin are pre-verified
+        // Self-registered roles (BUYER, FARMER, SUPPLIER) require OTP verification
+        if (request.getRole() == UserRole.BUYER || request.getRole() == UserRole.FARMER || request.getRole() == UserRole.SUPPLIER) {
+            var challenge = emailVerificationService.startForNewAccount(saved);
+            UserResponse response = mapToResponse(saved);
+            response.setEmailVerificationChallengeId(challenge.challengeId());
+            return response;
+        } else {
+            // Mark staff accounts as verified immediately
+            saved.setEmailVerified(true);
+            saved.setEmailVerifiedAt(java.time.Instant.now());
+            userRepository.save(saved);
+            return mapToResponse(saved);
+        }
     }
 
     @PreAuthorize("@resourceAuthorization.self(#id)")

@@ -44,7 +44,7 @@ public class User {
     /** Legacy accounts are grandfathered; all HTTP creation paths explicitly set false. */
     @Transient
     @Builder.Default
-    private boolean emailVerified = true;
+    private boolean emailVerified = false;
 
     /** Null for grandfathered accounts; populated only by successful email verification. */
     private java.time.Instant emailVerifiedAt;
