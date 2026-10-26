@@ -41,12 +41,21 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    /** Legacy accounts are grandfathered; all HTTP creation paths explicitly set false. */
+    /**
+     * Transient flag for email verification status.
+     * Defaults to false for new accounts. Set to true for staff accounts (ADMIN, INSPECTOR, DRIVER)
+     * created by admin, and for self-registered accounts (BUYER, FARMER, SUPPLIER) after OTP verification.
+     * This field is not persisted to the database; the persisted version is emailVerifiedAt.
+     */
     @Transient
     @Builder.Default
     private boolean emailVerified = false;
 
-    /** Null for grandfathered accounts; populated only by successful email verification. */
+    /**
+     * Timestamp when email was verified. Null for unverified accounts.
+     * Populated only by successful email verification via OTP.
+     * This is the persisted version of the email verification status in the database.
+     */
     private java.time.Instant emailVerifiedAt;
 
     /** Phone number, trimmed on input; unique per account. */
@@ -116,12 +125,21 @@ public class User {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    // Explicit getters and setters for Lombok compatibility
+    /**
+     * Explicit getters and setters for Lombok compatibility.
+     * Required because we use @Data with @Builder and need to override
+     * the default Lombok behavior for certain fields (like setEmailVerified).
+     */
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getEmail() { return email; }
+
+    /**
+     * Sets the email address. If the email changes, resets email verification status.
+     * This ensures users must re-verify their email after changing it.
+     */
     public void setEmail(String email) {
         if (this.email != null && !this.email.trim().equalsIgnoreCase(email == null ? "" : email.trim())) {
             this.emailVerified = false;
@@ -129,9 +147,21 @@ public class User {
         }
         this.email = email;
     }
+
+    /**
+     * Checks if the user's email is verified.
+     * Returns true if either the transient flag is true or the verification timestamp is set.
+     * This allows the check to work for both legacy accounts (transient flag) and new accounts (timestamp).
+     */
     public boolean isEmailVerified() {
         return emailVerified || emailVerifiedAt != null;
     }
+
+    /**
+     * Sets the email verification status.
+     * When setting to true, also sets the verification timestamp to now.
+     * When setting to false, clears the verification timestamp.
+     */
     public void setEmailVerified(boolean value) {
         this.emailVerified = value;
         if (value) {

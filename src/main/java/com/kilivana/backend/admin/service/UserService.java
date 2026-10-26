@@ -38,6 +38,19 @@ public class UserService {
     private final DriverProfileRepository driverProfileRepository;
     private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
+    /**
+     * Creates a new user account. Only administrators can call this method.
+     *
+     * <p>Email verification behavior varies by role:
+     * <ul>
+     *   <li>Staff roles (ADMIN, INSPECTOR, DRIVER): Pre-verified immediately since they're created by trusted admins</li>
+     *   <li>Self-registered roles (BUYER, FARMER, SUPPLIER): Require OTP verification via email</li>
+     * </ul>
+     *
+     * @param request the user registration details
+     * @return the created user response, with verification challenge ID if OTP is required
+     * @throws BadRequestException if email or phone already exists
+     */
     @Transactional
     @PreAuthorize("@resourceAuthorization.admin()")
     public UserResponse createUser(UserRegistrationRequest request) {

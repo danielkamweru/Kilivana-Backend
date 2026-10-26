@@ -6,9 +6,23 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Serves a self-contained HTML password reset page.
+ *
+ * <p>This page accepts a reset token from the URL query parameter and provides a form
+ * for users to set a new password. The token field is masked and non-copyable for security.
+ * The password field includes a toggle to show/hide the password for user convenience.
+ * The form submits to the backend API endpoint to complete the password reset.
+ */
 @RestController
 public class PasswordResetPageController {
 
+    /**
+     * Returns the password reset HTML page with the pre-filled token.
+     *
+     * @param token the password reset token from the email link (optional)
+     * @return HTML page with password reset form
+     */
     @GetMapping(value = "/reset-password", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> page(@RequestParam(required = false) String token) {
         String safeToken = token == null ? "" : token.replace("\"", "&quot;");

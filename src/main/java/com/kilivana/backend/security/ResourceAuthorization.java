@@ -27,7 +27,7 @@ public class ResourceAuthorization {
     private final com.kilivana.backend.logistics.repository.LogisticsJobRepository jobs;
     private final FarmRepository farms;
 
-    private User actor() {
+    public User actor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof Long id)) return null;
         return users.findById(id).filter(u -> u.isEmailVerified() && AccountAccessValidator.permitsAuthentication(u.getStatus())).orElse(null);

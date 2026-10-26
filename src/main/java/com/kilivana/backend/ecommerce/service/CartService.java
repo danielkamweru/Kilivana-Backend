@@ -147,8 +147,21 @@ public class CartService {
     @Transactional
     @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void checkout(Long cartId) {
-        throw new com.kilivana.backend.common.exception.ServiceUnavailableException(
-                "Checkout is unavailable until transactional order placement and delivery pricing are approved.");
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
+
+        if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
+            throw new BadRequestException("Cart is not active and cannot be checked out");
+        }
+
+        List<CartItem> items = cartItemRepository.findByCartId(cartId);
+        if (items.isEmpty()) {
+            throw new BadRequestException("Cannot checkout an empty cart");
+        }
+
+        // Change cart status to CHECKOUT_PROCESSING
+        cart.setStatus(Cart.CartStatus.CHECKOUT_PROCESSING);
+        cartRepository.save(cart);
     }
 
     /**
