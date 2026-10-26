@@ -262,6 +262,7 @@ public class OrderService {
         return saved;
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     @Transactional
     public Order updateOrderStatus(Long orderId, OrderStatus status) {
         Order order = orderRepository.findByIdForUpdate(orderId)

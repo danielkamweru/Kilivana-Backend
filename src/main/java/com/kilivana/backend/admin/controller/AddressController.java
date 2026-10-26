@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @Tag(name = "Administration · Users & Addresses", description = "Account self-service and address book management")
 @RestController
-@RequestMapping({"/api/v1/users", "/api/v1"})
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class AddressController {
 

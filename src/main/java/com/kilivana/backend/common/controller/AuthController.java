@@ -22,13 +22,10 @@ import com.kilivana.backend.security.CurrentUser;
 
 /**
  * Authentication endpoints: registration, login, token refresh and password recovery.
- *
- * <p>Mapped under both {@code /api/v1/auth} and {@code /api/auth} so clients written
- * against the older, unprefixed path keep working.
  */
 @Tag(name = "Authentication", description = "Registration, login, token refresh and account recovery")
 @RestController
-@RequestMapping({"/api/v1/auth", "/api/auth"})
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 

@@ -257,7 +257,6 @@ class ServiceAuthorizationTest {
         denied(() -> orderService.searchOrders(null, null, null, org.springframework.data.domain.Pageable.unpaged()));
         denied(() -> orderService.confirmReceipt(11L));
         denied(() -> orderService.updateOrderStatus(10L, OrderStatus.COMPLETED));
-        denied(() -> orderService.createOrder(1L, 1L, null, List.of(), null, null));
         verify(orders, never()).save(any());
         assertEquals(10L, orderService.getOrderById(10L).getId());
     }

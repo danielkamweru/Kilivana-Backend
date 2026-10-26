@@ -22,20 +22,42 @@ public class PasswordResetPageController {
               <style>
                 body { font-family: system-ui, sans-serif; max-width: 420px; margin: 40px auto; padding: 0 16px; }
                 label { display: block; margin-top: 12px; }
-                input { width: 100%%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
-                button { margin-top: 16px; padding: 10px 16px; }
+                .input-wrapper { position: relative; margin-top: 4px; }
+                input { width: 100%%; padding: 8px; box-sizing: border-box; padding-right: 40px; }
+                .toggle-password { position: absolute; right: 8px; top: 50%%; transform: translateY(-50%%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; }
+                button[type="submit"] { margin-top: 16px; padding: 10px 16px; }
                 #msg { margin-top: 12px; }
               </style>
             </head>
             <body>
               <h1>Reset Password</h1>
               <form id="f">
-                <label>Reset token<input id="token" name="token" value="%s" required></label>
-                <label>New password<input id="password" name="password" type="password" required minlength="8"></label>
+                <label>Reset token
+                  <div class="input-wrapper">
+                    <input id="token" name="token" type="password" value="%s" required oncopy="return false;" oncut="return false;" onpaste="return false;">
+                  </div>
+                </label>
+                <label>New password
+                  <div class="input-wrapper">
+                    <input id="password" name="password" type="password" required minlength="8">
+                    <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+                  </div>
+                </label>
                 <button type="submit">Reset password</button>
               </form>
               <div id="msg"></div>
               <script>
+                function togglePassword() {
+                  const passwordInput = document.getElementById('password');
+                  const toggleBtn = document.querySelector('.toggle-password');
+                  if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleBtn.textContent = '🙈';
+                  } else {
+                    passwordInput.type = 'password';
+                    toggleBtn.textContent = '👁️';
+                  }
+                }
                 document.getElementById('f').addEventListener('submit', async (e) => {
                   e.preventDefault();
                   const token = document.getElementById('token').value;

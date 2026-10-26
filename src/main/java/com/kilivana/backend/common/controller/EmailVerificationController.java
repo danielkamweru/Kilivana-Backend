@@ -3,16 +3,18 @@ package com.kilivana.backend.common.controller;
 import com.kilivana.backend.common.dto.*;
 import com.kilivana.backend.common.service.EmailVerificationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name="Authentication", description="Registration, login, token refresh, email verification and account recovery")
 @RestController @RequiredArgsConstructor
-@RequestMapping({"/api/v1/auth/email-verification","/api/auth/email-verification"})
+@RequestMapping("/api/v1/auth/email-verification")
 public class EmailVerificationController {
     private final EmailVerificationService verification;
-    @PostMapping({"/request","/resend"})
+    @PostMapping("/request")
     @Operation(summary="Request or resend an email verification code",description="Generic acknowledgment, 60-second cooldown, five sends per email per hour. Does not disclose account existence.")
     public ResponseEntity<ApiResponse<EmailOtpChallengeResponse>> request(@Valid @RequestBody EmailOtpRequest request) {
         return ResponseEntity.accepted().body(ApiResponse.success(verification.request(request.getEmail())));

@@ -19,12 +19,11 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Account self-service and address book management. This is the only entry point a user uses
  * to register themselves or update their own profile; the heavier administration endpoints
- * live on the admin controllers. The two base paths — <code>/api/v1/users</code> and
- * <code>/api/users</code> — are kept in sync so older clients keep working.
+ * live on the admin controllers.
  */
 @Tag(name = "Administration · Users & Addresses", description = "Account self-service and address book management")
 @RestController
-@RequestMapping({"/api/v1/users", "/api/users"})
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserProfileController {
 

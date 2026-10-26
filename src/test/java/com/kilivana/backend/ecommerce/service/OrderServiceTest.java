@@ -4,6 +4,7 @@ import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.repository.FarmerProfileRepository;
+import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.PaymentStatus;
@@ -75,6 +76,8 @@ class OrderServiceTest {
                 userRepository, addressRepository, farmerProfileRepository,
                 driverProfileRepository, logisticsService, logisticsJobRepository);
 
+        when(userRepository.existsById(BUYER_ID)).thenReturn(true);
+        when(userRepository.findById(BUYER_ID)).thenReturn(Optional.of(User.builder().id(BUYER_ID).role(UserRole.BUYER).build()));
         when(userRepository.existsByIdAndRole(BUYER_ID, UserRole.BUYER)).thenReturn(true);
         Address address = Address.builder().id(ADDRESS_ID).userId(BUYER_ID).build();
         when(addressRepository.findById(ADDRESS_ID)).thenReturn(Optional.of(address));
@@ -182,7 +185,8 @@ class OrderServiceTest {
     @Test
     @DisplayName("refuses a buyer that is not a buyer account")
     void refusesNonBuyer() {
-        when(userRepository.existsByIdAndRole(BUYER_ID, UserRole.BUYER)).thenReturn(false);
+        when(userRepository.existsById(BUYER_ID)).thenReturn(true);
+        when(userRepository.findById(BUYER_ID)).thenReturn(Optional.of(com.kilivana.backend.admin.entity.User.builder().id(BUYER_ID).role(UserRole.ADMIN).build()));
         assertThrows(BadRequestException.class, () ->
                 orderService.createOrder(BUYER_ID, ADDRESS_ID,
                         new BigDecimal("25.00"), items(), null, null));
