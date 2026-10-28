@@ -2,9 +2,14 @@ package com.kilivana.backend.ecommerce.controller;
 
 import com.kilivana.backend.ecommerce.dto.OrderRequest;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.dto.SellerOrderSummary;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.service.OrderService;
+import com.kilivana.backend.admin.entity.User;
+import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.OrderStatus;
 import jakarta.validation.Valid;
@@ -33,6 +38,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class OrderController {
 
     private final OrderService orderService;
+    private final UserRepository userRepository;
 
     /**
      * Creates a new purchase order from the supplied request payload.
@@ -137,6 +143,42 @@ public class OrderController {
         Page<OrderResponse> responses = orderService.searchOrders(buyerId, sellerId, status, pageable)
                 .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    @Operation(summary = "List orders for a seller", description = "Returns a paginated, seller-scoped summary of orders containing the seller's items.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Seller orders retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized for this seller"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Seller not found")
+    })
+    @GetMapping("/seller/{sellerId}")
+    @org.springframework.security.access.prepost.PreAuthorize("@resourceAuthorization.admin() || @resourceAuthorization.seller(#sellerId)")
+    public ResponseEntity<ApiResponse<java.util.List<SellerOrderSummary>>> sellerOrders(
+            @Parameter(description = "Seller user ID") @PathVariable Long sellerId) {
+        User user = userRepository.findById(sellerId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", sellerId));
+        if (user.getRole() != UserRole.FARMER && user.getRole() != UserRole.SUPPLIER) {
+            throw new ResourceNotFoundException("User", sellerId);
+        }
+        java.util.List<SellerOrderSummary> summaries = orderService.searchOrders(null, sellerId, null, org.springframework.data.domain.Pageable.unpaged())
+                .map(orderService::toResponse).getContent().stream().map(o -> {
+                    java.math.BigDecimal total = java.math.BigDecimal.ZERO;
+                    int count = 0;
+                    for (com.kilivana.backend.ecommerce.dto.OrderItemResponse item : o.getItems()) {
+                        if (sellerId.equals(item.getSellerId())) {
+                            count++;
+                            total = total.add(item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));
+                        }
+                    }
+                    return SellerOrderSummary.builder()
+                            .id(o.getId())
+                            .status(o.getStatus().name())
+                            .total(total)
+                            .createdAt(o.getCreatedAt())
+                            .itemCount(count)
+                            .build();
+                }).toList();
+        return ResponseEntity.ok(ApiResponse.success(summaries));
     }
 
     /**
