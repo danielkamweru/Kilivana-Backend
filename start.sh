@@ -1,6 +1,6 @@
 #!/bin/bash
 # Set environment variables
-export DB_URL="jdbc:postgresql://localhost:5432/kilivana"
+export DB_URL="jdbc:postgresql://localhost:5433/kilivana"
 export DB_USERNAME="kilivana_user"
 export DB_PASSWORD="daniel kamweru"
 export JWT_SECRET="dev-stable-secret-key-for-local-testing"

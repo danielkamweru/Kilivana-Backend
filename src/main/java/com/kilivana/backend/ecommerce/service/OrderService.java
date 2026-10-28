@@ -7,6 +7,8 @@ import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.FarmerProfileRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.logistics.entity.PickupStation;
+import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.PaymentStatus;
@@ -61,6 +63,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
+    private final PickupStationRepository pickupStationRepository;
     private final FarmerProfileRepository farmerProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final LogisticsService logisticsService;
@@ -84,12 +87,12 @@ public class OrderService {
     }
 
     /**
-     * Places an order: validates the buyer, the delivery address and every
+     * Places an order: validates the buyer, the delivery address/pickup station and every
      * line item, reserves the stock, computes the figures and writes the
      * order, its items and its first timeline event in one transaction.
      *
      * @throws BadRequestException when the buyer is not a buyer account, the
-     *     address is not the buyer's, a product does not exist or has not
+     *     address/station is not valid, a product does not exist or has not
      *     enough unreserved stock, or the caller's figures disagree with the
      *     computed ones
      */
@@ -98,6 +101,25 @@ public class OrderService {
     public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
                              List<OrderItemRequest> items,
                              BigDecimal claimedSubtotal, BigDecimal claimedTotal) {
+        return createOrder(buyerId, addressId, deliveryFee, items, claimedSubtotal, claimedTotal, "DOOR_DELIVERY");
+    }
+
+    /**
+     * Places an order with delivery method support: validates the buyer, the delivery address/pickup station and every
+     * line item, reserves the stock, computes the figures and writes the
+     * order, its items and its first timeline event in one transaction.
+     *
+     * @throws BadRequestException when the buyer is not a buyer account, the
+     *     address/station is not valid, a product does not exist or has not
+     *     enough unreserved stock, or the caller's figures disagree with the
+     *     computed ones
+     */
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId) || @resourceAuthorization.admin()")
+    public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
+                             List<OrderItemRequest> items,
+                             BigDecimal claimedSubtotal, BigDecimal claimedTotal,
+                             String deliveryMethod) {
         if (!userRepository.existsById(buyerId)) {
             throw new BadRequestException("Buyer ID must exist");
         }
@@ -105,10 +127,22 @@ public class OrderService {
         if (buyer.getRole() != UserRole.BUYER && buyer.getRole() != UserRole.FARMER && buyer.getRole() != UserRole.SUPPLIER) {
             throw new BadRequestException("Buyer ID must belong to a buyer, farmer, or supplier account");
         }
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address", addressId));
-        if (!address.getUserId().equals(buyerId)) {
-            throw new BadRequestException("Address does not belong to this buyer");
+
+        // Validate delivery method and address/station
+        if ("DOOR_DELIVERY".equalsIgnoreCase(deliveryMethod)) {
+            Address address = addressRepository.findById(addressId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", addressId));
+            if (!address.getUserId().equals(buyerId)) {
+                throw new BadRequestException("Address does not belong to this buyer");
+            }
+        } else if ("PICKUP_STATION".equalsIgnoreCase(deliveryMethod)) {
+            PickupStation station = pickupStationRepository.findById(addressId)
+                    .orElseThrow(() -> new ResourceNotFoundException("PickupStation", addressId));
+            if (!station.getIsAvailable()) {
+                throw new BadRequestException("Pickup station is not currently available");
+            }
+        } else {
+            throw new BadRequestException("Invalid delivery method. Must be DOOR_DELIVERY or PICKUP_STATION");
         }
 
         BigDecimal fee = deliveryFee == null ? BigDecimal.ZERO : deliveryFee;
@@ -175,6 +209,7 @@ public class OrderService {
                 .deliveryFee(fee)
                 .total(total)
                 .addressId(addressId)
+                .deliveryMethod(deliveryMethod)
                 .code(nextOrderCode())
                 .build();
         Order saved = orderRepository.save(order);

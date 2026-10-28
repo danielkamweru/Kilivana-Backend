@@ -4,6 +4,8 @@ import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.logistics.entity.PickupStation;
+import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.security.CurrentUser;
 import com.kilivana.backend.ecommerce.dto.CheckoutOrderRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteRequest;
@@ -32,18 +34,21 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class CheckoutService {
 
-    private static final BigDecimal DELIVERY_FEE = new BigDecimal("150.00");
+    private static final BigDecimal DOOR_DELIVERY_FEE = new BigDecimal("150.00");
+    private static final BigDecimal PICKUP_STATION_FEE = new BigDecimal("50.00");
     private static final int QUOTE_TTL_MINUTES = 15;
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final AddressRepository addressRepository;
+    private final PickupStationRepository pickupStationRepository;
     private final ProductRepository productRepository;
     private final OrderService orderService;
 
     private final Map<String, QuoteRecord> quotes = new ConcurrentHashMap<>();
 
-    public record QuoteRecord(String quoteId, Long userId, Long cartId, Long addressId,
+    public record QuoteRecord(String quoteId, Long userId, Long cartId, String deliveryMethod,
+                             Long addressId, Long pickupStationId,
                              BigDecimal subtotal, BigDecimal deliveryFee, BigDecimal total,
                              Instant expiresAt, boolean used) {}
 
@@ -52,13 +57,42 @@ public class CheckoutService {
         Long userId = CurrentUser.id();
         if (userId == null) throw new BadRequestException("Authentication required");
 
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new ResourceNotFoundException("Address", request.getAddressId()));
-        if (!address.getUserId().equals(userId)) {
-            throw new BadRequestException("Address does not belong to the authenticated user");
+        String deliveryMethod = request.getDeliveryMethod();
+        if (deliveryMethod == null) {
+            throw new BadRequestException("Delivery method is required");
         }
-        if (address.getLatitude() == null || address.getLongitude() == null) {
-            throw new BadRequestException("Delivery address is not geocoded/valid");
+
+        Long addressId = null;
+        Long pickupStationId = null;
+        BigDecimal deliveryFee;
+
+        if ("DOOR_DELIVERY".equalsIgnoreCase(deliveryMethod)) {
+            if (request.getAddressId() == null) {
+                throw new BadRequestException("Address ID is required for door delivery");
+            }
+            Address address = addressRepository.findById(request.getAddressId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", request.getAddressId()));
+            if (!address.getUserId().equals(userId)) {
+                throw new BadRequestException("Address does not belong to the authenticated user");
+            }
+            if (address.getLatitude() == null || address.getLongitude() == null) {
+                throw new BadRequestException("Delivery address is not geocoded/valid");
+            }
+            addressId = address.getId();
+            deliveryFee = DOOR_DELIVERY_FEE;
+        } else if ("PICKUP_STATION".equalsIgnoreCase(deliveryMethod)) {
+            if (request.getPickupStationId() == null) {
+                throw new BadRequestException("Pickup station ID is required for pickup station delivery");
+            }
+            PickupStation station = pickupStationRepository.findById(request.getPickupStationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("PickupStation", request.getPickupStationId()));
+            if (!station.getIsAvailable()) {
+                throw new BadRequestException("Pickup station is not currently available");
+            }
+            pickupStationId = station.getId();
+            deliveryFee = PICKUP_STATION_FEE;
+        } else {
+            throw new BadRequestException("Invalid delivery method. Must be DOOR_DELIVERY or PICKUP_STATION");
         }
 
         Cart cart = cartRepository.findFirstByBuyerIdAndStatus(userId, Cart.CartStatus.CHECKOUT_PROCESSING)
@@ -75,22 +109,30 @@ public class CheckoutService {
             BigDecimal line = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             subtotal = subtotal.add(line);
         }
-        BigDecimal total = subtotal.add(DELIVERY_FEE);
+        BigDecimal total = subtotal.add(deliveryFee);
         String quoteId = UUID.randomUUID().toString();
         Instant expiresAt = Instant.now().plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES);
 
-        quotes.put(quoteId, new QuoteRecord(quoteId, userId, cart.getId(), address.getId(),
-                subtotal, DELIVERY_FEE, total, expiresAt, false));
+        quotes.put(quoteId, new QuoteRecord(quoteId, userId, cart.getId(), deliveryMethod,
+                addressId, pickupStationId, subtotal, deliveryFee, total, expiresAt, false));
 
-        return DeliveryQuoteResponse.builder()
+        DeliveryQuoteResponse.DeliveryQuoteResponseBuilder responseBuilder = DeliveryQuoteResponse.builder()
                 .quoteId(quoteId)
-                .addressId(address.getId())
+                .deliveryMethod(deliveryMethod)
                 .subtotal(subtotal)
-                .deliveryFee(DELIVERY_FEE)
+                .deliveryFee(deliveryFee)
                 .total(total)
                 .currency("KES")
-                .expiresAt(expiresAt)
-                .build();
+                .expiresAt(expiresAt);
+
+        if (addressId != null) {
+            responseBuilder.addressId(addressId);
+        }
+        if (pickupStationId != null) {
+            responseBuilder.pickupStationId(pickupStationId);
+        }
+
+        return responseBuilder.build();
     }
 
     @Transactional
@@ -130,11 +172,18 @@ public class CheckoutService {
         }
         BigDecimal total = subtotal.add(quote.deliveryFee());
 
-        Order order = orderService.createOrder(userId, quote.addressId(), quote.deliveryFee(), items, subtotal, total);
+        // Determine the address ID to use (door delivery uses addressId, pickup station uses pickupStationId)
+        Long deliveryAddressId = quote.addressId();
+        if ("PICKUP_STATION".equalsIgnoreCase(quote.deliveryMethod()) && quote.pickupStationId() != null) {
+            deliveryAddressId = quote.pickupStationId();
+        }
+
+        Order order = orderService.createOrder(userId, deliveryAddressId, quote.deliveryFee(), items, subtotal, total, quote.deliveryMethod());
 
         // mark quote used
         quotes.put(quote.quoteId(), new QuoteRecord(quote.quoteId(), quote.userId(), quote.cartId(),
-                quote.addressId(), quote.subtotal(), quote.deliveryFee(), quote.total(), quote.expiresAt(), true));
+                quote.deliveryMethod(), quote.addressId(), quote.pickupStationId(),
+                quote.subtotal(), quote.deliveryFee(), quote.total(), quote.expiresAt(), true));
 
         // transition cart out of checkout processing
         cart.setStatus(Cart.CartStatus.ABANDONED);

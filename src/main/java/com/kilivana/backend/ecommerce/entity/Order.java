@@ -58,6 +58,10 @@ public class Order {
     @Column(nullable = false)
     private Long addressId;
 
+    /** Delivery method: DOOR_DELIVERY or PICKUP_STATION */
+    @Column(nullable = false)
+    private String deliveryMethod;
+
     @Column(columnDefinition = "TEXT")
     private String cancellationReason;
 
@@ -144,6 +148,14 @@ public class Order {
         this.addressId = addressId;
     }
 
+    public String getDeliveryMethod() {
+        return deliveryMethod;
+    }
+
+    public void setDeliveryMethod(String deliveryMethod) {
+        this.deliveryMethod = deliveryMethod;
+    }
+
     public String getCancellationReason() {
         return cancellationReason;
     }
@@ -190,6 +202,7 @@ public class Order {
         private BigDecimal total;
         private PaymentStatus paymentStatus;
         private Long addressId;
+        private String deliveryMethod;
         private String cancellationReason;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -240,6 +253,11 @@ public class Order {
             return this;
         }
 
+        public OrderBuilder deliveryMethod(String deliveryMethod) {
+            this.deliveryMethod = deliveryMethod;
+            return this;
+        }
+
         public OrderBuilder cancellationReason(String cancellationReason) {
             this.cancellationReason = cancellationReason;
             return this;
@@ -271,6 +289,7 @@ public class Order {
             order.total = this.total;
             order.paymentStatus = this.paymentStatus;
             order.addressId = this.addressId;
+            order.deliveryMethod = this.deliveryMethod;
             order.cancellationReason = this.cancellationReason;
             order.createdAt = this.createdAt;
             order.updatedAt = this.updatedAt;

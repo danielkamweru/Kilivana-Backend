@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request to calculate a delivery fee quote for checkout.
+ * Supports both door delivery (using addressId) and pickup station delivery (using pickupStationId).
  */
 @Schema(description = "Delivery fee quote request")
 @Data
@@ -17,7 +18,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DeliveryQuoteRequest {
 
-    @Schema(description = "Delivery address ID", example = "8")
-    @NotNull(message = "Address ID is required")
+    @Schema(description = "Delivery method: DOOR_DELIVERY or PICKUP_STATION", example = "DOOR_DELIVERY")
+    @NotNull(message = "Delivery method is required")
+    private String deliveryMethod;
+
+    @Schema(description = "Delivery address ID (required for DOOR_DELIVERY)", example = "8")
     private Long addressId;
+
+    @Schema(description = "Pickup station ID (required for PICKUP_STATION)", example = "5")
+    private Long pickupStationId;
 }

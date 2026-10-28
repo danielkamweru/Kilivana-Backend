@@ -23,6 +23,7 @@ import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -58,6 +59,7 @@ class OrderServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private UserRepository userRepository;
     @Mock private AddressRepository addressRepository;
+    @Mock private PickupStationRepository pickupStationRepository;
     @Mock private FarmerProfileRepository farmerProfileRepository;
     @Mock private DriverProfileRepository driverProfileRepository;
     @Mock private LogisticsService logisticsService;
@@ -73,8 +75,8 @@ class OrderServiceTest {
     void setUp() {
         orderService = new OrderService(orderRepository, orderItemRepository,
                 orderEventRepository, paymentRepository, productRepository,
-                userRepository, addressRepository, farmerProfileRepository,
-                driverProfileRepository, logisticsService, logisticsJobRepository);
+                userRepository, addressRepository, pickupStationRepository,
+                farmerProfileRepository, driverProfileRepository, logisticsService, logisticsJobRepository);
 
         when(userRepository.existsById(BUYER_ID)).thenReturn(true);
         when(userRepository.findById(BUYER_ID)).thenReturn(Optional.of(User.builder().id(BUYER_ID).role(UserRole.BUYER).build()));
