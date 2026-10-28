@@ -66,7 +66,7 @@ public class OrderService {
     private final LogisticsService logisticsService;
     private final LogisticsJobRepository logisticsJobRepository;
 
-    @PreAuthorize("@resourceAuthorization.order(#id)")
+    @PreAuthorize("@resourceAuthorization.order(#id) || @resourceAuthorization.orderSeller(#id)")
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", id));
@@ -273,7 +273,7 @@ public class OrderService {
         return saved;
     }
 
-    @PreAuthorize("@resourceAuthorization.order(#orderId)")
+    @PreAuthorize("@resourceAuthorization.order(#orderId) || @resourceAuthorization.orderSeller(#orderId)")
     public List<OrderEvent> getOrderTimeline(Long orderId) {
         getOrderById(orderId);
         return orderEventRepository.findByOrderIdOrderByCreatedAtAsc(orderId);

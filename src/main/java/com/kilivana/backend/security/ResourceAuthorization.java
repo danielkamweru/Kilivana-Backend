@@ -69,6 +69,13 @@ public class ResourceAuthorization {
     public boolean order(Long id) {
         return admin() || orders.findById(id).map(o -> buyer(o.getBuyerId())).orElse(false);
     }
+    /** True if the current user is a seller with at least one line item in the order. */
+    public boolean orderSeller(Long id) {
+        User u = actor();
+        if (u == null) return false;
+        if (u.getRole() != UserRole.FARMER && u.getRole() != UserRole.SUPPLIER) return false;
+        return orderItems.findByOrderId(id).stream().anyMatch(i -> Objects.equals(i.getSellerId(), u.getId()));
+    }
     /** Participant predicate is for disputes, not permission to read an entire mixed order. */
     public boolean orderParticipant(Long id) {
         User u = actor();
