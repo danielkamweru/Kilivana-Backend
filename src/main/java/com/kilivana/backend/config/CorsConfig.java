@@ -7,20 +7,20 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 /**
  * Configures cross-origin requests. The allowed origins are driven by the
  * {@code cors.allowed-origins} property so deployments can lock the API down
- * to their own frontend, while local development always keeps the Angular dev
- * server and ngrok preview tunnels accessible.
+ * to their own frontend. Local development defaults are declared in
+ * application.properties; public tunnel and deployment origins must be added
+ * explicitly through CORS_ALLOWED_ORIGINS.
  */
 @Configuration
 public class CorsConfig {
 
-    @Value("${cors.allowed-origins:*}")
+    @Value("${cors.allowed-origins}")
     private String corsAllowedOrigins;
 
     @Bean
@@ -29,25 +29,12 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        List<String> allowedOrigins = new ArrayList<>(Arrays.stream(corsAllowedOrigins.split(","))
+        List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
-                .toList());
+                .toList();
 
-        if (allowedOrigins.contains("*")) {
-            config.setAllowedOriginPatterns(List.of("*", "http://localhost:4200",
-                    "https://*.ngrok-free.dev", "https://*.ngrok.io"));
-        } else {
-            if (!allowedOrigins.contains("http://localhost:4200")) {
-                allowedOrigins.add("http://localhost:4200");
-            }
-            for (String origin : List.of("https://*.ngrok-free.dev", "https://*.ngrok.io")) {
-                if (!allowedOrigins.contains(origin)) {
-                    allowedOrigins.add(origin);
-                }
-            }
-            config.setAllowedOriginPatterns(allowedOrigins);
-        }
+        config.setAllowedOriginPatterns(allowedOrigins);
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         // ngrok-skip-browser-warning lets tunneled browsers skip ngrok's interstitial.

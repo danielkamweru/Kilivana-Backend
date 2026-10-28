@@ -1,5 +1,6 @@
 package com.kilivana.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -42,6 +43,11 @@ public class DarajaProperties {
      * Must be reachable by Safaricom (use ngrok or similar for local testing).
      */
     private String callbackUrl;
+
+    private String callbackPath = "/api/v1/payments/daraja/callback";
+
+    @Value("${app.public-base-url:}")
+    private String publicBaseUrl;
 
     /**
      * Daraja environment: "sandbox" or "production".
@@ -88,12 +94,18 @@ public class DarajaProperties {
     }
 
     public String getCallbackUrl() {
-        return callbackUrl;
+        if (callbackUrl != null && !callbackUrl.isBlank()) return callbackUrl;
+        if (publicBaseUrl == null || publicBaseUrl.isBlank()) return callbackPath;
+        return publicBaseUrl.replaceAll("\\/+$", "") + callbackPath;
     }
 
     public void setCallbackUrl(String callbackUrl) {
         this.callbackUrl = callbackUrl;
     }
+
+    public String getCallbackPath() { return callbackPath; }
+    public void setCallbackPath(String callbackPath) { this.callbackPath = callbackPath; }
+    void setPublicBaseUrl(String publicBaseUrl) { this.publicBaseUrl = publicBaseUrl; }
 
     public String getEnvironment() {
         return environment;

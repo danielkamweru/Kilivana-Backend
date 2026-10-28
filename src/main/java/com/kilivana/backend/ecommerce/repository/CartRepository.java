@@ -14,4 +14,7 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      * At most one active cart exists per buyer.
      */
     Optional<Cart> findByBuyerIdAndStatus(Long buyerId, Cart.CartStatus status);
+
+    /** Returns any one cart for the buyer in the given state (useful when duplicates exist). */
+    Optional<Cart> findFirstByBuyerIdAndStatus(Long buyerId, Cart.CartStatus status);
 }

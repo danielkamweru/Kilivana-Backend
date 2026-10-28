@@ -40,7 +40,7 @@ services:
         value: "*"
       # Absolute URL the API advertises in Swagger and image links.
       # This is the service's live hostname on Render.
-      - key: PUBLIC_BASE_URL
+      - key: PUBLIC_BACKEND_URL
         value: https://kilivana-backend-a44w.onrender.com
       # Populate the database with the Kenyan demo data on first boot.
       # Set to false once the data you want is in place.

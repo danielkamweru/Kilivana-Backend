@@ -58,7 +58,7 @@ public class CheckoutService {
             throw new BadRequestException("Address does not belong to the authenticated user");
         }
 
-        Cart cart = cartRepository.findByBuyerIdAndStatus(userId, Cart.CartStatus.CHECKOUT_PROCESSING)
+        Cart cart = cartRepository.findFirstByBuyerIdAndStatus(userId, Cart.CartStatus.CHECKOUT_PROCESSING)
                 .orElseThrow(() -> new BadRequestException("No checkout in progress; call POST /api/v1/checkout first"));
         java.util.List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
         if (cartItems.isEmpty()) {
@@ -121,6 +121,7 @@ public class CheckoutService {
             items.add(com.kilivana.backend.ecommerce.dto.OrderItemRequest.builder()
                     .productId(p.getId())
                     .quantity(ci.getQuantity())
+                    .unitPrice(p.getPrice())
                     .build());
             subtotal = subtotal.add(p.getPrice().multiply(BigDecimal.valueOf(ci.getQuantity())));
         }

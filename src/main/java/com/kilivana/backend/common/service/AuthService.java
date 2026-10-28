@@ -65,6 +65,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
     @Value("${app.password-reset.frontend-url:}")
     private String passwordResetFrontendUrl;
+    @Value("${app.public-base-url:}")
+    private String publicBaseUrl = "";
     /**
      * Recovery link for the mobile app (drivers). A deep link the app claims, such as
      * {@code kilivana://reset-password}, or an app link the app intercepts.
@@ -398,7 +400,12 @@ import java.util.concurrent.ConcurrentHashMap;
             case "admin" -> adminResetUrl;
             default -> passwordResetFrontendUrl;
         };
-        return firstUsableResetUrl(preferredUrl, passwordResetFrontendUrl);
+        return firstUsableResetUrl(preferredUrl, passwordResetFrontendUrl, backendResetPageUrl());
+    }
+
+    private String backendResetPageUrl() {
+        if (publicBaseUrl == null || publicBaseUrl.isBlank()) return "";
+        return publicBaseUrl.replaceAll("/+$", "") + "/reset-password";
     }
 
     private String firstUsableResetUrl(String... candidates) {

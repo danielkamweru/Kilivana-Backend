@@ -159,7 +159,7 @@ STORAGE_PROVIDER=local ./mvnw spring-boot:run
 - Use `snake_case` for database columns
 
 ## Frontend Integration Notes
-- Frontend API base: `https://either-juvenile-progeny.ngrok-free.dev/api/v1`
+- Frontend API base: `{PUBLIC_BACKEND_URL}/api/v1`
 - Frontend file: `src/app/core/services/api.service.ts` (currently stubbed)
 - Key frontend files: `farmer.model.ts`, `farmer.service.ts`, `farmer-details.ts`
 - KYC documents fetched from `GET /admin/kyc`, filtered by `userId` on frontend

@@ -113,7 +113,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `JWT_EXPIRATION` | `1800000` | Access-token lifetime in ms (default: 30 minutes). `0` means no expiry. |
 | `JWT_REFRESH_EXPIRATION` | `0` | Refresh-token lifetime in ms. |
 | `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins; wildcard patterns allowed, so `*` permits every origin (the default). Restrict to the KilivanaAdmin2 origin for a locked deployment. |
-| `PUBLIC_BASE_URL` | *(empty)* | Public HTTPS base URL used to build image URLs and the OpenAPI server entry, e.g. `https://kilivana-backend-a44w.onrender.com`. |
+| `PUBLIC_BACKEND_URL` | *(empty)* | Public HTTPS API origin used for image URLs, the OpenAPI server entry, and the default Daraja callback. `PUBLIC_BASE_URL` is a legacy fallback. |
 | `SEED_DATA` | `false` | Populates a fresh database with Kenyan demo data on startup. Idempotent: a restart never duplicates or overwrites records. |
 | `SEED_ADMIN_EMAIL` | `admin@kilivana.com` | Email of the seeded initial administrator. |
 | `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it here, in the environment, or as a Render secret. |
@@ -135,7 +135,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ### Password-reset links
 
-The API appends a single-use `token` query parameter to a configured **absolute HTTP(S)** reset page. It never builds a production URL in Java. Invalid destinations (custom schemes, fragments, credentials, or malformed URLs) are skipped; if no valid destination exists, no recovery mail is sent.
+The API appends a single-use `token` query parameter to a configured **absolute HTTP(S)** reset page. Client-specific URLs take precedence; otherwise `PUBLIC_BACKEND_URL/reset-password` serves the backend-hosted reset form. Invalid destinations (custom schemes, fragments, credentials, or malformed URLs) are skipped; if no valid destination exists, no recovery mail is sent.
 
 For local development, use `RESET_PASSWORD_URL=http://localhost:4200/reset-password` and run the frontend separately from the API. The reset page must `POST` `{ "token": "...", "newPassword": "..." }` to `http://localhost:8080/api/v1/auth/reset-password`.
 
@@ -163,8 +163,8 @@ Android integration remains a client-side step: host the driver reset page at `R
 
 | Value | Behaviour |
 | --- | --- |
-| `local` | Writes to `app.storage.local.directory` (`./uploads`) and serves `{PUBLIC_BASE_URL}/uploads/...`. |
-| `database` *(default)* | Stores the bytes as `bytea` in `stored_images` and serves `{PUBLIC_BASE_URL}/api/v1/images/{publicId}`. |
+| `local` | Writes to `app.storage.local.directory` (`./uploads`) and serves `{PUBLIC_BACKEND_URL}/uploads/...`. |
+| `database` *(default)* | Stores the bytes as `bytea` in `stored_images` and serves `{PUBLIC_BACKEND_URL}/api/v1/images/{publicId}`. |
 
 Both public image URLs are readable without a Bearer token, because they are embedded in `<img>`
 tags and mobile payloads that cannot send one: `GET /uploads/**` and `GET /api/v1/images/**`. Every
@@ -205,7 +205,7 @@ application compares addresses case-insensitively while the generated constraint
 ## Swagger Documentation
 
 Swagger UI is available at:
-- ngrok: https://either-juvenile-progeny.ngrok-free.dev/swagger-ui/index.html
+- ngrok: `{PUBLIC_BACKEND_URL}/swagger-ui/index.html` after starting ngrok
 - Local: http://localhost:8080/swagger-ui/index.html
 - Local fallback: http://localhost:8080/swagger-ui.html
 - Deployed: https://kilivana-backend.onrender.com/swagger-ui/index.html
@@ -513,7 +513,7 @@ The repository ships a [`render.yaml`](render.yaml) blueprint: it builds the JAR
    - `SEED_ADMIN_PASSWORD` — the initial administrator's password (a secret)
    - `SEED_DEMO_PASSWORD` — change the shared demo-account password
    - `CORS_ALLOWED_ORIGINS` — the KilivanaAdmin2 origin
-   - `PUBLIC_BASE_URL` — the service's own URL
+   - `PUBLIC_BACKEND_URL` — the service's own URL
 5. The health check is `GET /api/v1/health`; Render polls it to mark the service live.
 
 With `SEED_DATA=true` a fresh database is populated with Kenyan demo data on first boot. The seed is idempotent, so a restart or redeploy never duplicates or overwrites records; set `SEED_DATA=false` once the data you want is in place. Uploaded images default to `STORAGE_PROVIDER=database` because the Render filesystem is ephemeral.
@@ -588,7 +588,7 @@ This project is currently configured for internal development use. Add a license
 | `PORT` | `8080` | Server port |
 | `STORAGE_PROVIDER` | `database` | `database` or `local` |
 | `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Local storage directory (when `STORAGE_PROVIDER=local`) |
-| `PUBLIC_BASE_URL` | (server URL) | Base URL for Swagger docs |
+| `PUBLIC_BACKEND_URL` | (server URL) | Base URL for Swagger docs, image links, and the default Daraja callback |
 | `SENDGRID_ENABLED` | `false` | Enable/disable SendGrid email |
 | `SENDGRID_API_KEY` | (none) | SendGrid API key |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Sender email address |
