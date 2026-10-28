@@ -6,6 +6,7 @@ import com.kilivana.backend.ecommerce.dto.SellerOrderSummary;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.service.OrderService;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.UserRole;
@@ -39,6 +40,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final UserRepository userRepository;
+    private final OrderItemRepository orderItemRepository;
 
     /**
      * Creates a new purchase order from the supplied request payload.
@@ -161,10 +163,10 @@ public class OrderController {
             throw new ResourceNotFoundException("User", sellerId);
         }
         java.util.List<SellerOrderSummary> summaries = orderService.searchOrders(null, sellerId, null, org.springframework.data.domain.Pageable.unpaged())
-                .map(orderService::toResponse).getContent().stream().map(o -> {
+                .getContent().stream().map(o -> {
                     java.math.BigDecimal total = java.math.BigDecimal.ZERO;
                     int count = 0;
-                    for (com.kilivana.backend.ecommerce.dto.OrderItemResponse item : o.getItems()) {
+                    for (com.kilivana.backend.ecommerce.entity.OrderItem item : orderItemRepository.findByOrderId(o.getId())) {
                         if (sellerId.equals(item.getSellerId())) {
                             count++;
                             total = total.add(item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));

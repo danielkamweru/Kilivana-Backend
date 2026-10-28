@@ -57,6 +57,9 @@ public class CheckoutService {
         if (!address.getUserId().equals(userId)) {
             throw new BadRequestException("Address does not belong to the authenticated user");
         }
+        if (address.getLatitude() == null || address.getLongitude() == null) {
+            throw new BadRequestException("Delivery address is not geocoded/valid");
+        }
 
         Cart cart = cartRepository.findFirstByBuyerIdAndStatus(userId, Cart.CartStatus.CHECKOUT_PROCESSING)
                 .orElseThrow(() -> new BadRequestException("No checkout in progress; call POST /api/v1/checkout first"));

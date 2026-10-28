@@ -128,7 +128,20 @@ public class LogisticsJob {
     public void setScheduledPickupAt(LocalDateTime scheduledPickupAt) { this.scheduledPickupAt = scheduledPickupAt; }
     public LocalDateTime getScheduledDropoffAt() { return scheduledDropoffAt; }
     public void setScheduledDropoffAt(LocalDateTime scheduledDropoffAt) { this.scheduledDropoffAt = scheduledDropoffAt; }
-    public Double getDistanceKm() { return distanceKm; }
+    public Double getDistanceKm() {
+        if (distanceKm != null && distanceKm > 0) return distanceKm;
+        if (pickupLatitude == null || pickupLongitude == null
+                || destinationLatitude == null || destinationLongitude == null) return distanceKm;
+        // Fallback straight-line distance when no road-route value was supplied.
+        double r = 6371.0;
+        double dLat = Math.toRadians(destinationLatitude - pickupLatitude);
+        double dLon = Math.toRadians(destinationLongitude - pickupLongitude);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(pickupLatitude)) * Math.cos(Math.toRadians(destinationLatitude))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(r * c * 10.0) / 10.0;
+    }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
     public Integer getEstimatedMinutes() { return estimatedMinutes; }
     public void setEstimatedMinutes(Integer estimatedMinutes) { this.estimatedMinutes = estimatedMinutes; }

@@ -267,6 +267,10 @@ public class LogisticsService {
         if (job.getStatus() != DeliveryStatus.PENDING_ASSIGNMENT) {
             throw new BadRequestException("Job cannot be assigned in current status");
         }
+        Double distance = job.getDistanceKm();
+        if (distance == null || distance <= 0) {
+            throw new BadRequestException("Cannot assign a job with no/zero delivery distance");
+        }
         User driver = userRepository.findById(driverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver", driverId));
         if (driver.getRole() != UserRole.DRIVER) {
