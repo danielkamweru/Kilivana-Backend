@@ -2,9 +2,11 @@ package com.kilivana.backend.common.service;
 
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.common.dto.*;
+import com.kilivana.backend.common.exception.EmailOtpCooldownException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
+import java.util.UUID;
 
 /** Limits commit before account transactions: concurrent callers never hold two pool connections. */
 @Service @RequiredArgsConstructor
@@ -18,7 +20,13 @@ public class EmailVerificationService {
 
     @Transactional(propagation=Propagation.NOT_SUPPORTED)
     public EmailOtpChallengeResponse request(String email) {
-        var id=limiter.acquireSend(email);
+        UUID id;
+        try {
+            id=limiter.acquireSend(email);
+        } catch (EmailOtpCooldownException cooldown) {
+            return EmailOtpChallengeResponse.accepted(
+                    transactions.activeChallengeId(email).orElseGet(UUID::randomUUID));
+        }
         dispatchQueue.enqueue(email,id);
         return EmailOtpChallengeResponse.accepted(id);
     }

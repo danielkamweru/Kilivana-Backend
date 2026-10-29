@@ -1,6 +1,8 @@
 package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.admin.entity.User;
+import com.kilivana.backend.admin.entity.Notification;
+import com.kilivana.backend.admin.repository.NotificationRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.enums.OrderStatus;
@@ -55,7 +57,6 @@ import java.util.stream.Collectors;
  * </ul>
  */
 @Service
-@PreAuthorize("@resourceAuthorization.admin()")
 @RequiredArgsConstructor
 public class LogisticsService {
 
@@ -68,6 +69,7 @@ public class LogisticsService {
     private final OrderEventRepository orderEventRepository;
     private final UserRepository userRepository;
     private final TrackingStopService trackingStopService;
+    private final NotificationRepository notificationRepository;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
@@ -85,6 +87,7 @@ public class LogisticsService {
     public static final BigDecimal PLATFORM_FEE_RATE = new BigDecimal("0.03");
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public LogisticsJob createLogisticsJob(Long orderId, String pickupAddress, String destinationAddress) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
@@ -100,6 +103,7 @@ public class LogisticsService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public LogisticsJob createJob(LogisticsJob job) {
         // Rebuild instead of saving the submitted instance. A client that includes an
         // "id" would otherwise make save() merge into that existing row and overwrite a
@@ -177,7 +181,7 @@ public class LogisticsService {
     }
 
     /**
-     * Confirms the customer-supplied handover code before a driver can close out a job.
+     * Verifies and consumes the handover code. Filing proof of delivery completes the job.
      *
      * A six-digit code has only a million possible values, so guessing is the main threat
      * here. The code is stored as a BCrypt hash, never in plaintext, and repeated wrong
@@ -192,12 +196,17 @@ public class LogisticsService {
     @PreAuthorize("@resourceAuthorization.jobWrite(#jobId)")
     public LogisticsJob verifyDeliveryOtp(Long jobId, String otp) {
         LogisticsJob job = getJobById(jobId);
+        verifyDeliveryOtp(job, otp);
+        return job;
+    }
+
+    private void verifyDeliveryOtp(LogisticsJob job, String otp) {
         if (job.getDeliveryOtpHash() == null) {
+            if (Boolean.TRUE.equals(job.getDeliveryOtpVerified())) {
+                return;
+            }
             throw new BadRequestException("This job has no delivery code to verify");
         }
-        // The code is verified once the goods are on the road and at the point of
-        // handover. It is refused for jobs that have not started, because there is
-        // no driver to receive it and no point in confirming a delivery early.
         if (job.getStatus() != DeliveryStatus.IN_TRANSIT
                 && job.getStatus() != DeliveryStatus.ARRIVED_AT_DESTINATION) {
             throw new BadRequestException("Delivery code can only be verified once the job is underway");
@@ -227,9 +236,7 @@ public class LogisticsService {
         job.setDeliveryOtpHash(null);
         job.setDeliveryOtpExpiresAt(null);
         job.setDeliveryOtpVerified(true);
-        job.setStatus(DeliveryStatus.DELIVERED);
-        syncOrderStatus(job);
-        return logisticsJobRepository.save(job);
+        logisticsJobRepository.save(job);
     }
 
     @PreAuthorize("@resourceAuthorization.jobRead(#id)")
@@ -238,7 +245,7 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", id));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@resourceAuthorization.admin()")
     public List<LogisticsJob> getAllJobs() {
         return logisticsJobRepository.findAll();
     }
@@ -256,11 +263,13 @@ public class LogisticsService {
         return logisticsJobRepository.findByOrderId(orderId);
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     public List<LogisticsJob> getJobsByStatus(DeliveryStatus status) {
         return logisticsJobRepository.findByStatus(status);
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public LogisticsJob assignDriver(Long jobId, Long driverId) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
@@ -279,7 +288,16 @@ public class LogisticsService {
         job.setDriverId(driverId);
         job.setStatus(DeliveryStatus.ASSIGNED);
         LogisticsJob saved = logisticsJobRepository.save(job);
+        recordStatusEvent(saved, DeliveryStatus.ASSIGNED);
         syncOrderStatus(saved);
+        if (notificationRepository != null) {
+            notificationRepository.save(Notification.builder()
+                    .userId(driverId)
+                    .type("DELIVERY_ASSIGNED")
+                    .title("New delivery assigned")
+                    .message("You have been assigned delivery job #" + saved.getId() + ".")
+                    .build());
+        }
         return saved;
     }
 
@@ -296,7 +314,16 @@ public class LogisticsService {
         }
         job.setStatus(DeliveryStatus.ACCEPTED);
         LogisticsJob saved = logisticsJobRepository.save(job);
+        recordStatusEvent(saved, DeliveryStatus.ACCEPTED);
         syncOrderStatus(saved);
+        if (notificationRepository != null && saved.getDriverId() != null) {
+            notificationRepository.save(Notification.builder()
+                    .userId(saved.getDriverId())
+                    .type("DELIVERY_ACTIVE")
+                    .title("Delivery active")
+                    .message("Delivery job #" + saved.getId() + " is now active.")
+                    .build());
+        }
         return saved;
     }
 
@@ -318,7 +345,7 @@ public class LogisticsService {
                     java.util.Map.entry(DeliveryStatus.IN_TRANSIT,
                             java.util.Set.of(DeliveryStatus.ARRIVED_AT_DESTINATION, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
                     java.util.Map.entry(DeliveryStatus.ARRIVED_AT_DESTINATION,
-                            java.util.Set.of(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
+                            java.util.Set.of(DeliveryStatus.CANCELLED, DeliveryStatus.FAILED)),
                     java.util.Map.entry(DeliveryStatus.DELIVERED, java.util.Set.of()),
                     java.util.Map.entry(DeliveryStatus.CANCELLED, java.util.Set.of()),
                     java.util.Map.entry(DeliveryStatus.FAILED, java.util.Set.of()));
@@ -332,6 +359,9 @@ public class LogisticsService {
         // check any authenticated caller could jump a job straight to DELIVERED
         // and settle an order that was never handed over.
         if (!NEXT_STATUSES.getOrDefault(job.getStatus(), java.util.Set.of()).contains(status)) {
+            if (status == DeliveryStatus.DELIVERED) {
+                throw new BadRequestException("A delivery can only be completed by submitting proof of delivery");
+            }
             throw new BadRequestException("A " + job.getStatus().wire() + " job cannot move to "
                     + status.wire());
         }
@@ -343,15 +373,25 @@ public class LogisticsService {
             job.setDeliveryOtpAttempts(0);
             LogisticsJob saved = logisticsJobRepository.save(job);
             deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
+            recordStatusEvent(saved, status);
             syncOrderStatus(saved);
             return saved;
         }
         LogisticsJob saved = logisticsJobRepository.save(job);
+        recordStatusEvent(saved, status);
         syncOrderStatus(saved);
         // Live tracking stops the moment the job reaches a terminal state, so subscribers
         // are told to stop animating rather than waiting for a fix that will never come.
         trackingStopService.maybeStopTracking(saved.getId());
         return saved;
+    }
+
+    private void recordStatusEvent(LogisticsJob job, DeliveryStatus status) {
+        trackingEventRepository.save(TrackingEvent.builder()
+                .logisticsJobId(job.getId())
+                .status(status)
+                .driverId(job.getDriverId())
+                .build());
     }
 
     /**
@@ -383,17 +423,25 @@ public class LogisticsService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public LogisticsJob cancelJob(Long jobId, String cancellationReason) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
+        if (job.getStatus() == DeliveryStatus.DELIVERED
+                || job.getStatus() == DeliveryStatus.CANCELLED
+                || job.getStatus() == DeliveryStatus.FAILED) {
+            throw new BadRequestException("A terminal delivery cannot be cancelled");
+        }
         job.setStatus(DeliveryStatus.CANCELLED);
         job.setCancellationReason(cancellationReason);
         LogisticsJob saved = logisticsJobRepository.save(job);
+        recordStatusEvent(saved, DeliveryStatus.CANCELLED);
         trackingStopService.maybeStopTracking(saved.getId());
         return saved;
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public void deleteJob(Long id) {
         if (!logisticsJobRepository.existsById(id)) {
             throw new ResourceNotFoundException("LogisticsJob", id);
@@ -415,6 +463,7 @@ public class LogisticsService {
         return trackingEventRepository.save(event);
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     public TrackingEvent getTrackingEventById(Long id) {
         return trackingEventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TrackingEvent", id));
@@ -430,29 +479,33 @@ public class LogisticsService {
         return trackingEventRepository.findByDriverId(driverId);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = { BadRequestException.class, TooManyRequestsException.class })
     @PreAuthorize("@resourceAuthorization.jobWrite(#proof.logisticsJobId)")
     public ProofOfDelivery createProofOfDelivery(ProofOfDelivery proof, String otp) {
-        // Proof of delivery is the record that a delivery happened. It may only be filed
-        // once the driver has confirmed the customer's handover code, so an unverified
-        // caller cannot assert a delivery that never took place.
+        if (proof.getRecipientName() == null || proof.getRecipientName().isBlank()) {
+            throw new BadRequestException("Recipient name is required");
+        }
         LogisticsJob job = logisticsJobRepository.findById(proof.getLogisticsJobId())
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", proof.getLogisticsJobId()));
 
-        if (Boolean.TRUE.equals(job.getDeliveryOtpVerified())) {
+        if (proofOfDeliveryRepository.existsByLogisticsJobId(job.getId())
+                || job.getStatus() == DeliveryStatus.DELIVERED) {
             throw new ConflictException("This delivery has already been confirmed");
+        }
+        if (job.getStatus() == DeliveryStatus.CANCELLED || job.getStatus() == DeliveryStatus.FAILED) {
+            throw new BadRequestException("Proof of delivery cannot be filed for a terminal delivery");
+        }
+        if (job.getStatus() != DeliveryStatus.IN_TRANSIT
+                && job.getStatus() != DeliveryStatus.ARRIVED_AT_DESTINATION) {
+            throw new BadRequestException("Proof of delivery can only be filed for an active delivery");
         }
         if (job.getDeliveryOtpHash() != null) {
-            verifyDeliveryOtp(job.getId(), otp);
-        } else if (proofOfDeliveryRepository.existsByLogisticsJobId(job.getId())) {
-            // A job created before OTP verification existed has no code to check, so the
-            // flag cannot distinguish first from repeat delivery. Fall back to the stored
-            // proof rather than allowing unlimited deliveries for the same job.
-            throw new ConflictException("This delivery has already been confirmed");
+            verifyDeliveryOtp(job, otp);
+        } else if (!Boolean.TRUE.equals(job.getDeliveryOtpVerified())
+                && job.getDeliveryOtpExpiresAt() != null) {
+            throw new BadRequestException("This job's delivery code has not been verified");
         }
 
-        // Rebuild rather than save the submitted instance. Accepting a client-supplied
-        // "id" would let a caller overwrite an existing proof instead of filing a new one.
         ProofOfDelivery toSave = ProofOfDelivery.builder()
                 .logisticsJobId(proof.getLogisticsJobId())
                 .recipientName(proof.getRecipientName())
@@ -461,9 +514,17 @@ public class LogisticsService {
                 .otpReference(null)
                 .deliveredAt(LocalDateTime.now())
                 .build();
-        return proofOfDeliveryRepository.save(toSave);
+        ProofOfDelivery savedProof = proofOfDeliveryRepository.save(toSave);
+        job.setDeliveryOtpVerified(true);
+        job.setStatus(DeliveryStatus.DELIVERED);
+        logisticsJobRepository.save(job);
+        recordStatusEvent(job, DeliveryStatus.DELIVERED);
+        syncOrderStatus(job);
+        trackingStopService.maybeStopTracking(job.getId());
+        return savedProof;
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     public ProofOfDelivery getProofById(Long id) {
         return proofOfDeliveryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ProofOfDelivery", id));
@@ -488,6 +549,7 @@ public class LogisticsService {
     }
 
     @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
     public void deleteProof(Long id) {
         if (!proofOfDeliveryRepository.existsById(id)) {
             throw new ResourceNotFoundException("ProofOfDelivery", id);

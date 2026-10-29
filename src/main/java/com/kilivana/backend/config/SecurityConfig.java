@@ -143,7 +143,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/tracking/{id}/location").hasRole("DRIVER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/tracking/{id}/location").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/tracking/{id}/status").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/v1/logistics/jobs/{id}/status").hasRole("ADMIN")
+                .requestMatchers("/api/v1/trips/**").hasRole("DRIVER")
+                // The service authorizes status changes for the assigned driver or an admin.
+                .requestMatchers(HttpMethod.PUT, "/api/v1/logistics/jobs/{id}/status").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/logistics/jobs/{id}/status").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/orders/{id}/status").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/orders/{id}/status").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/orders/{id}/cancel").hasRole("ADMIN")

@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -142,6 +143,29 @@ class OrderServiceTest {
         assertEquals("ORD-00100", order.getCode());
         assertEquals(OrderStatus.PLACED, order.getStatus());
         assertEquals(PaymentStatus.PENDING, order.getPaymentStatus());
+    }
+
+    @Test
+    @DisplayName("persists a buyer-entered pickup location without a station or address ID")
+    void persistsManualPickupLocation() {
+        String pickupLocation = "Outside Westlands Mall, near the main entrance";
+
+        Order order = orderService.createOrder(BUYER_ID, null,
+                new BigDecimal("25.00"), items(), null, null, "PICKUP_STATION", pickupLocation);
+
+        assertEquals("PICKUP_STATION", order.getDeliveryMethod());
+        assertEquals(pickupLocation, order.getPickupLocation());
+        assertNull(order.getAddressId());
+        verify(pickupStationRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("rejects manual pickup locations longer than 500 characters")
+    void rejectsOversizedManualPickupLocation() {
+        String pickupLocation = "x".repeat(501);
+
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, null,
+                new BigDecimal("25.00"), items(), null, null, "PICKUP_STATION", pickupLocation));
     }
 
     @Test

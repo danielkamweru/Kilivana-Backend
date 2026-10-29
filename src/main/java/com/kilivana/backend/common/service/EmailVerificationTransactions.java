@@ -11,6 +11,7 @@ import com.kilivana.backend.security.EmailOtpSecurity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service @RequiredArgsConstructor
@@ -43,6 +44,17 @@ public class EmailVerificationTransactions {
                 issue(user,id);
         });
         return EmailOtpChallengeResponse.accepted(id);
+    }
+
+    @Transactional(readOnly=true)
+    public Optional<UUID> activeChallengeId(String email) {
+        return users.findByEmailIgnoreCase(EmailOtpSecurity.normalize(email))
+                .filter(user -> !user.isEmailVerified())
+                .flatMap(user -> challenges.findById(user.getId()))
+                .filter(challenge -> challenge.getUsedAt() == null
+                        && challenge.getExpiresAt().isAfter(security.now())
+                        && challenge.getEmail().equals(EmailOtpSecurity.normalize(email)))
+                .map(EmailVerificationChallenge::getChallengeId);
     }
 
     /** User row lock serializes issuance, attempts and consumption across JVMs. */

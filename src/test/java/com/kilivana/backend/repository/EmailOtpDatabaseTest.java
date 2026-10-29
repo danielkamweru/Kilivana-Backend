@@ -208,9 +208,13 @@ class EmailOtpDatabaseTest {
         assertTrue(saved(user.getId()).isEmailVerified());
     }
     @Test void knownAndUnknownAddressesHaveIdenticalCooldownAndHourlyLimits() {
-        var user=register("limits@example.invalid");otp.request("unknown-limits@example.invalid");
+        var user=register("limits@example.invalid");
+        var unknownFirst=otp.request("unknown-limits@example.invalid");
         for(String email:List.of(user.getEmail(),"unknown-limits@example.invalid"))
-            assertThrows(EmailOtpRateLimitException.class,()->otp.request(email));
+            assertNotNull(otp.request(email).challengeId());
+        assertEquals(user.getEmailVerificationChallengeId(),otp.request(user.getEmail()).challengeId());
+        assertEquals(unknownFirst.message(),otp.request("unknown-limits@example.invalid").message());
+        assertEquals(1,delivered.get());
         for(int i=1;i<5;i++){clock.advance(61);otp.request(user.getEmail());otp.request("unknown-limits@example.invalid");}
         clock.advance(61);
         for(String email:List.of(user.getEmail(),"unknown-limits@example.invalid"))

@@ -139,6 +139,35 @@ class EmailVerificationServiceTest {
         service.request(user.getEmail(),UUID.randomUUID());
         verifyNoInteractions(mail);assertEquals(first.challengeId(),state.get().getChallengeId());
     }
+    @Test void immediateRetryReusesActiveChallengeWithoutSendingAgain() {
+        var limiter=mock(EmailOtpRequestLimiter.class);
+        var transactions=mock(EmailVerificationTransactions.class);
+        var queue=mock(EmailOtpDispatchQueue.class);
+        var verification=new EmailVerificationService(limiter,transactions,queue);
+        var challengeId=UUID.randomUUID();
+        when(limiter.acquireSend(user.getEmail())).thenThrow(new EmailOtpCooldownException(60));
+        when(transactions.activeChallengeId(user.getEmail())).thenReturn(Optional.of(challengeId));
+
+        var response=verification.request(user.getEmail());
+
+        assertEquals(challengeId,response.challengeId());
+        verifyNoInteractions(queue);
+    }
+    @Test void cooldownRetryUsesChallengeFromTheInitialRegistrationEmail() {
+        var registration=service.startForNewAccount(user);
+
+        assertEquals(registration.challengeId(),service.activeChallengeId(user.getEmail()).orElseThrow());
+    }
+    @Test void hourlyRateLimitStillRejectsRequests() {
+        var limiter=mock(EmailOtpRequestLimiter.class);
+        var transactions=mock(EmailVerificationTransactions.class);
+        var queue=mock(EmailOtpDispatchQueue.class);
+        var verification=new EmailVerificationService(limiter,transactions,queue);
+        when(limiter.acquireSend(user.getEmail())).thenThrow(new EmailOtpRateLimitException(3600));
+
+        assertThrows(EmailOtpRateLimitException.class,()->verification.request(user.getEmail()));
+        verifyNoInteractions(transactions,queue);
+    }
     @Test void missingOrShortKeyFailsClosed() {
         assertThrows(IllegalStateException.class,()->new EmailOtpSecurity(""));
         assertThrows(IllegalStateException.class,()->new EmailOtpSecurity("short"));

@@ -4,8 +4,6 @@ import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
-import com.kilivana.backend.logistics.entity.PickupStation;
-import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.security.CurrentUser;
 import com.kilivana.backend.ecommerce.dto.CheckoutOrderRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteRequest;
@@ -41,14 +39,13 @@ public class CheckoutService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final AddressRepository addressRepository;
-    private final PickupStationRepository pickupStationRepository;
     private final ProductRepository productRepository;
     private final OrderService orderService;
 
     private final Map<String, QuoteRecord> quotes = new ConcurrentHashMap<>();
 
     public record QuoteRecord(String quoteId, Long userId, Long cartId, String deliveryMethod,
-                             Long addressId, Long pickupStationId,
+                             Long addressId, String pickupLocation,
                              BigDecimal subtotal, BigDecimal deliveryFee, BigDecimal total,
                              Instant expiresAt, boolean used) {}
 
@@ -63,7 +60,7 @@ public class CheckoutService {
         }
 
         Long addressId = null;
-        Long pickupStationId = null;
+        String pickupLocation = null;
         BigDecimal deliveryFee;
 
         if ("DOOR_DELIVERY".equalsIgnoreCase(deliveryMethod)) {
@@ -81,15 +78,18 @@ public class CheckoutService {
             addressId = address.getId();
             deliveryFee = DOOR_DELIVERY_FEE;
         } else if ("PICKUP_STATION".equalsIgnoreCase(deliveryMethod)) {
-            if (request.getPickupStationId() == null) {
-                throw new BadRequestException("Pickup station ID is required for pickup station delivery");
+            // Pickup delivery is now a one-time manually typed location. There is no
+            // platform station to select — stations are configured by an operator in the
+            // database and the checkout UI has nothing to show until that happens, so
+            // forcing a station choice only ever produced a 400. The buyer simply types
+            // where they want the package handed over.
+            if (request.getPickupLocation() == null || request.getPickupLocation().isBlank()) {
+                throw new BadRequestException("Pickup location is required for pickup delivery");
             }
-            PickupStation station = pickupStationRepository.findById(request.getPickupStationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("PickupStation", request.getPickupStationId()));
-            if (!station.getIsAvailable()) {
-                throw new BadRequestException("Pickup station is not currently available");
+            pickupLocation = request.getPickupLocation().trim();
+            if (pickupLocation.length() > 500) {
+                throw new BadRequestException("Pickup location must be at most 500 characters");
             }
-            pickupStationId = station.getId();
             deliveryFee = PICKUP_STATION_FEE;
         } else {
             throw new BadRequestException("Invalid delivery method. Must be DOOR_DELIVERY or PICKUP_STATION");
@@ -114,7 +114,7 @@ public class CheckoutService {
         Instant expiresAt = Instant.now().plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES);
 
         quotes.put(quoteId, new QuoteRecord(quoteId, userId, cart.getId(), deliveryMethod,
-                addressId, pickupStationId, subtotal, deliveryFee, total, expiresAt, false));
+                addressId, pickupLocation, subtotal, deliveryFee, total, expiresAt, false));
 
         DeliveryQuoteResponse.DeliveryQuoteResponseBuilder responseBuilder = DeliveryQuoteResponse.builder()
                 .quoteId(quoteId)
@@ -128,8 +128,8 @@ public class CheckoutService {
         if (addressId != null) {
             responseBuilder.addressId(addressId);
         }
-        if (pickupStationId != null) {
-            responseBuilder.pickupStationId(pickupStationId);
+        if (pickupLocation != null) {
+            responseBuilder.pickupLocation(pickupLocation);
         }
 
         return responseBuilder.build();
@@ -172,17 +172,15 @@ public class CheckoutService {
         }
         BigDecimal total = subtotal.add(quote.deliveryFee());
 
-        // Determine the address ID to use (door delivery uses addressId, pickup station uses pickupStationId)
+        // A manual pickup has no address or station ID; only the typed location is retained.
         Long deliveryAddressId = quote.addressId();
-        if ("PICKUP_STATION".equalsIgnoreCase(quote.deliveryMethod()) && quote.pickupStationId() != null) {
-            deliveryAddressId = quote.pickupStationId();
-        }
 
-        Order order = orderService.createOrder(userId, deliveryAddressId, quote.deliveryFee(), items, subtotal, total, quote.deliveryMethod());
+        Order order = orderService.createOrder(userId, deliveryAddressId, quote.deliveryFee(), items,
+                subtotal, total, quote.deliveryMethod(), quote.pickupLocation());
 
         // mark quote used
         quotes.put(quote.quoteId(), new QuoteRecord(quote.quoteId(), quote.userId(), quote.cartId(),
-                quote.deliveryMethod(), quote.addressId(), quote.pickupStationId(),
+                quote.deliveryMethod(), quote.addressId(), quote.pickupLocation(),
                 quote.subtotal(), quote.deliveryFee(), quote.total(), quote.expiresAt(), true));
 
         // transition cart out of checkout processing

@@ -14,7 +14,8 @@ import java.time.Instant;
  *
  * <p>The quote includes a unique ID that must be used when creating the order.
  * The quote expires after a short time to ensure prices remain current.
- * Supports both door delivery and pickup station delivery.
+ * Supports door delivery and pickup delivery, where the buyer types a one-time
+ * location rather than selecting a platform station.
  */
 @Schema(description = "Delivery fee quote response")
 @Data
@@ -32,8 +33,9 @@ public class DeliveryQuoteResponse {
     @Schema(description = "Delivery address ID (for DOOR_DELIVERY)", example = "8")
     private Long addressId;
 
-    @Schema(description = "Pickup station ID (for PICKUP_STATION)", example = "5")
-    private Long pickupStationId;
+    @Schema(description = "One-time buyer-entered pickup location (for PICKUP_STATION)",
+            example = "Outside Westlands Mall, near the main entrance")
+    private String pickupLocation;
 
     @Schema(description = "Cart subtotal (sum of item prices)", example = "3601.50")
     private BigDecimal subtotal;

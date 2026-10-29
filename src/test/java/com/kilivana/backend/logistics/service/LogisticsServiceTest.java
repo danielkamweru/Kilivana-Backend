@@ -1,5 +1,6 @@
 package com.kilivana.backend.logistics.service;
 
+import com.kilivana.backend.admin.repository.NotificationRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
@@ -14,6 +15,7 @@ import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
+import com.kilivana.backend.logistics.service.TrackingStopService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +64,12 @@ class LogisticsServiceTest {
     /** Only a driver account can be assigned to a job. */
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private NotificationRepository notificationRepository;
+
+    @Mock
+    private TrackingStopService trackingStopService;
 
     /**
      * A real encoder, spied rather than stubbed: the point of these tests is that the
@@ -212,6 +220,8 @@ class LogisticsServiceTest {
 
         // Single-use: a captured code cannot be replayed to file a second delivery.
         assertThat(verified.getDeliveryOtpHash()).isNull();
+        assertThat(verified.getDeliveryOtpVerified()).isTrue();
+        assertThat(verified.getStatus()).isEqualTo(DeliveryStatus.IN_TRANSIT);
     }
 
     @Test
@@ -374,6 +384,43 @@ class LogisticsServiceTest {
                 .build();
 
         assertThat(logisticsService.createProofOfDelivery(submitted, JOB_OTP).getDeliveredAt()).isNotNull();
+        assertThat(logisticsJobRepository.findById(1L).orElseThrow().getStatus())
+                .isEqualTo(DeliveryStatus.DELIVERED);
+        org.mockito.Mockito.verify(trackingStopService).maybeStopTracking(1L);
+    }
+
+    @Test
+    void createProofOfDelivery_completesLegacyJobWithoutOtp() {
+        noopJobRepo();
+        when(proofOfDeliveryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        LogisticsJob job = LogisticsJob.builder()
+                .id(1L)
+                .orderId(1L)
+                .status(DeliveryStatus.ARRIVED_AT_DESTINATION)
+                .build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
+
+        logisticsService.createProofOfDelivery(ProofOfDelivery.builder()
+                .logisticsJobId(1L)
+                .recipientName("Recipient")
+                .build(), null);
+
+        assertThat(job.getStatus()).isEqualTo(DeliveryStatus.DELIVERED);
+        assertThat(job.getDeliveryOtpVerified()).isTrue();
+    }
+
+    @Test
+    void createProofOfDelivery_completesAfterOtpWasVerifiedSeparately() {
+        jobWithLiveOtp();
+        logisticsService.verifyDeliveryOtp(1L, JOB_OTP);
+
+        logisticsService.createProofOfDelivery(ProofOfDelivery.builder()
+                .logisticsJobId(1L)
+                .recipientName("Recipient")
+                .build(), null);
+
+        assertThat(logisticsJobRepository.findById(1L).orElseThrow().getStatus())
+                .isEqualTo(DeliveryStatus.DELIVERED);
     }
 
     @Test
@@ -391,6 +438,20 @@ class LogisticsServiceTest {
     }
 
     @Test
+    void createProofOfDelivery_persistsWrongCodeAttemptBeforeReturningError() {
+        jobWithLiveOtp();
+        LogisticsJob job = logisticsJobRepository.findById(1L).orElseThrow();
+
+        assertThatThrownBy(() -> logisticsService.createProofOfDelivery(
+                ProofOfDelivery.builder().logisticsJobId(1L).recipientName("Recipient").build(),
+                "000000"))
+                .isInstanceOf(BadRequestException.class);
+
+        assertThat(job.getDeliveryOtpAttempts()).isEqualTo(1);
+        org.mockito.Mockito.verify(logisticsJobRepository).save(job);
+    }
+
+    @Test
     void createProofOfDelivery_shouldRejectAMissingOtp() {
         jobWithLiveOtp();
 
@@ -401,6 +462,20 @@ class LogisticsServiceTest {
 
         assertThatThrownBy(() -> logisticsService.createProofOfDelivery(submitted, null))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void updateJobStatus_rejectsDeliveredWithoutProof() {
+        noopJobRepo();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(LogisticsJob.builder()
+                .id(1L)
+                .orderId(1L)
+                .status(DeliveryStatus.ARRIVED_AT_DESTINATION)
+                .build()));
+
+        assertThatThrownBy(() -> logisticsService.updateJobStatus(1L, DeliveryStatus.DELIVERED))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("proof of delivery");
     }
 
     @Test

@@ -123,7 +123,13 @@ public class AuditLogController {
             @RequestParam(required = false) String action,
             @RequestParam(required = false) LocalDateTime startDate,
             @RequestParam(required = false) LocalDateTime endDate,
-            @RequestParam(required = false) Pageable pageable) {
+            Pageable pageable) {
+        // A bare Pageable parameter lets Spring's PageableHandlerMethodArgumentResolver
+        // bind page/size/sort and default to PageRequest.of(0, 20). Tagging it with
+        // @RequestParam(required=false) instead makes Spring treat it as a plain request
+        // param and fall back to Pageable.unpageable(), whose getPageNumber() throws —
+        // and Jackson serialises that straight through the response, so a plain
+        // "list me everything" call came back 500.
         Page<AuditLogResponse> auditLogs = auditLogService.searchAuditLogs(
                 actorId, entityType, action, startDate, endDate, pageable);
         return ResponseEntity.ok(ApiResponse.success(auditLogs));

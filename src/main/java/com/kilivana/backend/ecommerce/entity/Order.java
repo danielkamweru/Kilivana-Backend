@@ -55,8 +55,11 @@ public class Order {
     @Column(nullable = false)
     private PaymentStatus paymentStatus;
 
-    @Column(nullable = false)
+    @Column
     private Long addressId;
+
+    @Column(columnDefinition = "TEXT")
+    private String pickupLocation;
 
     /** Delivery method: DOOR_DELIVERY or PICKUP_STATION */
     @Column(nullable = false)
@@ -148,6 +151,14 @@ public class Order {
         this.addressId = addressId;
     }
 
+    public String getPickupLocation() {
+        return pickupLocation;
+    }
+
+    public void setPickupLocation(String pickupLocation) {
+        this.pickupLocation = pickupLocation;
+    }
+
     public String getDeliveryMethod() {
         return deliveryMethod;
     }
@@ -202,6 +213,7 @@ public class Order {
         private BigDecimal total;
         private PaymentStatus paymentStatus;
         private Long addressId;
+        private String pickupLocation;
         private String deliveryMethod;
         private String cancellationReason;
         private LocalDateTime createdAt;
@@ -253,6 +265,11 @@ public class Order {
             return this;
         }
 
+        public OrderBuilder pickupLocation(String pickupLocation) {
+            this.pickupLocation = pickupLocation;
+            return this;
+        }
+
         public OrderBuilder deliveryMethod(String deliveryMethod) {
             this.deliveryMethod = deliveryMethod;
             return this;
@@ -289,6 +306,7 @@ public class Order {
             order.total = this.total;
             order.paymentStatus = this.paymentStatus;
             order.addressId = this.addressId;
+            order.pickupLocation = this.pickupLocation;
             order.deliveryMethod = this.deliveryMethod;
             order.cancellationReason = this.cancellationReason;
             order.createdAt = this.createdAt;

@@ -426,6 +426,12 @@ Registration body:
 }
 ```
 
+Successful registration sends the verification email and returns
+`data.emailVerificationChallengeId`. Verify using that challenge ID; do not request a
+second code immediately. A repeated request during the 60-second cooldown now returns
+the active challenge without sending another email. After the cooldown, a resend can be
+requested through `POST /api/v1/auth/email-verification/request`.
+
 Login body:
 
 ```json
@@ -775,6 +781,11 @@ This project is currently configured for internal development use. Add a license
 - `PUT /api/v1/carts/{cartId}/items/{productId}` — Update item (alternate)
 - `POST /api/v1/checkout` — Checkout
 - `POST /api/v1/checkout/validate` — Validate checkout
+
+For `POST /api/v1/checkout/delivery-quote`, choose `DOOR_DELIVERY` with an `addressId`,
+or choose `PICKUP_STATION` with exactly one of `pickupStationId` and `pickupLocation`.
+`pickupLocation` is a one-time, buyer-entered location (up to 500 characters); it is
+stored on the order and is not added to the buyer's saved pickup stations.
 
 ### Ecommerce — Disputes
 - `POST /api/v1/disputes` — Create dispute

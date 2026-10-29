@@ -8,6 +8,7 @@ import com.kilivana.backend.admin.service.*;
 import com.kilivana.backend.admin.dto.AddressRequest;
 import com.kilivana.backend.common.enums.*;
 import com.kilivana.backend.common.exception.GlobalExceptionHandler;
+import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import com.kilivana.backend.common.service.ImageStorage;
 import com.kilivana.backend.ecommerce.dto.*;
@@ -66,6 +67,7 @@ class ServiceAuthorizationTest {
         @Bean DriverProfileRepository drivers() { return mock(DriverProfileRepository.class); }
         @Bean LogisticsJobRepository jobs() { return mock(LogisticsJobRepository.class); }
         @Bean com.kilivana.backend.logistics.repository.TrackingEventRepository tracking() { return mock(com.kilivana.backend.logistics.repository.TrackingEventRepository.class); }
+        @Bean com.kilivana.backend.logistics.repository.PickupStationRepository pickupStations() { return mock(com.kilivana.backend.logistics.repository.PickupStationRepository.class); }
         @Bean com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository proofs() { return mock(com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository.class); }
         @Bean com.kilivana.backend.mail.DeliveryOtpNotifier notifier() { return mock(com.kilivana.backend.mail.DeliveryOtpNotifier.class); }
         @Bean NotificationRepository notifications() { return mock(NotificationRepository.class); }
@@ -352,10 +354,36 @@ class ServiceAuthorizationTest {
         denied(() -> logistics.updateJobStatus(50L, DeliveryStatus.DELIVERED));
         denied(() -> logistics.verifyDeliveryOtp(50L, "000000"));
         actor(4L, UserRole.DRIVER);
+        when(users.findById(4L)).thenReturn(Optional.of(User.builder().id(4L)
+                .role(UserRole.DRIVER).status(UserStatus.ACTIVE).emailVerified(true).build()));
         denied(() -> logistics.acceptJob(50L, 5L));
         actor(5L, UserRole.DRIVER);
+        when(users.findById(5L)).thenReturn(Optional.of(User.builder().id(5L)
+                .role(UserRole.DRIVER).status(UserStatus.ACTIVE).emailVerified(true).build()));
         assertEquals(50L, logistics.getJobById(50L).getId());
         actor(99L, UserRole.ADMIN);
+        when(users.findById(99L)).thenReturn(Optional.of(User.builder().id(99L)
+                .role(UserRole.ADMIN).status(UserStatus.ACTIVE).emailVerified(true).build()));
         assertEquals(50L, logistics.getJobById(50L).getId());
+    }
+
+    @Test void driverCanOnlyAdvanceOwnJobAndCannotCompleteWithoutProof() {
+        var ownJob = com.kilivana.backend.logistics.entity.LogisticsJob.builder()
+                .id(51L).orderId(10L).driverId(5L).status(DeliveryStatus.ACCEPTED).build();
+        var otherJob = com.kilivana.backend.logistics.entity.LogisticsJob.builder()
+                .id(52L).orderId(10L).driverId(6L).status(DeliveryStatus.ACCEPTED).build();
+        when(jobs.findById(51L)).thenReturn(Optional.of(ownJob));
+        when(jobs.findById(52L)).thenReturn(Optional.of(otherJob));
+        when(jobs.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        actor(5L, UserRole.DRIVER);
+        when(users.findById(5L)).thenReturn(Optional.of(User.builder().id(5L)
+                .role(UserRole.DRIVER).status(UserStatus.ACTIVE).emailVerified(true).build()));
+
+        assertEquals(DeliveryStatus.EN_ROUTE_TO_PICKUP,
+                logistics.updateJobStatus(51L, DeliveryStatus.EN_ROUTE_TO_PICKUP).getStatus());
+        denied(() -> logistics.updateJobStatus(52L, DeliveryStatus.EN_ROUTE_TO_PICKUP));
+        assertThrows(BadRequestException.class,
+                () -> logistics.updateJobStatus(51L, DeliveryStatus.DELIVERED));
+        denied(() -> logistics.getAllJobs());
     }
 }

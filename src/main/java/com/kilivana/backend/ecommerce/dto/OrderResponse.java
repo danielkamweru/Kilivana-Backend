@@ -44,6 +44,9 @@ public class OrderResponse {
     private PaymentStatus paymentStatus;
     @Schema(description = "Delivery address ID", example = "8")
     private Long addressId;
+    @Schema(description = "One-time buyer-entered pickup location for manually arranged pickup",
+            example = "Outside Westlands Mall, near the main entrance")
+    private String pickupLocation;
     @Schema(description = "Reason the order was cancelled, if applicable", example = "Buyer requested cancellation")
     private String cancellationReason;
     /** Driver on the order's current delivery job, when one exists. */

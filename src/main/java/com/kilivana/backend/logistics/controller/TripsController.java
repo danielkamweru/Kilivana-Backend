@@ -2,6 +2,8 @@ package com.kilivana.backend.logistics.controller;
 
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.exception.BadRequestException;
+import com.kilivana.backend.common.exception.ForbiddenException;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import com.kilivana.backend.logistics.service.DriverLocationService;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Trip management endpoints providing convenient access to logistics jobs
@@ -39,15 +40,29 @@ public class TripsController {
      * ACCEPTED, EN_ROUTE_TO_PICKUP, ARRIVED_AT_PICKUP, PICKED_UP,
      * IN_TRANSIT, ARRIVED_AT_DESTINATION.
      */
-    @Operation(summary = "Get active trips", description = "Returns all delivery jobs currently in active states where tracking is possible.")
+    @Operation(summary = "Get my active trips",
+            description = "Returns active delivery jobs assigned to the authenticated driver.")
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<List<LogisticsJob>>> getActiveTrips() {
+        Long driverId = CurrentUser.id();
         Set<com.kilivana.backend.common.enums.DeliveryStatus> activeStates = driverLocationService.getActiveStates();
-        List<LogisticsJob> allJobs = logisticsService.getAllJobs();
-        List<LogisticsJob> activeJobs = allJobs.stream()
+        List<LogisticsJob> activeJobs = logisticsService.getJobsByDriver(driverId).stream()
                 .filter(job -> activeStates.contains(job.getStatus()))
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(ApiResponse.success(activeJobs));
+    }
+
+    @Operation(summary = "Get my current trip",
+            description = "Returns the most recently assigned active delivery job for the authenticated driver.")
+    @GetMapping("/current")
+    public ResponseEntity<ApiResponse<LogisticsJob>> getCurrentTrip() {
+        Long driverId = CurrentUser.id();
+        Set<com.kilivana.backend.common.enums.DeliveryStatus> activeStates = driverLocationService.getActiveStates();
+        LogisticsJob current = logisticsService.getJobsByDriver(driverId).stream()
+                .filter(job -> activeStates.contains(job.getStatus()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Active trip"));
+        return ResponseEntity.ok(ApiResponse.success(current));
     }
 
     /**
@@ -61,21 +76,16 @@ public class TripsController {
             @Parameter(description = "ID of the trip to start tracking") @PathVariable Long id) {
         Long driverId = CurrentUser.id();
         LogisticsJob job = logisticsService.getJobById(id);
+        if (!driverId.equals(job.getDriverId())) {
+            throw new ForbiddenException("Only the driver assigned to this trip can start tracking");
+        }
 
-        // If job is in ASSIGNED state, try to accept it (driver acceptance)
         if (job.getStatus() == com.kilivana.backend.common.enums.DeliveryStatus.ASSIGNED) {
-            // Verify the driver is assigned to this job
-            if (!job.getDriverId().equals(driverId)) {
-                throw new BadRequestException("You are not the driver assigned to this trip");
-            }
             logisticsService.acceptJob(id, driverId);
         }
-        // If job is already in an active state, tracking is already possible
         else if (!driverLocationService.getActiveStates().contains(job.getStatus())) {
-            // Job is not in any active state - cannot start tracking
             throw new BadRequestException("Cannot start tracking for trip in status: " + job.getStatus().wire());
         }
-        // If job is already active, do nothing - tracking is already startable
 
         return ResponseEntity.ok(ApiResponse.successMessage("Tracking started successfully"));
     }

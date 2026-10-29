@@ -61,7 +61,7 @@ public class LogisticsJobController {
         return ResponseEntity.ok(ApiResponse.success(job));
     }
 
-    @Operation(summary = "List all delivery jobs", description = "Returns every delivery job.")
+    @Operation(summary = "List all delivery jobs", description = "Returns every delivery job to administrators.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Delivery jobs returned"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
@@ -72,7 +72,8 @@ public class LogisticsJobController {
         return ResponseEntity.ok(ApiResponse.success(jobs));
     }
 
-    @Operation(summary = "List jobs of a driver", description = "Returns the delivery jobs assigned to one driver, newest first.")
+    @Operation(summary = "List jobs of a driver",
+            description = "Returns the delivery jobs assigned to the authenticated driver (or the requested driver for an administrator), newest first.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Delivery jobs returned"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
@@ -172,7 +173,7 @@ public class LogisticsJobController {
     }
 
     @Operation(summary = "Update job status (PUT)",
-            description = "Moves a job to the next status in its delivery pipeline; illegal transitions are rejected.")
+            description = "Moves a job to the next status in its delivery pipeline; illegal transitions are rejected. DELIVERED can only be reached by filing proof of delivery.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Job status updated"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Unknown status, or the job cannot move to it from its current status"),
@@ -188,7 +189,7 @@ public class LogisticsJobController {
     }
 
     @Operation(summary = "Update job status (POST)",
-            description = "POST alias of PUT /{id}/status; moves a job to the next status in its delivery pipeline.")
+            description = "POST alias of PUT /{id}/status; moves a job to the next status in its delivery pipeline. DELIVERED can only be reached by filing proof of delivery.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Job status updated"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Unknown status, or the job cannot move to it from its current status"),
@@ -203,7 +204,7 @@ public class LogisticsJobController {
     }
 
     @Operation(summary = "Verify the delivery handover code",
-            description = "Confirms the customer-supplied six-digit delivery code. Wrong codes are counted and the code locks temporarily after too many failures.")
+            description = "Verifies and consumes the customer-supplied six-digit delivery code. This does not complete the job; submit proof of delivery to mark it delivered. Wrong codes are counted and the code locks temporarily after too many failures.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Delivery code verified"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Job has no delivery code, the code has expired, or the code is incorrect"),

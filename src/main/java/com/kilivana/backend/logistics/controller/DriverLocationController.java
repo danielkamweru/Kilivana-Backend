@@ -1,6 +1,7 @@
 package com.kilivana.backend.logistics.controller;
 
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.dto.DriverLocationResponse;
 import com.kilivana.backend.logistics.dto.LocationUpdateRequest;
 import com.kilivana.backend.logistics.dto.LocationUpdateResponse;
@@ -69,23 +70,31 @@ public class DriverLocationController {
             @Parameter(description = "ID of the delivery job") @PathVariable Long jobId) {
         authorizationService.ensureCanTrack(jobId, CurrentUser.id());
         DriverLocationResponse response = driverLocationService.getLatest(jobId);
+        if (response == null) {
+            throw new ResourceNotFoundException("Driver location", jobId);
+        }
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "Get the tracking status of a delivery",
             description = "Returns the delivery status alongside the latest fix, so a client can draw "
                     + "the right state without a second call. The status reflects the delivery job, not "
-                    + "the order: a job can be in transit while the order is still confirmed.")
+                    + "the order: a job can be in transit while the order is still confirmed. Returns 404 "
+                    + "until the first location fix has been recorded.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Status returned"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Missing or expired authentication"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorised to track this delivery")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorised to track this delivery"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No location recorded yet for this delivery")
     })
     @GetMapping("/{jobId}/status")
     public ResponseEntity<ApiResponse<DriverLocationResponse>> getStatus(
             @Parameter(description = "ID of the delivery job") @PathVariable Long jobId) {
         authorizationService.ensureCanTrack(jobId, CurrentUser.id());
         DriverLocationResponse response = driverLocationService.getLatest(jobId);
+        if (response == null) {
+            throw new ResourceNotFoundException("Driver location", jobId);
+        }
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

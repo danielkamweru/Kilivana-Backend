@@ -120,6 +120,16 @@ public class OrderService {
                              List<OrderItemRequest> items,
                              BigDecimal claimedSubtotal, BigDecimal claimedTotal,
                              String deliveryMethod) {
+        return createOrder(buyerId, addressId, deliveryFee, items, claimedSubtotal, claimedTotal,
+                deliveryMethod, null);
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId) || @resourceAuthorization.admin()")
+    public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
+                             List<OrderItemRequest> items,
+                             BigDecimal claimedSubtotal, BigDecimal claimedTotal,
+                             String deliveryMethod, String pickupLocation) {
         if (!userRepository.existsById(buyerId)) {
             throw new BadRequestException("Buyer ID must exist");
         }
@@ -130,16 +140,32 @@ public class OrderService {
 
         // Validate delivery method and address/station
         if ("DOOR_DELIVERY".equalsIgnoreCase(deliveryMethod)) {
+            if (pickupLocation != null && !pickupLocation.isBlank()) {
+                throw new BadRequestException("Pickup location can only be used for pickup delivery");
+            }
             Address address = addressRepository.findById(addressId)
                     .orElseThrow(() -> new ResourceNotFoundException("Address", addressId));
             if (!address.getUserId().equals(buyerId)) {
                 throw new BadRequestException("Address does not belong to this buyer");
             }
         } else if ("PICKUP_STATION".equalsIgnoreCase(deliveryMethod)) {
-            PickupStation station = pickupStationRepository.findById(addressId)
-                    .orElseThrow(() -> new ResourceNotFoundException("PickupStation", addressId));
-            if (!station.getIsAvailable()) {
-                throw new BadRequestException("Pickup station is not currently available");
+            if (pickupLocation != null && !pickupLocation.isBlank()) {
+                if (addressId != null) {
+                    throw new BadRequestException("Provide a pickup station ID or manual pickup location, not both");
+                }
+                pickupLocation = pickupLocation.trim();
+                if (pickupLocation.length() > 500) {
+                    throw new BadRequestException("Pickup location must be at most 500 characters");
+                }
+            } else {
+                if (addressId == null) {
+                    throw new BadRequestException("Pickup station ID or manual pickup location is required");
+                }
+                PickupStation station = pickupStationRepository.findById(addressId)
+                        .orElseThrow(() -> new ResourceNotFoundException("PickupStation", addressId));
+                if (!station.getIsAvailable()) {
+                    throw new BadRequestException("Pickup station is not currently available");
+                }
             }
         } else {
             throw new BadRequestException("Invalid delivery method. Must be DOOR_DELIVERY or PICKUP_STATION");
@@ -209,6 +235,7 @@ public class OrderService {
                 .deliveryFee(fee)
                 .total(total)
                 .addressId(addressId)
+                .pickupLocation(pickupLocation)
                 .deliveryMethod(deliveryMethod)
                 .code(nextOrderCode())
                 .build();
@@ -343,8 +370,6 @@ public class OrderService {
                 : driverProfileRepository.findByUserId(driver.getId()).orElse(null);
         User buyer = order.getBuyerId() == null ? null
                 : userRepository.findById(order.getBuyerId()).orElse(null);
-        Address address = order.getAddressId() == null ? null
-                : addressRepository.findById(order.getAddressId()).orElse(null);
         OrderItem firstItem = orderItemRepository.findByOrderId(order.getId()).stream()
                 .filter(item -> item.getSellerId() != null)
                 .findFirst().orElse(null);
@@ -366,6 +391,7 @@ public class OrderService {
                 .total(order.getTotal())
                 .paymentStatus(order.getPaymentStatus())
                 .addressId(order.getAddressId())
+                .pickupLocation(order.getPickupLocation())
                 .cancellationReason(order.getCancellationReason())
                 .driverId(job == null ? null : job.getDriverId())
                 .driverName(driver == null ? null : driver.getName())
@@ -378,7 +404,7 @@ public class OrderService {
                 .buyerName(buyer == null ? null : buyer.getName())
                 .buyerPhone(buyer == null ? null : buyer.getPhone())
                 .buyerCounty(buyer == null ? null : buyer.getRegion())
-                .deliveryAddress(address == null ? null : address.getAddressText())
+                .deliveryAddress(orderAddress(order.getId()))
                 .sellerName(seller == null ? null : seller.getName())
                 .sellerPhone(seller == null ? null : seller.getPhone())
                 .sellerCounty(seller == null ? null : seller.getRegion())
@@ -458,8 +484,16 @@ public class OrderService {
 
     private String orderAddress(Long orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow();
+        if (order.getPickupLocation() != null && !order.getPickupLocation().isBlank()) {
+            return order.getPickupLocation();
+        }
         if (order.getAddressId() == null) {
             return null;
+        }
+        if ("PICKUP_STATION".equalsIgnoreCase(order.getDeliveryMethod())) {
+            return pickupStationRepository.findById(order.getAddressId())
+                    .map(PickupStation::getAddress)
+                    .orElse(null);
         }
         return addressRepository.findById(order.getAddressId())
                 .map(Address::getAddressText)

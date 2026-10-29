@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 public class EmailVerificationController {
     private final EmailVerificationService verification;
     @PostMapping("/request")
-    @Operation(summary="Request or resend an email verification code",description="Generic acknowledgment, 60-second cooldown, five sends per email per hour. Does not disclose account existence.")
+    @Operation(summary="Request or resend an email verification code",description="Generic acknowledgment; repeated requests during the 60-second cooldown reuse the active challenge without sending another email. Maximum five sends per email per hour. Does not disclose account existence.")
     public ResponseEntity<ApiResponse<EmailOtpChallengeResponse>> request(@Valid @RequestBody EmailOtpRequest request) {
         return ResponseEntity.accepted().body(ApiResponse.success(verification.request(request.getEmail())));
     }

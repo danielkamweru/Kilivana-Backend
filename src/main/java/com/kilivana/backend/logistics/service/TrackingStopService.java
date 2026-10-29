@@ -49,7 +49,9 @@ public class TrackingStopService {
         event.setDriverId(job.getDriverId());
         event.setStatus(job.getStatus().wire());
         event.setMessage("Live tracking has ended for this delivery.");
-        broadcastService.pushToUser(job.getDriverId(), event);
+        if (job.getDriverId() != null) {
+            broadcastService.pushToUser(job.getDriverId(), event);
+        }
         broadcastService.push(jobId, event);
         log.info("Stopped live tracking for job {} (status {})", jobId, job.getStatus().wire());
     }

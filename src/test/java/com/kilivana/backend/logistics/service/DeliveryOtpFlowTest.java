@@ -63,7 +63,7 @@ class DeliveryOtpFlowTest {
         encoder = new BCryptPasswordEncoder();
         service = new LogisticsService(logisticsJobRepository, trackingEventRepository,
                 proofOfDeliveryRepository, deliveryOtpNotifier, encoder,
-                orderRepository, orderEventRepository, userRepository, null);
+                orderRepository, orderEventRepository, userRepository, null, null);
         when(orderRepository.findById(any())).thenReturn(Optional.of(Order.builder()
                 .id(1L).subtotal(new BigDecimal("100.00")).total(new BigDecimal("100.00")).build()));
         when(logisticsJobRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -93,15 +93,13 @@ class DeliveryOtpFlowTest {
     }
 
     @Test
-    void correctCodeIsConsumedAndCannotBeReused() {
+    void correctCodeIsConsumedAndRepeatVerificationIsIdempotent() {
         liveJob(DeliveryStatus.IN_TRANSIT);
         LogisticsJob verified = service.verifyDeliveryOtp(1L, OTP);
 
         assertThat(verified.getDeliveryOtpVerified()).isTrue();
         assertThat(verified.getDeliveryOtpHash()).isNull();
-        assertThatThrownBy(() -> service.verifyDeliveryOtp(1L, OTP))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("no delivery code");
+        assertThat(service.verifyDeliveryOtp(1L, OTP)).isSameAs(verified);
     }
 
     @Test
