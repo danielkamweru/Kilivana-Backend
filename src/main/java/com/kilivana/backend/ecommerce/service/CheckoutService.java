@@ -34,8 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class CheckoutService {
 
-    private static final BigDecimal DOOR_DELIVERY_FEE = new BigDecimal("150.00");
-    private static final BigDecimal PICKUP_STATION_FEE = new BigDecimal("50.00");
+    private static final BigDecimal DOOR_DELIVERY_FEE = new BigDecimal("1.00");
+    private static final BigDecimal PICKUP_STATION_FEE = new BigDecimal("1.00");
     private static final int QUOTE_TTL_MINUTES = 15;
 
     private final CartRepository cartRepository;
