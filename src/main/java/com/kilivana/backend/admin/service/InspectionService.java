@@ -125,6 +125,7 @@ public class InspectionService {
             inspection.setEvidenceUrls(request.getEvidenceUrls());
         }
         inspection.setInspectedAt(java.time.LocalDateTime.now());
+        inspection.setStatus(InspectionStatus.COMPLETED);
         Inspection saved = inspectionRepository.save(inspection);
         return enrich(InspectionResponse.fromEntity(saved, null), saved);
     }
