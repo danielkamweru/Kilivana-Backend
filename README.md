@@ -189,6 +189,16 @@ docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V19__payment_status_check_and_lookup_indexes.sql
 ```
 
+Product lifecycle states also require the manual migration below. It widens
+`products_status_check` to include `UNLISTED`, `ARCHIVED` and `DELETED`; without it,
+database operations that set those lifecycle statuses are rejected even though the
+application supports them. New products are created as `PENDING_APPROVAL`.
+
+```bash
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V19__seller_product_lifecycle.sql
+```
+
 `V19` widens the `payments.status` check to the current `PaymentStatus` values and adds
 the callback lookup indexes. The old constraint still carried the values the enum had
 before it was reshaped, so a successful M-PESA callback was rejected by the database
