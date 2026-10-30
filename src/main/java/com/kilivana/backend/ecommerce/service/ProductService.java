@@ -402,8 +402,6 @@ import java.util.stream.Collectors;
     @PreAuthorize("@productVisibility.canModifyProduct(#id)")
     public void deleteProduct(Long id) throws IOException {
         Product product = lockEditable(id);
-        if (product.getStatus() != ProductStatus.ARCHIVED)
-            throw new BadRequestException("Archive the product before deleting it");
         if (product.getReservedQty() != null && product.getReservedQty() > 0)
             throw new BadRequestException("Product has reserved stock and cannot be deleted");
         deleteAllProductImages(id);
@@ -453,7 +451,7 @@ import java.util.stream.Collectors;
     private void validateAdminStatus(Product product, ProductStatus status) {
         requireNotDeleted(product);
         if (status == null || status == ProductStatus.DELETED)
-            throw new BadRequestException("Use archived product deletion for terminal removal");
+            throw new BadRequestException("Use the delete endpoint for terminal removal");
     }
 
     private void validateImage(MultipartFile file) {

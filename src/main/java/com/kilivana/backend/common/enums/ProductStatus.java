@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * Admin moderation uses ACTIVE, PENDING_APPROVAL, REJECTED and SUSPENDED.
- * Sellers use UNLISTED to hide a published product and ARCHIVED before deletion.
+ * Sellers use UNLISTED to hide a published product and ARCHIVED to retire a listing.
  * Re-listing requires PENDING_APPROVAL; DELETED is terminal and retains history.
  * Out-of-stock remains a property of stock quantity rather than a lifecycle state.
  */

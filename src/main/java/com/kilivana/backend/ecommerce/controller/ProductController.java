@@ -203,7 +203,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
-    @Operation(summary = "Delete product", description = "Soft deletes an archived product and cleans up images. Retains historical product references. Owner seller or Admin only; reserved stock is rejected.")
+    @Operation(summary = "Delete product", description = "Soft deletes a product in any non-deleted status and cleans up images. Retains historical product references. Owner seller or Admin only; reserved stock is rejected.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Product deleted successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required"),

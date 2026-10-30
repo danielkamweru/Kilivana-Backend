@@ -46,7 +46,7 @@ class ProductManagementSecurityTest {
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
     void actor(Long id, UserRole role) {
         when(users.findById(id)).thenReturn(Optional.of(User.builder().id(id).name("Fixture")
-                .role(role).status(UserStatus.ACTIVE).build()));
+                .role(role).status(UserStatus.ACTIVE).emailVerified(true).build()));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(id, null, List.of()));
     }
     @Test void unlistPreservesDataAndOwnerAccessButHidesPublicAndRelistNeedsApproval() {
@@ -77,8 +77,9 @@ class ProductManagementSecurityTest {
         assertThrows(BadRequestException.class, () -> service.updateSellerProductStatus(42L, ProductStatus.UNLISTED));
         verify(products, never()).save(any());
     }
-    @Test void archivedDeletionRetainsHistoricalRowAndCleansImagesAndIsTerminal() throws Exception {
-        product.setStatus(ProductStatus.ARCHIVED);
+    @ParameterizedTest @EnumSource(value=ProductStatus.class, names={"ACTIVE","PENDING_APPROVAL","REJECTED","SUSPENDED","UNLISTED","ARCHIVED"})
+    void deletionFromAnyNonDeletedStatusRetainsHistoricalRowAndCleansImages(ProductStatus status) throws Exception {
+        product.setStatus(status);
         var image=ProductImage.builder().id(2L).productId(42L).publicId("stored-2").build();
         when(images.findByProductId(42L)).thenReturn(List.of(image));
         service.deleteProduct(42L);
@@ -95,9 +96,8 @@ class ProductManagementSecurityTest {
         actor(99L, UserRole.ADMIN);
         assertThrows(ResourceNotFoundException.class, () -> service.updateProductStatus(42L, ProductStatus.ACTIVE));
     }
-    @Test void publishedAndReservedProductsCannotBeDeleted() {
-        assertThrows(BadRequestException.class, () -> service.deleteProduct(42L));
-        product.setStatus(ProductStatus.ARCHIVED); product.setReservedQty(1);
+    @Test void reservedProductsCannotBeDeleted() {
+        product.setReservedQty(1);
         assertThrows(BadRequestException.class, () -> service.deleteProduct(42L));
         verifyNoInteractions(storage);
         verify(products, never()).save(any());
@@ -124,6 +124,10 @@ class ProductManagementSecurityTest {
     @Test void supplierAndAdminCanUseOwnerWorkflow() throws Exception {
         actor(4L, UserRole.SUPPLIER);
         service.updateSellerProductStatus(42L, ProductStatus.UNLISTED);
+        service.deleteProduct(42L);
+        assertEquals(ProductStatus.DELETED, product.getStatus());
+
+        product.setStatus(ProductStatus.ACTIVE);
         actor(99L, UserRole.ADMIN);
         service.updateSellerProductStatus(42L, ProductStatus.ARCHIVED);
         service.deleteProduct(42L);

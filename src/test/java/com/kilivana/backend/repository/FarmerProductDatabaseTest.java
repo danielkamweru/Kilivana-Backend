@@ -73,7 +73,7 @@ class FarmerProductDatabaseTest {
         assertTrue(products.searchProducts(null,null,null,PageRequest.of(0,10)).isEmpty());
     }
     @Test void softDeletionPreservesOrderAndPaymentReferencesAndDeletesStoredBytes() throws Exception {
-        var p=product(ProductStatus.ARCHIVED);
+        var p=product(ProductStatus.ACTIVE);
         var order=orders.saveAndFlush(Order.builder().buyerId(9L).code("AUDIT-ORDER")
             .status(OrderStatus.COMPLETED).subtotal(BigDecimal.TEN).deliveryFee(BigDecimal.ZERO)
             .total(BigDecimal.TEN).paymentStatus(PaymentStatus.PAID).addressId(1L).build());
