@@ -7,8 +7,10 @@ import com.kilivana.backend.admin.repository.FarmerProfileRepository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.OrderStatus;
+import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.common.enums.ProductStatus;
+import com.kilivana.backend.common.enums.SellerType;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
@@ -22,6 +24,8 @@ import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.logistics.service.LogisticsService;
@@ -66,8 +70,11 @@ class OrderServiceTest {
     @Mock private DriverProfileRepository driverProfileRepository;
     @Mock private LogisticsService logisticsService;
     @Mock private LogisticsJobRepository logisticsJobRepository;
+    @Mock private FarmRepository farmRepository;
+    @Mock private com.kilivana.backend.admin.repository.SupplierWarehouseRepository warehouseRepository;
 
     private OrderService orderService;
+    private Product product;
 
     private static final Long BUYER_ID = 7L;
     private static final Long ADDRESS_ID = 3L;
@@ -79,8 +86,7 @@ class OrderServiceTest {
                 orderEventRepository, paymentRepository, productRepository,
                 userRepository, addressRepository, pickupStationRepository,
                 farmerProfileRepository, driverProfileRepository, logisticsService, logisticsJobRepository,
-                mock(com.kilivana.backend.farm.repository.FarmRepository.class),
-                mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class));
+                farmRepository, warehouseRepository);
 
         when(userRepository.existsById(BUYER_ID)).thenReturn(true);
         when(userRepository.findById(BUYER_ID)).thenReturn(Optional.of(User.builder().id(BUYER_ID).role(UserRole.BUYER).build()));
@@ -90,14 +96,18 @@ class OrderServiceTest {
         // The next order reference continues after the highest existing one.
         when(orderRepository.maxNumericOrderCode()).thenReturn(99);
 
-        Product product = Product.builder()
+        product = Product.builder()
                 .id(PRODUCT_ID).sellerId(9L).name("Green Tea").unit("kg")
                 .price(new BigDecimal("50.00"))
                 .stockQty(10).reservedQty(0).soldQty(0).minimumOrderQty(1)
-                .status(ProductStatus.ACTIVE).build();
+                .status(ProductStatus.ACTIVE).sellerType(SellerType.FARMER).farmId(3L).build();
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(productRepository.findByIdForUpdate(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(farmRepository.findById(3L)).thenReturn(Optional.of(Farm.builder()
+                .id(3L).farmerId(9L).status(FarmStatus.ACTIVE)
+                .name("Test farm").address("Farm road").county("Nairobi")
+                .latitude(-1.2).longitude(36.8).build()));
 
         // The first save assigns the identity, the second stores the code.
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
@@ -146,6 +156,18 @@ class OrderServiceTest {
         assertEquals("ORD-00100", order.getCode());
         assertEquals(OrderStatus.PLACED, order.getStatus());
         assertEquals(PaymentStatus.PENDING, order.getPaymentStatus());
+    }
+
+    @Test
+    @DisplayName("rejects products without an active dispatch location before saving an order")
+    void rejectsProductWithoutDispatchLocation() {
+        product.setFarmId(null);
+
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID,
+                new BigDecimal("25.00"), items(), null, null));
+
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(productRepository, never()).save(any(Product.class));
     }
 
     @Test

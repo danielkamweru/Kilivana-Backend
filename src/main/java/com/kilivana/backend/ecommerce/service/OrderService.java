@@ -46,7 +46,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Order placement and the order lifecycle.
@@ -218,6 +220,7 @@ public class OrderService {
                     .orElseThrow(() -> new ResourceNotFoundException("Product", id)));
         }
         BigDecimal subtotal = BigDecimal.ZERO;
+        Map<Long, DispatchOriginSnapshot> dispatchOrigins = new HashMap<>();
         for (OrderItemRequest item : items) {
             Product product = locked.get(item.getProductId());
             if (product.getStatus() != com.kilivana.backend.common.enums.ProductStatus.ACTIVE)
@@ -235,6 +238,7 @@ public class OrderService {
             if (item.getQuantity() < Math.max(1, nullToZero(product.getMinimumOrderQty())))
                 throw new BadRequestException("Quantity is below the minimum order quantity");
             if (stock - reserved < item.getQuantity()) throw new BadRequestException("Insufficient available stock");
+            dispatchOrigins.put(product.getId(), dispatchOrigin(product));
             subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
         subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
@@ -276,7 +280,7 @@ public class OrderService {
 
         for (OrderItemRequest item : items) {
             Product product = locked.get(item.getProductId());
-            DispatchOriginSnapshot origin = dispatchOrigin(product);
+            DispatchOriginSnapshot origin = dispatchOrigins.get(product.getId());
             orderItemRepository.save(OrderItem.builder()
                     .orderId(saved.getId())
                     .productId(product.getId())
@@ -307,7 +311,7 @@ public class OrderService {
                 throw new BadRequestException("Farmer products cannot use a supplier warehouse");
             }
             if (product.getFarmId() == null) {
-                return DispatchOriginSnapshot.empty();
+                throw new BadRequestException("Farmer product has no active dispatch farm");
             }
             Farm farm = farmRepository.findById(product.getFarmId())
                     .orElseThrow(() -> new ResourceNotFoundException("Farm", product.getFarmId()));
@@ -326,7 +330,7 @@ public class OrderService {
             throw new BadRequestException("Supplier products cannot use a farmer's farm");
         }
         if (product.getSupplierWarehouseId() == null) {
-            return DispatchOriginSnapshot.empty();
+            throw new BadRequestException("Supplier product has no active dispatch warehouse");
         }
         SupplierWarehouse warehouse = supplierWarehouseRepository
                 .findByIdAndUserId(product.getSupplierWarehouseId(), product.getSellerId())
@@ -349,11 +353,7 @@ public class OrderService {
     }
 
     private record DispatchOriginSnapshot(Long id, String type, String name, String address,
-                                          String county, Double latitude, Double longitude) {
-        private static DispatchOriginSnapshot empty() {
-            return new DispatchOriginSnapshot(null, null, null, null, null, null, null);
-        }
-    }
+                                          String county, Double latitude, Double longitude) {}
 
     /**
      * Cancels an order and releases its reserved stock. A paid or escrowed

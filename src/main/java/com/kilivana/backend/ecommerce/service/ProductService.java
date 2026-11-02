@@ -195,7 +195,7 @@ import java.util.stream.Collectors;
                 throw new BadRequestException("Farmers must select a farm, not a supplier warehouse");
             }
             if (request.getFarmId() == null) {
-                return null;
+                throw new BadRequestException("Farmers must select an active farm as a dispatch location");
             }
             Farm farm = farmRepository.findById(request.getFarmId())
                     .orElseThrow(() -> new ResourceNotFoundException("Farm", request.getFarmId()));
@@ -206,13 +206,14 @@ import java.util.stream.Collectors;
             if (farm.getStatus() != FarmStatus.ACTIVE) {
                 throw new BadRequestException("An inactive farm cannot be used as a dispatch origin");
             }
+            requireDispatchLocationCoordinates(farm.getAddress(), farm.getLatitude(), farm.getLongitude());
             return farm.getId();
         }
         if (request.getFarmId() != null) {
             throw new BadRequestException("Suppliers must select a warehouse, not a farmer's farm");
         }
         if (request.getWarehouseId() == null) {
-            return null;
+            throw new BadRequestException("Suppliers must select an active warehouse as a dispatch location");
         }
         SupplierWarehouse warehouse = warehouseRepository.findByIdAndUserId(request.getWarehouseId(), sellerId)
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
@@ -220,7 +221,17 @@ import java.util.stream.Collectors;
         if (!Boolean.TRUE.equals(warehouse.getActive())) {
             throw new BadRequestException("An inactive warehouse cannot be used as a dispatch origin");
         }
+        requireDispatchLocationCoordinates(warehouse.getAddress(), warehouse.getLatitude(), warehouse.getLongitude());
         return null;
+    }
+
+    private static void requireDispatchLocationCoordinates(String address, Double latitude, Double longitude) {
+        if (address == null || address.isBlank() || latitude == null || longitude == null
+                || !Double.isFinite(latitude) || !Double.isFinite(longitude)
+                || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new BadRequestException(
+                    "Product dispatch location requires an address and valid coordinates");
+        }
     }
 
     @Transactional(rollbackFor = IOException.class)

@@ -4,6 +4,8 @@ import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.DeliveryStatus;
+import com.kilivana.backend.common.exception.ForbiddenException;
+import com.kilivana.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -61,14 +63,22 @@ public class LogisticsJobController {
         return ResponseEntity.ok(ApiResponse.success(job));
     }
 
-    @Operation(summary = "List all delivery jobs", description = "Returns every delivery job to administrators.")
+    @Operation(summary = "List delivery jobs",
+            description = "Administrators receive all jobs; drivers receive only jobs assigned to their account.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Delivery jobs returned"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
     public ResponseEntity<ApiResponse<List<LogisticsJob>>> getAllJobs(Pageable pageable) {
-        List<LogisticsJob> jobs = logisticsService.getAllJobs();
+        List<LogisticsJob> jobs;
+        if (CurrentUser.hasRole("ADMIN")) {
+            jobs = logisticsService.getAllJobs();
+        } else if (CurrentUser.hasRole("DRIVER")) {
+            jobs = logisticsService.getJobsByDriver(CurrentUser.id());
+        } else {
+            throw new ForbiddenException("Only administrators and drivers can list delivery jobs");
+        }
         return ResponseEntity.ok(ApiResponse.success(jobs));
     }
 

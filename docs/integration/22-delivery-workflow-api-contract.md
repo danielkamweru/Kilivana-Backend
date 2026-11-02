@@ -53,10 +53,10 @@ accepted from the request:
 | `DELETE /api/v1/suppliers/me/warehouses/{id}` | SUPPLIER, own warehouse | None | `200`, deactivated warehouse |
 | `PUT /api/v1/suppliers/me/warehouses/{id}/default` | SUPPLIER, own warehouse | None | `200`, warehouse |
 
-Product requests may specify `farmId` for a farmer or `warehouseId` for a supplier.
-The service validates seller type, ownership and active location. Both remain optional
-for compatibility with existing catalog clients; dispatch cannot use an unlocated
-product and returns a business validation error rather than inventing a route.
+Product requests must specify `farmId` for a farmer or `warehouseId` for a supplier.
+The service validates seller type, ownership, active status, address and coordinates
+before accepting the listing. Existing products without a dispatch location need a
+seller/admin to select one before they can be ordered and dispatched.
 
 ## Checkout, orders and dispatch
 
@@ -80,6 +80,7 @@ it must not merge different pickup origins.
 
 | Method and path | Authentication / ownership | Request | Success / transition |
 |---|---|---|---|
+| `GET /api/v1/logistics/jobs` | ADMIN or DRIVER; driver sees only own assigned jobs | None | `200`, all jobs for admin or own jobs for driver |
 | `GET /api/v1/logistics/jobs/status/{status}` | ADMIN | Status in path | `200`, jobs |
 | `PUT /api/v1/logistics/jobs/{deliveryJobId}/assign?driverId={id}` | ADMIN | Driver ID | `200`, job `pending_assignment → assigned` |
 | `POST /api/v1/trips/jobs/{deliveryJobId}/accept` | Assigned DRIVER | None; identity from JWT | `200`, creates and returns an active `DeliveryTrip` |
@@ -101,11 +102,15 @@ attempt-limited buyer code and proof of delivery.
 ## Schema rollout
 
 `db/migrations/V24__delivery_workflow_foundation.sql` defines the persisted warehouse,
-dispatch-snapshot, job, trip, GPS-link and delivery-event schema. The application does
-not currently configure Flyway, so deployments must run this migration through the
-existing database rollout process before enabling these routes; `ddl-auto=update` is not
-a production migration strategy. Validate it against the deployed PostgreSQL version
-and data before rollout.
+dispatch-snapshot, job, trip, GPS-link and delivery-event schema.
+`db/migrations/V25__backfill_dispatch_locations.sql` assigns existing products to an
+active default supplier warehouse or their sole active location when unambiguous, then
+backfills missing order-item snapshots from eligible product locations. It intentionally
+leaves products without a safe location choice unchanged. The application does not
+currently configure Flyway, so deployments must run these migrations through the
+existing database rollout process; `ddl-auto=update` is not a production migration
+strategy. Validate the migration against the deployed PostgreSQL version and data before
+rollout.
 
 ## Errors and compatibility
 
