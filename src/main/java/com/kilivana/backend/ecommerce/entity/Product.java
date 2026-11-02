@@ -86,6 +86,9 @@ public class Product {
     @Column
     private Long farmId;
 
+    @Column(name = "supplier_warehouse_id")
+    private Long supplierWarehouseId;
+
     @Column(columnDefinition = "TEXT")
     private String statusReason;
 

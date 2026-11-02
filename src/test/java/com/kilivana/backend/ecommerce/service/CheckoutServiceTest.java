@@ -11,6 +11,8 @@ import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.logistics.entity.PickupStation;
+import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,7 @@ class CheckoutServiceTest {
     private AddressRepository addressRepository;
     private ProductRepository productRepository;
     private OrderService orderService;
+    private PickupStationRepository pickupStationRepository;
     private CheckoutService checkoutService;
 
     @BeforeEach
@@ -51,8 +54,9 @@ class CheckoutServiceTest {
         addressRepository = mock(AddressRepository.class);
         productRepository = mock(ProductRepository.class);
         orderService = mock(OrderService.class);
+        pickupStationRepository = mock(PickupStationRepository.class);
         checkoutService = new CheckoutService(cartRepository, cartItemRepository, addressRepository,
-                productRepository, orderService);
+                productRepository, orderService, pickupStationRepository);
 
         // CurrentUser.id() reads the caller from the Spring SecurityContext, so the
         // test has to populate it the same way the JWT filter does.
@@ -116,5 +120,20 @@ class CheckoutServiceTest {
         BadRequestException ex = assertThrows(BadRequestException.class,
                 () -> checkoutService.createDeliveryQuote(request));
         assertEquals("Pickup location must be at most 500 characters", ex.getMessage());
+    }
+
+    @Test
+    void pickupQuote_resolvesCanonicalAvailableStation() {
+        PickupStation station = PickupStation.builder()
+                .id(5L).name("Westlands Hub").address("Canonical address")
+                .latitude(-1.28).longitude(36.81).region("Nairobi").isAvailable(true).build();
+        when(pickupStationRepository.findById(5L)).thenReturn(Optional.of(station));
+
+        DeliveryQuoteResponse response = checkoutService.createDeliveryQuote(DeliveryQuoteRequest.builder()
+                .deliveryMethod("PICKUP_STATION").pickupStationId(5L).build());
+
+        assertEquals(5L, response.getPickupStationId());
+        assertEquals("Canonical address", response.getPickupStation().getAddress());
+        assertEquals(-1.28, response.getPickupStation().getLatitude());
     }
 }

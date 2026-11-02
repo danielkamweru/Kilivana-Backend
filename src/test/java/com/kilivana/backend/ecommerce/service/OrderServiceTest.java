@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,7 +78,9 @@ class OrderServiceTest {
         orderService = new OrderService(orderRepository, orderItemRepository,
                 orderEventRepository, paymentRepository, productRepository,
                 userRepository, addressRepository, pickupStationRepository,
-                farmerProfileRepository, driverProfileRepository, logisticsService, logisticsJobRepository);
+                farmerProfileRepository, driverProfileRepository, logisticsService, logisticsJobRepository,
+                mock(com.kilivana.backend.farm.repository.FarmRepository.class),
+                mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class));
 
         when(userRepository.existsById(BUYER_ID)).thenReturn(true);
         when(userRepository.findById(BUYER_ID)).thenReturn(Optional.of(User.builder().id(BUYER_ID).role(UserRole.BUYER).build()));

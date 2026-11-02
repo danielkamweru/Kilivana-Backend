@@ -134,7 +134,8 @@ class FarmerProductDatabaseTest {
         try {
             ImageStorage failing=mock(ImageStorage.class);
             when(failing.uploadImage(any(),anyString())).thenThrow(new IOException("simulated upload failure"));
-            var real=new ProductService(products,images,mock(CategoryRepository.class),failing,users,visibility);
+            var real=new ProductService(products,images,mock(CategoryRepository.class),failing,users,visibility,
+                    farms,mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class));
             var factory=new org.springframework.aop.framework.ProxyFactory(real);
             var interceptor=new org.springframework.transaction.interceptor.TransactionInterceptor(transactions,
                 new org.springframework.transaction.annotation.AnnotationTransactionAttributeSource());

@@ -16,6 +16,7 @@ import com.kilivana.backend.ecommerce.entity.*;
 import com.kilivana.backend.ecommerce.repository.*;
 import com.kilivana.backend.ecommerce.service.*;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,7 @@ class ServiceAuthorizationTest {
     static class Config {
         @Bean com.kilivana.backend.logistics.service.TrackingStopService trackingStop() { return mock(com.kilivana.backend.logistics.service.TrackingStopService.class); }
         @Bean com.kilivana.backend.farm.repository.FarmRepository farms() { return mock(com.kilivana.backend.farm.repository.FarmRepository.class); }
+        @Bean com.kilivana.backend.admin.repository.SupplierWarehouseRepository warehouses() { return mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class); }
         @Bean com.kilivana.backend.common.service.EmailVerificationService emailVerification() { return mock(com.kilivana.backend.common.service.EmailVerificationService.class); }
         @Bean UserRepository users() { return mock(UserRepository.class); }
         @Bean InspectionRepository inspections() { return mock(InspectionRepository.class); }
@@ -67,6 +69,8 @@ class ServiceAuthorizationTest {
         @Bean DriverProfileRepository drivers() { return mock(DriverProfileRepository.class); }
         @Bean LogisticsJobRepository jobs() { return mock(LogisticsJobRepository.class); }
         @Bean com.kilivana.backend.logistics.repository.TrackingEventRepository tracking() { return mock(com.kilivana.backend.logistics.repository.TrackingEventRepository.class); }
+        @Bean com.kilivana.backend.logistics.repository.DeliveryEventRepository deliveryEvents() { return mock(com.kilivana.backend.logistics.repository.DeliveryEventRepository.class); }
+        @Bean com.kilivana.backend.logistics.repository.DeliveryTripRepository deliveryTrips() { return mock(com.kilivana.backend.logistics.repository.DeliveryTripRepository.class); }
         @Bean com.kilivana.backend.logistics.repository.PickupStationRepository pickupStations() { return mock(com.kilivana.backend.logistics.repository.PickupStationRepository.class); }
         @Bean com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository proofs() { return mock(com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository.class); }
         @Bean com.kilivana.backend.mail.DeliveryOtpNotifier notifier() { return mock(com.kilivana.backend.mail.DeliveryOtpNotifier.class); }
@@ -112,7 +116,8 @@ class ServiceAuthorizationTest {
     }
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
     void actor(Long id, UserRole role) {
-        when(users.findById(id)).thenReturn(Optional.of(User.builder().id(id).role(role).status(UserStatus.ACTIVE).build()));
+        when(users.findById(id)).thenReturn(Optional.of(User.builder().id(id).role(role)
+                .status(UserStatus.ACTIVE).emailVerified(true).build()));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(id, null, List.of()));
     }
     void denied(org.junit.jupiter.api.function.Executable action) { assertThrows(AccessDeniedException.class, action); }
@@ -150,7 +155,7 @@ class ServiceAuthorizationTest {
     @Test void pendingFarmerCanReadOwnPendingProductButUnrelatedFarmerCannot() {
         actor(4L, UserRole.FARMER);
         when(users.findById(4L)).thenReturn(Optional.of(User.builder().id(4L).role(UserRole.FARMER)
-                .status(UserStatus.PENDING_VERIFICATION).build()));
+                .status(UserStatus.PENDING_VERIFICATION).emailVerified(true).build()));
         var product = Product.builder().id(40L).sellerId(4L).stockQty(1).status(ProductStatus.PENDING_APPROVAL).build();
         when(products.findById(40L)).thenReturn(Optional.of(product));
         assertEquals(40L, productService.getProductById(40L).getId());
@@ -180,7 +185,7 @@ class ServiceAuthorizationTest {
     @Test void pendingFarmerKeepsOwnAccessButCannotEscalateProductStatus() {
         actor(4L, UserRole.FARMER);
         when(users.findById(4L)).thenReturn(Optional.of(User.builder().id(4L).role(UserRole.FARMER)
-                .status(UserStatus.PENDING_VERIFICATION).build()));
+                .status(UserStatus.PENDING_VERIFICATION).emailVerified(true).build()));
         assertEquals(4L, userService.getUserById(4L).getId());
         denied(() -> productService.updateProductStatusWithReason(1L, ProductStatus.ACTIVE, "test", 4L));
         verify(products, never()).findByIdForUpdate(any());
@@ -262,6 +267,47 @@ class ServiceAuthorizationTest {
         verify(orders, never()).save(any());
         assertEquals(10L, orderService.getOrderById(10L).getId());
     }
+
+    @Test void sellersCanOnlySeeTheirOwnDeliveryJobsForAnOrder() {
+        actor(4L, UserRole.FARMER);
+        when(orders.findById(77L)).thenReturn(Optional.of(Order.builder()
+                .id(77L).buyerId(1L).status(OrderStatus.PLACED).build()));
+        when(orderItems.findByOrderId(77L)).thenReturn(List.of(
+                OrderItem.builder().orderId(77L).sellerId(4L).build(),
+                OrderItem.builder().orderId(77L).sellerId(5L).build()));
+        when(jobs.findByOrderIdAndSellerId(77L, 4L)).thenReturn(List.of(
+                LogisticsJob.builder().id(10L).orderId(77L).sellerId(4L)
+                        .status(com.kilivana.backend.common.enums.DeliveryStatus.PENDING_ASSIGNMENT).build()));
+
+        var summary = logistics.getSellerDeliverySummary(77L, 4L);
+
+        assertEquals(1, summary.getDeliveries().size());
+        assertEquals(10L, summary.getDeliveries().get(0).getDeliveryJobId());
+        verify(jobs).findByOrderIdAndSellerId(77L, 4L);
+
+        actor(5L, UserRole.SUPPLIER);
+        denied(() -> logistics.getSellerDeliverySummary(77L, 4L));
+    }
+
+    @Test void buyersCanReadOnlyTheirOwnDeliverySummary() {
+        actor(1L, UserRole.BUYER);
+        when(orders.findById(77L)).thenReturn(Optional.of(Order.builder()
+                .id(77L).buyerId(1L).status(OrderStatus.PLACED).build()));
+        when(jobs.findByOrderId(77L)).thenReturn(List.of(
+                LogisticsJob.builder().id(10L).orderId(77L).sellerId(4L)
+                        .status(com.kilivana.backend.common.enums.DeliveryStatus.ASSIGNED)
+                        .driverId(99L).build()));
+
+        var summary = logistics.getBuyerDeliverySummary(77L);
+
+        assertEquals(1, summary.getDeliveries().size());
+        assertEquals("assigned", summary.getDeliveries().get(0).getStatus());
+        assertFalse(summary.toString().contains("99"));
+
+        actor(2L, UserRole.BUYER);
+        denied(() -> logistics.getBuyerDeliverySummary(77L));
+    }
+
     @Test void sellerCannotReadAnotherSellersMixedOrder() {
         actor(4L, UserRole.FARMER);
         denied(() -> orderService.getOrderById(11L));

@@ -78,13 +78,18 @@ public class TrackingBroadcastService {
      */
     @Transactional(readOnly = true)
     public LocationEvent buildEvent(Long jobId) {
+        return buildEvent(jobId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public LocationEvent buildEvent(Long jobId, Long tripId) {
         DriverLatestLocation latest = latestRepository.findByLogisticsJobId(jobId).orElse(null);
         if (latest == null) {
             return null;
         }
         LogisticsJob job = logisticsJobRepository.findById(jobId).orElse(null);
         LocationEvent event = new LocationEvent();
-        event.setTripId(jobId);
+        event.setTripId(tripId == null ? jobId : tripId);
         event.setOrderId(job == null ? null : job.getOrderId());
         event.setDriverId(latest.getDriverId());
         event.setLatitude(latest.getLatitude());

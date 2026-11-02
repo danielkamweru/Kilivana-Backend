@@ -2,6 +2,7 @@ package com.kilivana.backend.logistics.controller;
 
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.logistics.dto.PickupStationResponse;
+import com.kilivana.backend.logistics.dto.NearestPickupStationResponse;
 import com.kilivana.backend.logistics.dto.SavePickupStationRequest;
 import com.kilivana.backend.logistics.dto.UserPickupStationResponse;
 import com.kilivana.backend.logistics.service.PickupStationService;
@@ -30,13 +31,25 @@ public class PickupStationController {
 
     private final PickupStationService pickupStationService;
 
+    @Operation(summary = "Find nearby available pickup stations",
+            description = "Filters available stations by radius and returns the nearest first.")
+    @GetMapping("/nearest")
+    public ResponseEntity<ApiResponse<List<NearestPickupStationResponse>>> getNearestPickupStations(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "10") double radiusKm,
+            @RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(
+                pickupStationService.findNearest(lat, lng, radiusKm, limit)));
+    }
+
     /**
      * Lists all available pickup stations.
      *
      * @return list of available pickup stations
      */
     @Operation(summary = "List available pickup stations",
-            description = "Returns all pickup stations that are currently available for use.")
+            description = "Returns canonical station addresses and coordinates for checkout and client-side maps.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Pickup stations listed"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required")

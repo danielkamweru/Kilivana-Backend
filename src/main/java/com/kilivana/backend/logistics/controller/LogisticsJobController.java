@@ -172,6 +172,15 @@ public class LogisticsJobController {
         return acceptJob(id, driverId);
     }
 
+    @Operation(summary = "Reject an assigned job")
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<LogisticsJob>> rejectJob(
+            @PathVariable Long id, @RequestParam(required = false) String reason) {
+        LogisticsJob job = logisticsService.rejectJob(id,
+                com.kilivana.backend.security.CurrentUser.id(), reason);
+        return ResponseEntity.ok(ApiResponse.success(job));
+    }
+
     @Operation(summary = "Update job status (PUT)",
             description = "Moves a job to the next status in its delivery pipeline; illegal transitions are rejected. DELIVERED can only be reached by filing proof of delivery.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({

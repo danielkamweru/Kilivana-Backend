@@ -9,6 +9,7 @@ import com.kilivana.backend.logistics.service.TrackingStopService;
 import com.kilivana.backend.logistics.repository.DriverLatestLocationRepository;
 import com.kilivana.backend.logistics.repository.DriverLocationRepository;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.repository.DeliveryTripRepository;
 import com.kilivana.backend.common.service.UserReferenceCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -35,6 +36,7 @@ public class TrackingConfig {
     private final DriverLatestLocationRepository latestRepository;
     private final DriverLocationRepository locationRepository;
     private final LogisticsJobRepository logisticsJobRepository;
+    private final DeliveryTripRepository deliveryTripRepository;
     private final TrackingAuthorizationService authorizationService;
     private final TrackingBroadcastService broadcastService;
 
@@ -57,6 +59,7 @@ public class TrackingConfig {
     public DriverLocationService driverLocationService() {
         return new DriverLocationService(
                 logisticsJobRepository,
+                deliveryTripRepository,
                 locationRepository,
                 latestRepository,
                 locationValidator(),

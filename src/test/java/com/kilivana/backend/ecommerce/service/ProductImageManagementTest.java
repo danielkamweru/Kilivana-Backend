@@ -35,7 +35,9 @@ class ProductImageManagementTest {
         when(images.findByProductIdOrderBySortOrderAsc(1L)).thenReturn(List.of(old));
         rebuild();
     }
-    void rebuild() { service=new ProductService(products,images,mock(CategoryRepository.class),storage,mock(UserService.class),mock(ProductVisibility.class)); }
+    void rebuild() { service=new ProductService(products,images,mock(CategoryRepository.class),storage,mock(UserService.class),
+            mock(ProductVisibility.class),mock(com.kilivana.backend.farm.repository.FarmRepository.class),
+            mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class)); }
     MockMultipartFile png() { return new MockMultipartFile("image","photo.png","image/png",new byte[]{(byte)137,80,78,71,13,10,26,10,0,0,0,0}); }
     void uploadResult() throws Exception {
         when(storage.uploadImage(any(),anyString())).thenReturn(Map.of("id","new"));

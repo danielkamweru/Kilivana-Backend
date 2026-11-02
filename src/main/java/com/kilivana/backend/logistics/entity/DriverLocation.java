@@ -41,6 +41,9 @@ public class DriverLocation {
     @Column(nullable = false)
     private Long logisticsJobId;
 
+    @Column(name = "trip_id")
+    private Long tripId;
+
     /** The driver who reported the fix. */
     @Column(nullable = false)
     private Long driverId;
@@ -73,6 +76,8 @@ public class DriverLocation {
     public void setId(Long id) { this.id = id; }
     public Long getLogisticsJobId() { return logisticsJobId; }
     public void setLogisticsJobId(Long logisticsJobId) { this.logisticsJobId = logisticsJobId; }
+    public Long getTripId() { return tripId; }
+    public void setTripId(Long tripId) { this.tripId = tripId; }
     public Long getDriverId() { return driverId; }
     public void setDriverId(Long driverId) { this.driverId = driverId; }
     public Double getLatitude() { return latitude; }
@@ -97,6 +102,7 @@ public class DriverLocation {
     public static class DriverLocationBuilder {
         private Long id;
         private Long logisticsJobId;
+        private Long tripId;
         private Long driverId;
         private Double latitude;
         private Double longitude;
@@ -113,6 +119,11 @@ public class DriverLocation {
 
         public DriverLocationBuilder logisticsJobId(Long logisticsJobId) {
             this.logisticsJobId = logisticsJobId;
+            return this;
+        }
+
+        public DriverLocationBuilder tripId(Long tripId) {
+            this.tripId = tripId;
             return this;
         }
 
@@ -160,6 +171,7 @@ public class DriverLocation {
             DriverLocation driverLocation = new DriverLocation();
             driverLocation.id = this.id;
             driverLocation.logisticsJobId = this.logisticsJobId;
+            driverLocation.tripId = this.tripId;
             driverLocation.driverId = this.driverId;
             driverLocation.latitude = this.latitude;
             driverLocation.longitude = this.longitude;

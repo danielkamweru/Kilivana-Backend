@@ -30,7 +30,9 @@ class ProductCreationTest {
             mock(CategoryRepository.class),
             mock(ImageStorage.class),
             users,
-            mock(ProductVisibility.class));
+            mock(ProductVisibility.class),
+            mock(com.kilivana.backend.farm.repository.FarmRepository.class),
+            mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class));
 
     @Test
     void createsProductsPendingApproval() {

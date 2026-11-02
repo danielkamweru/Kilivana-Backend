@@ -14,6 +14,11 @@ import com.kilivana.backend.common.enums.ProductStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.admin.entity.SupplierWarehouse;
+import com.kilivana.backend.admin.repository.SupplierWarehouseRepository;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.admin.service.UserService;
 import com.kilivana.backend.admin.dto.UserResponse;
 import com.kilivana.backend.common.enums.SellerType;
@@ -53,12 +58,15 @@ import java.util.stream.Collectors;
     private final ImageStorage imageStorage;
     private final UserService userService;
     private final com.kilivana.backend.security.ProductVisibility visibility;
+    private final FarmRepository farmRepository;
+    private final SupplierWarehouseRepository warehouseRepository;
 
     @Transactional(rollbackFor = IOException.class)
     @PreAuthorize("@resourceAuthorization.seller(#userId)")
     public ProductResponse createProduct(ProductRequest request, Long userId) {
         UserResponse user = userService.getUserById(userId);
         SellerType sellerType = user.getRole() == UserRole.SUPPLIER ? SellerType.SUPPLIER : SellerType.FARMER;
+        Long farmId = validateDispatchLocation(request, userId, sellerType);
         Product product = Product.builder()
                 .sellerId(userId)
                 .sellerType(sellerType)
@@ -71,6 +79,8 @@ import java.util.stream.Collectors;
                 .reservedQty(0)
                 .soldQty(0)
                 .minimumOrderQty(request.getMinimumOrderQty())
+                .farmId(farmId)
+                .supplierWarehouseId(request.getWarehouseId())
                 .status(ProductStatus.PENDING_APPROVAL)
                 .build();
         Product saved = productRepository.save(product);
@@ -171,7 +181,46 @@ import java.util.stream.Collectors;
         product.setPrice(request.getPrice());
         product.setStockQty(request.getStockQty());
         product.setMinimumOrderQty(request.getMinimumOrderQty());
+        if (request.getFarmId() != null || request.getWarehouseId() != null) {
+            Long farmId = validateDispatchLocation(request, product.getSellerId(), product.getSellerType());
+            product.setFarmId(farmId);
+            product.setSupplierWarehouseId(request.getWarehouseId());
+        }
         return mapToResponse(productRepository.save(product));
+    }
+
+    private Long validateDispatchLocation(ProductRequest request, Long sellerId, SellerType sellerType) {
+        if (sellerType == SellerType.FARMER) {
+            if (request.getWarehouseId() != null) {
+                throw new BadRequestException("Farmers must select a farm, not a supplier warehouse");
+            }
+            if (request.getFarmId() == null) {
+                return null;
+            }
+            Farm farm = farmRepository.findById(request.getFarmId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Farm", request.getFarmId()));
+            if (!sellerId.equals(farm.getFarmerId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "A product may only use a farm owned by its seller");
+            }
+            if (farm.getStatus() != FarmStatus.ACTIVE) {
+                throw new BadRequestException("An inactive farm cannot be used as a dispatch origin");
+            }
+            return farm.getId();
+        }
+        if (request.getFarmId() != null) {
+            throw new BadRequestException("Suppliers must select a warehouse, not a farmer's farm");
+        }
+        if (request.getWarehouseId() == null) {
+            return null;
+        }
+        SupplierWarehouse warehouse = warehouseRepository.findByIdAndUserId(request.getWarehouseId(), sellerId)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
+                        "A product may only use a warehouse owned by its seller"));
+        if (!Boolean.TRUE.equals(warehouse.getActive())) {
+            throw new BadRequestException("An inactive warehouse cannot be used as a dispatch origin");
+        }
+        return null;
     }
 
     @Transactional(rollbackFor = IOException.class)
@@ -550,6 +599,7 @@ import java.util.stream.Collectors;
                 .harvestDate(product.getHarvestDate())
                 .lowStockThreshold(product.getLowStockThreshold())
                 .farmId(product.getFarmId())
+                .warehouseId(product.getSupplierWarehouseId())
                 .statusReason(product.getStatusReason())
                 .statusChangedAt(product.getStatusChangedAt())
                 .statusChangedBy(product.getStatusChangedBy())

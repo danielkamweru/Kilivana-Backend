@@ -44,6 +44,8 @@ public class OrderResponse {
     private PaymentStatus paymentStatus;
     @Schema(description = "Delivery address ID", example = "8")
     private Long addressId;
+    @Schema(description = "Selected platform pickup station ID", example = "3")
+    private Long pickupStationId;
     @Schema(description = "One-time buyer-entered pickup location for manually arranged pickup",
             example = "Outside Westlands Mall, near the main entrance")
     private String pickupLocation;

@@ -2,6 +2,8 @@ package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.logistics.dto.CreatePickupStationRequest;
+import com.kilivana.backend.logistics.dto.NearestPickupStationResponse;
 import com.kilivana.backend.logistics.dto.PickupStationResponse;
 import com.kilivana.backend.logistics.dto.SavePickupStationRequest;
 import com.kilivana.backend.logistics.dto.UserPickupStationResponse;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -67,6 +70,80 @@ public class PickupStationService {
     @PreAuthorize("isAuthenticated()")
     public boolean isPickupStationServiceAvailable() {
         return !pickupStationRepository.findByIsAvailableTrue().isEmpty();
+    }
+
+    @Transactional(readOnly = true)
+    public List<NearestPickupStationResponse> findNearest(double latitude, double longitude,
+                                                          double radiusKm, int limit) {
+        validateCoordinates(latitude, longitude);
+        if (!Double.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 100) {
+            throw new BadRequestException("radiusKm must be greater than 0 and at most 100");
+        }
+        if (limit < 1 || limit > 100) {
+            throw new BadRequestException("limit must be between 1 and 100");
+        }
+        return pickupStationRepository.findByIsAvailableTrue().stream()
+                .filter(station -> station.getLatitude() != null && station.getLongitude() != null)
+                .filter(station -> Double.isFinite(station.getLatitude())
+                        && Double.isFinite(station.getLongitude()))
+                .filter(station -> station.getLatitude() >= -90 && station.getLatitude() <= 90
+                        && station.getLongitude() >= -180 && station.getLongitude() <= 180)
+                .map(station -> NearestPickupStationResponse.builder()
+                        .id(station.getId())
+                        .name(station.getName())
+                        .address(station.getAddress())
+                        .latitude(station.getLatitude())
+                        .longitude(station.getLongitude())
+                        .region(station.getRegion())
+                        .isAvailable(station.getIsAvailable())
+                        .openingHours(station.getOpeningHours())
+                        .contactPhone(station.getContactPhone())
+                        .pickupInstructions(station.getPickupInstructions())
+                        .distanceKm(haversineKm(latitude, longitude,
+                                station.getLatitude(), station.getLongitude()))
+                        .build())
+                .filter(station -> station.getDistanceKm() <= radiusKm)
+                .sorted(java.util.Comparator.comparing(NearestPickupStationResponse::getDistanceKm))
+                .limit(limit)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public List<PickupStationResponse> getAllPickupStations() {
+        return pickupStationRepository.findAll().stream()
+                .map(PickupStationResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public PickupStationResponse createPickupStation(CreatePickupStationRequest request) {
+        PickupStation station = new PickupStation();
+        copyStationRequest(request, station);
+        station.setIsAvailable(request.getIsAvailable() == null || request.getIsAvailable());
+        return PickupStationResponse.fromEntity(pickupStationRepository.save(station));
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public PickupStationResponse updatePickupStation(Long stationId, CreatePickupStationRequest request) {
+        PickupStation station = pickupStationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("PickupStation", stationId));
+        copyStationRequest(request, station);
+        if (request.getIsAvailable() != null) {
+            station.setIsAvailable(request.getIsAvailable());
+        }
+        return PickupStationResponse.fromEntity(pickupStationRepository.save(station));
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void deactivatePickupStation(Long stationId) {
+        PickupStation station = pickupStationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("PickupStation", stationId));
+        station.setIsAvailable(false);
+        pickupStationRepository.save(station);
     }
 
     /**
@@ -189,5 +266,34 @@ public class PickupStationService {
                 station.getRegion(),
                 station.getIsAvailable()
         );
+    }
+
+    private static void copyStationRequest(CreatePickupStationRequest request, PickupStation station) {
+        validateCoordinates(request.getLatitude(), request.getLongitude());
+        station.setName(request.getName().trim());
+        station.setAddress(request.getAddress().trim());
+        station.setLatitude(request.getLatitude());
+        station.setLongitude(request.getLongitude());
+        station.setRegion(request.getRegion().trim());
+        station.setOpeningHours(request.getOpeningHours());
+        station.setContactPhone(request.getContactPhone());
+        station.setPickupInstructions(request.getPickupInstructions());
+    }
+
+    private static void validateCoordinates(double latitude, double longitude) {
+        if (!Double.isFinite(latitude) || !Double.isFinite(longitude)
+                || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new BadRequestException("Coordinates must be valid latitude/longitude values");
+        }
+    }
+
+    private static double haversineKm(double latitude1, double longitude1,
+                                      double latitude2, double longitude2) {
+        double latitudeDelta = Math.toRadians(latitude2 - latitude1);
+        double longitudeDelta = Math.toRadians(longitude2 - longitude1);
+        double a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
+                + Math.cos(Math.toRadians(latitude1)) * Math.cos(Math.toRadians(latitude2))
+                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
+        return 6371.0088 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

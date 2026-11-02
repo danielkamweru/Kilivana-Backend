@@ -6,13 +6,17 @@ import com.kilivana.backend.admin.entity.DriverProfile;
 import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.FarmerProfileRepository;
+import com.kilivana.backend.admin.repository.SupplierWarehouseRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.admin.entity.SupplierWarehouse;
 import com.kilivana.backend.logistics.entity.PickupStation;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.enums.SellerType;
+import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.dto.OrderItemRequest;
@@ -28,6 +32,8 @@ import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.service.LogisticsService;
@@ -68,6 +74,8 @@ public class OrderService {
     private final DriverProfileRepository driverProfileRepository;
     private final LogisticsService logisticsService;
     private final LogisticsJobRepository logisticsJobRepository;
+    private final FarmRepository farmRepository;
+    private final SupplierWarehouseRepository supplierWarehouseRepository;
 
     @PreAuthorize("@resourceAuthorization.order(#id) || @resourceAuthorization.orderSeller(#id)")
     public Order getOrderById(Long id) {
@@ -130,6 +138,16 @@ public class OrderService {
                              List<OrderItemRequest> items,
                              BigDecimal claimedSubtotal, BigDecimal claimedTotal,
                              String deliveryMethod, String pickupLocation) {
+        return createOrder(buyerId, addressId, deliveryFee, items, claimedSubtotal, claimedTotal,
+                deliveryMethod, pickupLocation, null);
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.buyer(#buyerId) || @resourceAuthorization.admin()")
+    public Order createOrder(Long buyerId, Long addressId, BigDecimal deliveryFee,
+                             List<OrderItemRequest> items,
+                             BigDecimal claimedSubtotal, BigDecimal claimedTotal,
+                             String deliveryMethod, String pickupLocation, Long pickupStationId) {
         if (!userRepository.existsById(buyerId)) {
             throw new BadRequestException("Buyer ID must exist");
         }
@@ -138,6 +156,7 @@ public class OrderService {
             throw new BadRequestException("Buyer ID must belong to a buyer, farmer, or supplier account");
         }
 
+        PickupStation selectedStation = null;
         // Validate delivery method and address/station
         if ("DOOR_DELIVERY".equalsIgnoreCase(deliveryMethod)) {
             if (pickupLocation != null && !pickupLocation.isBlank()) {
@@ -149,7 +168,16 @@ public class OrderService {
                 throw new BadRequestException("Address does not belong to this buyer");
             }
         } else if ("PICKUP_STATION".equalsIgnoreCase(deliveryMethod)) {
-            if (pickupLocation != null && !pickupLocation.isBlank()) {
+            if (pickupStationId != null) {
+                if (addressId != null || (pickupLocation != null && !pickupLocation.isBlank())) {
+                    throw new BadRequestException("Provide a pickup station ID without address or manual location");
+                }
+                selectedStation = pickupStationRepository.findById(pickupStationId)
+                        .orElseThrow(() -> new ResourceNotFoundException("PickupStation", pickupStationId));
+                if (!Boolean.TRUE.equals(selectedStation.getIsAvailable())) {
+                    throw new BadRequestException("Pickup station is not currently available");
+                }
+            } else if (pickupLocation != null && !pickupLocation.isBlank()) {
                 if (addressId != null) {
                     throw new BadRequestException("Provide a pickup station ID or manual pickup location, not both");
                 }
@@ -161,9 +189,9 @@ public class OrderService {
                 if (addressId == null) {
                     throw new BadRequestException("Pickup station ID or manual pickup location is required");
                 }
-                PickupStation station = pickupStationRepository.findById(addressId)
+                selectedStation = pickupStationRepository.findById(addressId)
                         .orElseThrow(() -> new ResourceNotFoundException("PickupStation", addressId));
-                if (!station.getIsAvailable()) {
+                if (!Boolean.TRUE.equals(selectedStation.getIsAvailable())) {
                     throw new BadRequestException("Pickup station is not currently available");
                 }
             }
@@ -235,6 +263,11 @@ public class OrderService {
                 .deliveryFee(fee)
                 .total(total)
                 .addressId(addressId)
+                .pickupStationId(pickupStationId)
+                .pickupStationNameSnapshot(selectedStation == null ? null : selectedStation.getName())
+                .pickupStationAddressSnapshot(selectedStation == null ? null : selectedStation.getAddress())
+                .pickupStationLatitudeSnapshot(selectedStation == null ? null : selectedStation.getLatitude())
+                .pickupStationLongitudeSnapshot(selectedStation == null ? null : selectedStation.getLongitude())
                 .pickupLocation(pickupLocation)
                 .deliveryMethod(deliveryMethod)
                 .code(nextOrderCode())
@@ -243,6 +276,7 @@ public class OrderService {
 
         for (OrderItemRequest item : items) {
             Product product = locked.get(item.getProductId());
+            DispatchOriginSnapshot origin = dispatchOrigin(product);
             orderItemRepository.save(OrderItem.builder()
                     .orderId(saved.getId())
                     .productId(product.getId())
@@ -252,12 +286,73 @@ public class OrderService {
                     .quantity(item.getQuantity())
                     .unitPrice(product.getPrice())
                     .subtotal(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .dispatchLocationIdSnapshot(origin.id())
+                    .dispatchLocationTypeSnapshot(origin.type())
+                    .dispatchLocationNameSnapshot(origin.name())
+                    .dispatchAddressSnapshot(origin.address())
+                    .dispatchCountySnapshot(origin.county())
+                    .dispatchLatitudeSnapshot(origin.latitude())
+                    .dispatchLongitudeSnapshot(origin.longitude())
                     .build());
         }
 
         orderEventRepository.save(OrderEvent.builder()
                 .orderId(saved.getId()).status(saved.getStatus()).build());
         return saved;
+    }
+
+    private DispatchOriginSnapshot dispatchOrigin(Product product) {
+        if (product.getSellerType() == SellerType.FARMER) {
+            if (product.getSupplierWarehouseId() != null) {
+                throw new BadRequestException("Farmer products cannot use a supplier warehouse");
+            }
+            if (product.getFarmId() == null) {
+                return DispatchOriginSnapshot.empty();
+            }
+            Farm farm = farmRepository.findById(product.getFarmId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Farm", product.getFarmId()));
+            if (!product.getSellerId().equals(farm.getFarmerId())) {
+                throw new BadRequestException("Product dispatch farm does not belong to its seller");
+            }
+            if (farm.getStatus() != FarmStatus.ACTIVE) {
+                throw new BadRequestException("Product dispatch farm is inactive");
+            }
+            requireDispatchCoordinates(farm.getLatitude(), farm.getLongitude(), farm.getAddress());
+            return new DispatchOriginSnapshot(farm.getId(), "FARM", farm.getName(), farm.getAddress(),
+                    farm.getCounty(), farm.getLatitude(), farm.getLongitude());
+        }
+
+        if (product.getFarmId() != null) {
+            throw new BadRequestException("Supplier products cannot use a farmer's farm");
+        }
+        if (product.getSupplierWarehouseId() == null) {
+            return DispatchOriginSnapshot.empty();
+        }
+        SupplierWarehouse warehouse = supplierWarehouseRepository
+                .findByIdAndUserId(product.getSupplierWarehouseId(), product.getSellerId())
+                .orElseThrow(() -> new BadRequestException(
+                        "Product dispatch warehouse does not belong to its supplier"));
+        if (!Boolean.TRUE.equals(warehouse.getActive())) {
+            throw new BadRequestException("Product dispatch warehouse is inactive");
+        }
+        requireDispatchCoordinates(warehouse.getLatitude(), warehouse.getLongitude(), warehouse.getAddress());
+        return new DispatchOriginSnapshot(warehouse.getId(), "WAREHOUSE", warehouse.getName(),
+                warehouse.getAddress(), warehouse.getCounty(), warehouse.getLatitude(), warehouse.getLongitude());
+    }
+
+    private static void requireDispatchCoordinates(Double latitude, Double longitude, String address) {
+        if (address == null || address.isBlank() || latitude == null || longitude == null
+                || !Double.isFinite(latitude) || !Double.isFinite(longitude)
+                || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new BadRequestException("Product dispatch location requires an address and valid coordinates");
+        }
+    }
+
+    private record DispatchOriginSnapshot(Long id, String type, String name, String address,
+                                          String county, Double latitude, Double longitude) {
+        private static DispatchOriginSnapshot empty() {
+            return new DispatchOriginSnapshot(null, null, null, null, null, null, null);
+        }
     }
 
     /**
@@ -392,6 +487,7 @@ public class OrderService {
                 .paymentStatus(order.getPaymentStatus())
                 .addressId(order.getAddressId())
                 .pickupLocation(order.getPickupLocation())
+                .pickupStationId(order.getPickupStationId())
                 .cancellationReason(order.getCancellationReason())
                 .driverId(job == null ? null : job.getDriverId())
                 .driverName(driver == null ? null : driver.getName())
@@ -484,6 +580,12 @@ public class OrderService {
 
     private String orderAddress(Long orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow();
+        if (order.getPickupStationId() != null) {
+            return order.getPickupStationAddressSnapshot();
+        }
+        if (order.getPickupStationAddressSnapshot() != null) {
+            return order.getPickupStationAddressSnapshot();
+        }
         if (order.getPickupLocation() != null && !order.getPickupLocation().isBlank()) {
             return order.getPickupLocation();
         }

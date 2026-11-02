@@ -59,6 +59,8 @@ public class ProductResponse {
     private Integer lowStockThreshold;
     @Schema(description = "Farm ID if product is linked to a certified farm", example = "3")
     private Long farmId;
+    @Schema(description = "Supplier warehouse dispatch origin", example = "8")
+    private Long warehouseId;
     @Schema(description = "Reason for status change", example = "Failed quality inspection")
     private String statusReason;
     @Schema(description = "Timestamp when status was last changed", example = "2024-01-15T12:00:00")

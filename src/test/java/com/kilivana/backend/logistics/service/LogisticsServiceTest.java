@@ -2,18 +2,23 @@ package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.admin.repository.NotificationRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
+import com.kilivana.backend.logistics.entity.DeliveryTrip;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
+import com.kilivana.backend.logistics.repository.DeliveryEventRepository;
+import com.kilivana.backend.logistics.repository.DeliveryTripRepository;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import com.kilivana.backend.logistics.service.TrackingStopService;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +69,18 @@ class LogisticsServiceTest {
     /** Only a driver account can be assigned to a job. */
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private DriverProfileRepository driverProfileRepository;
+
+    @Mock
+    private OrderItemRepository orderItemRepository;
+
+    @Mock
+    private DeliveryEventRepository deliveryEventRepository;
+
+    @Mock
+    private DeliveryTripRepository deliveryTripRepository;
 
     @Mock
     private NotificationRepository notificationRepository;
@@ -134,6 +151,55 @@ class LogisticsServiceTest {
 
         assertThat(saved.getId()).isNull();
         assertThat(saved.getOrderId()).isEqualTo(1L);
+    }
+
+    @Test
+    void acceptingAssignedJobCreatesAnIndependentActiveTrip() {
+        noopJobRepo();
+        LogisticsJob assigned = LogisticsJob.builder()
+                .id(1L)
+                .orderId(1L)
+                .driverId(5L)
+                .status(DeliveryStatus.ASSIGNED)
+                .build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(assigned));
+        when(deliveryTripRepository.findFirstByDeliveryJobIdAndDriverIdAndStatusOrderByCreatedAtDesc(
+                1L, 5L, com.kilivana.backend.logistics.enums.DeliveryTripStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(deliveryTripRepository.save(any(DeliveryTrip.class))).thenAnswer(invocation -> {
+            DeliveryTrip trip = invocation.getArgument(0);
+            trip.setId(91L);
+            return trip;
+        });
+
+        LogisticsJob accepted = logisticsService.acceptJob(1L, 5L);
+
+        assertThat(accepted.getStatus()).isEqualTo(DeliveryStatus.ACCEPTED);
+        org.mockito.ArgumentCaptor<DeliveryTrip> tripCaptor =
+                org.mockito.ArgumentCaptor.forClass(DeliveryTrip.class);
+        org.mockito.Mockito.verify(deliveryTripRepository).save(tripCaptor.capture());
+        assertThat(tripCaptor.getValue().getId()).isEqualTo(91L);
+        assertThat(tripCaptor.getValue().getDeliveryJobId()).isEqualTo(1L);
+        assertThat(tripCaptor.getValue().getDriverId()).isEqualTo(5L);
+        assertThat(tripCaptor.getValue().getStartedAt()).isNotNull();
+    }
+
+    @Test
+    void rejectingAssignedJobReturnsItToDispatchAndReleasesDriver() {
+        noopJobRepo();
+        LogisticsJob assigned = LogisticsJob.builder()
+                .id(1L).orderId(1L).driverId(5L).status(DeliveryStatus.ASSIGNED).build();
+        var profile = com.kilivana.backend.admin.entity.DriverProfile.builder()
+                .userId(5L).availabilityStatus(com.kilivana.backend.common.enums.DriverStatus.ON_DELIVERY).build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(assigned));
+        when(driverProfileRepository.findByUserId(5L)).thenReturn(Optional.of(profile));
+
+        LogisticsJob rejected = logisticsService.rejectJob(1L, 5L, "Vehicle issue");
+
+        assertThat(rejected.getStatus()).isEqualTo(DeliveryStatus.PENDING_ASSIGNMENT);
+        assertThat(rejected.getDriverId()).isNull();
+        assertThat(profile.getAvailabilityStatus()).isEqualTo(com.kilivana.backend.common.enums.DriverStatus.AVAILABLE);
+        org.mockito.Mockito.verify(driverProfileRepository).save(profile);
     }
 
     @Test

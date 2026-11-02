@@ -77,6 +77,9 @@ public class ProductRequest {
     @Schema(description = "Farm ID if product is linked to a certified farm", example = "3")
     private Long farmId;
 
+    @Schema(description = "Supplier warehouse dispatch origin", example = "8")
+    private Long warehouseId;
+
     @Size(max = 500, message = "Status reason must be at most 500 characters")
     @Schema(description = "Reason for status change (suspended/rejected)", example = "Failed quality inspection")
     private String statusReason;

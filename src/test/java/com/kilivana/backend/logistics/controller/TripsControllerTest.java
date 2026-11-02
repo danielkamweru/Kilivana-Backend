@@ -4,6 +4,7 @@ import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
+import com.kilivana.backend.logistics.entity.DeliveryTrip;
 import com.kilivana.backend.logistics.service.DriverLocationService;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import org.junit.jupiter.api.AfterEach;
@@ -73,6 +74,30 @@ class TripsControllerTest {
 
         assertThatThrownBy(() -> controller.getCurrentTrip())
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void tripLookupUsesTheAuthenticatedDriver() {
+        DeliveryTrip trip = DeliveryTrip.builder().id(21L).deliveryJobId(9L).driverId(17L).build();
+        when(logisticsService.getTripForDriver(21L, 17L)).thenReturn(trip);
+
+        var response = controller.getTrip(21L);
+
+        assertThat(response.getBody().getData()).isSameAs(trip);
+        verify(logisticsService).getTripForDriver(21L, 17L);
+    }
+
+    @Test
+    void tripStatusAdvancesItsLinkedDeliveryJob() {
+        DeliveryTrip trip = DeliveryTrip.builder().id(21L).deliveryJobId(9L).driverId(17L).build();
+        LogisticsJob updated = LogisticsJob.builder().id(9L).status(DeliveryStatus.EN_ROUTE_TO_PICKUP).build();
+        when(logisticsService.getTripForDriver(21L, 17L)).thenReturn(trip);
+        when(logisticsService.updateJobStatus(9L, DeliveryStatus.EN_ROUTE_TO_PICKUP)).thenReturn(updated);
+
+        var response = controller.updateTripStatus(21L, "en_route_to_pickup");
+
+        assertThat(response.getBody().getData()).isSameAs(updated);
+        verify(logisticsService).updateJobStatus(9L, DeliveryStatus.EN_ROUTE_TO_PICKUP);
     }
 
     @Test

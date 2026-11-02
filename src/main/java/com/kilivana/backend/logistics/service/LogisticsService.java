@@ -2,11 +2,17 @@ package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.entity.Notification;
+import com.kilivana.backend.admin.entity.DriverProfile;
 import com.kilivana.backend.admin.repository.NotificationRepository;
+import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
+import com.kilivana.backend.common.enums.DriverStatus;
+import com.kilivana.backend.common.enums.KycStatus;
 import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.UserRole;
+import com.kilivana.backend.common.enums.UserStatus;
+import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ConflictException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
@@ -14,14 +20,21 @@ import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
+import com.kilivana.backend.logistics.entity.DeliveryEvent;
+import com.kilivana.backend.logistics.entity.DeliveryTrip;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
+import com.kilivana.backend.logistics.dto.BuyerDeliverySummaryResponse;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
 import com.kilivana.backend.logistics.entity.TrackingEvent;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.repository.DeliveryEventRepository;
+import com.kilivana.backend.logistics.repository.DeliveryTripRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
 import com.kilivana.backend.logistics.service.TrackingStopService;
+import com.kilivana.backend.logistics.enums.DeliveryTripStatus;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -70,6 +83,10 @@ public class LogisticsService {
     private final UserRepository userRepository;
     private final TrackingStopService trackingStopService;
     private final NotificationRepository notificationRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final DriverProfileRepository driverProfileRepository;
+    private final DeliveryEventRepository deliveryEventRepository;
+    private final DeliveryTripRepository deliveryTripRepository;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
@@ -95,7 +112,7 @@ public class LogisticsService {
                 .orderId(orderId)
                 .pickupAddress(pickupAddress)
                 .destinationAddress(destinationAddress)
-                .payoutAmount(sellerPayout(order))
+                .payoutAmount(sellerPayout(order.getSubtotal()))
                 .status(DeliveryStatus.PENDING_ASSIGNMENT)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(job);
@@ -113,7 +130,14 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order", job.getOrderId()));
         LogisticsJob toSave = LogisticsJob.builder()
                 .orderId(job.getOrderId())
+                .sellerId(job.getSellerId())
+                .buyerId(job.getBuyerId())
                 .pickupAddress(job.getPickupAddress())
+                .pickupFarmId(job.getPickupFarmId())
+                .pickupWarehouseId(job.getPickupWarehouseId())
+                .pickupStationId(job.getPickupStationId())
+                .destinationType(job.getDestinationType())
+                .deliveryInstructions(job.getDeliveryInstructions())
                 .destinationAddress(job.getDestinationAddress())
                 .pickupLatitude(job.getPickupLatitude())
                 .pickupLongitude(job.getPickupLongitude())
@@ -125,8 +149,8 @@ public class LogisticsService {
                 // caller: a client-supplied figure is only accepted when it agrees with
                 // what the order actually collected.
                 .payoutAmount(job.getPayoutAmount() == null
-                        ? sellerPayout(order)
-                        : checkPayout(job.getPayoutAmount(), order))
+                        ? sellerPayout(payoutBasis(order, job.getSellerId()))
+                        : checkPayout(job.getPayoutAmount(), payoutBasis(order, job.getSellerId())))
                 .scheduledPickupAt(job.getScheduledPickupAt())
                 .scheduledDropoffAt(job.getScheduledDropoffAt())
                 .distanceKm(job.getDistanceKm())
@@ -135,6 +159,8 @@ public class LogisticsService {
                 .driverId(null)
                 .build();
         LogisticsJob saved = logisticsJobRepository.save(toSave);
+        recordDeliveryEvent(saved, null, "DELIVERY_JOB_CREATED", currentActorId(),
+                com.kilivana.backend.security.CurrentUser.getRole(), null, null);
         // A job is created with a live handover code so the buyer can be told it
         // before the driver is even assigned. The code is generated here rather
         // than on the IN_TRANSIT transition so a job that never reaches transit
@@ -160,24 +186,38 @@ public class LogisticsService {
      * What is released to the seller when the delivery completes:
      * what the buyer paid for the goods, less the platform's share.
      */
-    private static BigDecimal sellerPayout(Order order) {
-        BigDecimal fee = order.getSubtotal().multiply(PLATFORM_FEE_RATE)
+    private static BigDecimal sellerPayout(BigDecimal subtotal) {
+        BigDecimal fee = subtotal.multiply(PLATFORM_FEE_RATE)
                 .setScale(2, RoundingMode.HALF_UP);
-        return order.getSubtotal().subtract(fee).setScale(2, RoundingMode.HALF_UP);
+        return subtotal.subtract(fee).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
      * A caller-supplied release figure is accepted only when it
      * matches the order's own arithmetic, rounded to the cent.
      */
-    private static BigDecimal checkPayout(BigDecimal claimed, Order order) {
-        BigDecimal expected = sellerPayout(order);
+    private static BigDecimal checkPayout(BigDecimal claimed, BigDecimal subtotal) {
+        BigDecimal expected = sellerPayout(subtotal);
         if (claimed.compareTo(BigDecimal.ZERO) < 0
                 || claimed.subtract(expected).abs().compareTo(new BigDecimal("0.01")) > 0) {
             throw new BadRequestException("Payout must equal the order subtotal less the "
                     + "platform fee (" + PLATFORM_FEE_RATE + "), which is " + expected);
         }
         return expected.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal payoutBasis(Order order, Long sellerId) {
+        if (sellerId == null) {
+            return order.getSubtotal();
+        }
+        BigDecimal sellerSubtotal = orderItemRepository.findByOrderId(order.getId()).stream()
+                .filter(item -> sellerId.equals(item.getSellerId()))
+                .map(item -> item.getSubtotal() == null ? BigDecimal.ZERO : item.getSubtotal())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (sellerSubtotal.signum() <= 0) {
+            throw new BadRequestException("Delivery job seller has no payable order items");
+        }
+        return sellerSubtotal;
     }
 
     /**
@@ -226,17 +266,23 @@ public class LogisticsService {
                 job.setDeliveryOtpLockedUntil(LocalDateTime.now().plusMinutes(otpLockoutMinutes));
                 job.setDeliveryOtpAttempts(0);
                 logisticsJobRepository.save(job);
+                recordDeliveryEvent(job, null, "DELIVERY_CODE_VERIFICATION_FAILED", currentActorId(),
+                        com.kilivana.backend.security.CurrentUser.getRole(), "attempt limit reached", null);
                 throw new TooManyRequestsException(
                         "Too many incorrect delivery codes. The code is locked for "
                                 + otpLockoutMinutes + " minutes.");
             }
             logisticsJobRepository.save(job);
+            recordDeliveryEvent(job, null, "DELIVERY_CODE_VERIFICATION_FAILED", currentActorId(),
+                    com.kilivana.backend.security.CurrentUser.getRole(), "incorrect code", null);
             throw new BadRequestException("Incorrect delivery code");
         }
         job.setDeliveryOtpHash(null);
         job.setDeliveryOtpExpiresAt(null);
         job.setDeliveryOtpVerified(true);
         logisticsJobRepository.save(job);
+        recordDeliveryEvent(job, null, "DELIVERY_CODE_VERIFIED", currentActorId(),
+                com.kilivana.backend.security.CurrentUser.getRole(), null, null);
     }
 
     @PreAuthorize("@resourceAuthorization.jobRead(#id)")
@@ -263,6 +309,46 @@ public class LogisticsService {
         return logisticsJobRepository.findByOrderId(orderId);
     }
 
+    @Transactional(readOnly = true)
+    @PreAuthorize("@resourceAuthorization.order(#orderId)")
+    public BuyerDeliverySummaryResponse getBuyerDeliverySummary(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        return BuyerDeliverySummaryResponse.builder()
+                .orderId(order.getId())
+                .orderStatus(order.getStatus() == null ? null : order.getStatus().wire())
+                .deliveries(deliverySummaries(logisticsJobRepository.findByOrderId(orderId)))
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@resourceAuthorization.sellerOrderSearch(#sellerId) "
+            + "and @resourceAuthorization.orderSeller(#orderId)")
+    public BuyerDeliverySummaryResponse getSellerDeliverySummary(Long orderId, Long sellerId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        List<LogisticsJob> sellerJobs = logisticsJobRepository.findByOrderIdAndSellerId(orderId, sellerId);
+        return BuyerDeliverySummaryResponse.builder()
+                .orderId(order.getId())
+                .orderStatus(order.getStatus() == null ? null : order.getStatus().wire())
+                .deliveries(deliverySummaries(sellerJobs))
+                .build();
+    }
+
+    private static List<BuyerDeliverySummaryResponse.Delivery> deliverySummaries(List<LogisticsJob> jobs) {
+        return jobs.stream()
+                .map(job -> BuyerDeliverySummaryResponse.Delivery.builder()
+                        .deliveryJobId(job.getId())
+                        .status(job.getStatus().wire())
+                        .destinationType(job.getDestinationType())
+                        .assignedAt(job.getAssignedAt())
+                        .acceptedAt(job.getAcceptedAt())
+                        .pickedUpAt(job.getPickedUpAt())
+                        .completedAt(job.getCompletedAt())
+                        .build())
+                .toList();
+    }
+
     @PreAuthorize("@resourceAuthorization.admin()")
     public List<LogisticsJob> getJobsByStatus(DeliveryStatus status) {
         return logisticsJobRepository.findByStatus(status);
@@ -285,10 +371,24 @@ public class LogisticsService {
         if (driver.getRole() != UserRole.DRIVER) {
             throw new BadRequestException("User " + driverId + " is not a driver");
         }
+        DriverProfile profile = driverProfileRepository.findByUserId(driverId)
+                .orElseThrow(() -> new BadRequestException("Driver has no verified driver profile"));
+        if (driver.getStatus() != UserStatus.ACTIVE
+                || driver.getVerificationStatus() != VerificationStatus.VERIFIED
+                || profile.getKycStatus() != KycStatus.VERIFIED
+                || profile.getAvailabilityStatus() != DriverStatus.AVAILABLE
+                || !logisticsJobRepository.findActiveByDriverId(driverId).isEmpty()) {
+            throw new BadRequestException("Driver is not active, verified and available");
+        }
         job.setDriverId(driverId);
         job.setStatus(DeliveryStatus.ASSIGNED);
+        job.setAssignedAt(LocalDateTime.now());
         LogisticsJob saved = logisticsJobRepository.save(job);
         recordStatusEvent(saved, DeliveryStatus.ASSIGNED);
+        recordDeliveryEvent(saved, null, "DRIVER_ASSIGNED", currentActorId(),
+                com.kilivana.backend.security.CurrentUser.getRole(), null, null);
+        profile.setAvailabilityStatus(DriverStatus.ON_DELIVERY);
+        driverProfileRepository.save(profile);
         syncOrderStatus(saved);
         if (notificationRepository != null) {
             notificationRepository.save(Notification.builder()
@@ -306,15 +406,26 @@ public class LogisticsService {
     public LogisticsJob acceptJob(Long jobId, Long driverId) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
-        if (!job.getDriverId().equals(driverId)) {
+        if (!java.util.Objects.equals(job.getDriverId(), driverId)) {
             throw new BadRequestException("Driver not assigned to this job");
         }
         if (job.getStatus() != DeliveryStatus.ASSIGNED) {
             throw new BadRequestException("Job cannot be accepted in current status");
         }
         job.setStatus(DeliveryStatus.ACCEPTED);
+        job.setAcceptedAt(LocalDateTime.now());
         LogisticsJob saved = logisticsJobRepository.save(job);
         recordStatusEvent(saved, DeliveryStatus.ACCEPTED);
+        DeliveryTrip trip = deliveryTripRepository
+                .findFirstByDeliveryJobIdAndDriverIdAndStatusOrderByCreatedAtDesc(
+                        saved.getId(), driverId, DeliveryTripStatus.ACTIVE)
+                .orElseGet(() -> deliveryTripRepository.save(DeliveryTrip.builder()
+                        .deliveryJobId(saved.getId())
+                        .driverId(driverId)
+                        .status(DeliveryTripStatus.ACTIVE)
+                        .startedAt(LocalDateTime.now())
+                        .build()));
+        recordDeliveryEvent(saved, trip.getId(), "DRIVER_ACCEPTED", driverId, UserRole.DRIVER.name(), null, null);
         syncOrderStatus(saved);
         if (notificationRepository != null && saved.getDriverId() != null) {
             notificationRepository.save(Notification.builder()
@@ -325,6 +436,50 @@ public class LogisticsService {
                     .build());
         }
         return saved;
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId) and @resourceAuthorization.driver(#driverId)")
+    public LogisticsJob rejectJob(Long jobId, Long driverId, String reason) {
+        LogisticsJob job = logisticsJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
+        if (!java.util.Objects.equals(job.getDriverId(), driverId)) {
+            throw new BadRequestException("Driver not assigned to this job");
+        }
+        if (job.getStatus() != DeliveryStatus.ASSIGNED) {
+            throw new BadRequestException("Only an assigned job can be rejected");
+        }
+        job.setDriverId(null);
+        job.setStatus(DeliveryStatus.PENDING_ASSIGNMENT);
+        job.setAssignedAt(null);
+        LogisticsJob saved = logisticsJobRepository.save(job);
+        driverProfileRepository.findByUserId(driverId).ifPresent(profile -> {
+            if (profile.getAvailabilityStatus() == DriverStatus.ON_DELIVERY) {
+                profile.setAvailabilityStatus(DriverStatus.AVAILABLE);
+                driverProfileRepository.save(profile);
+            }
+        });
+        recordStatusEvent(saved, DeliveryStatus.PENDING_ASSIGNMENT);
+        recordDeliveryEvent(saved, null, "DRIVER_REJECTED", driverId, UserRole.DRIVER.name(),
+                reason == null || reason.isBlank() ? null : reason.trim(), null);
+        return saved;
+    }
+
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
+    public DeliveryTrip getTripForDriver(Long tripId, Long driverId) {
+        DeliveryTrip trip = deliveryTripRepository.findById(tripId)
+                .orElseThrow(() -> new ResourceNotFoundException("DeliveryTrip", tripId));
+        if (!java.util.Objects.equals(trip.getDriverId(), driverId)) {
+            throw new com.kilivana.backend.common.exception.ForbiddenException(
+                    "Only the assigned driver can access this trip");
+        }
+        return trip;
+    }
+
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
+    public List<DeliveryTrip> getTripsForDriver(Long driverId) {
+        return deliveryTripRepository.findByDriverIdAndStatusOrderByCreatedAtDesc(
+                driverId, DeliveryTripStatus.ACTIVE);
     }
 
     /** The states a job may move to from each state, in order. */
@@ -366,6 +521,13 @@ public class LogisticsService {
                     + status.wire());
         }
         job.setStatus(status);
+        if (status == DeliveryStatus.PICKED_UP) {
+            job.setPickedUpAt(LocalDateTime.now());
+        } else if (status == DeliveryStatus.CANCELLED) {
+            job.setCancelledAt(LocalDateTime.now());
+        }
+        DeliveryTrip activeTrip = findActiveTrip(job);
+        updateTripStatus(activeTrip, status);
         if (status == DeliveryStatus.IN_TRANSIT && job.getDeliveryOtpHash() == null) {
             String otp = generateOtp();
             job.setDeliveryOtpHash(passwordEncoder.encode(otp));
@@ -374,12 +536,21 @@ public class LogisticsService {
             LogisticsJob saved = logisticsJobRepository.save(job);
             deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
             recordStatusEvent(saved, status);
+            recordDeliveryEvent(saved, activeTrip == null ? null : activeTrip.getId(),
+                    "DELIVERY_STATUS_" + status.name(), currentActorId(),
+                    com.kilivana.backend.security.CurrentUser.getRole(), null, null);
             syncOrderStatus(saved);
             return saved;
         }
         LogisticsJob saved = logisticsJobRepository.save(job);
         recordStatusEvent(saved, status);
+        recordDeliveryEvent(saved, activeTrip == null ? null : activeTrip.getId(),
+                "DELIVERY_STATUS_" + status.name(), currentActorId(),
+                com.kilivana.backend.security.CurrentUser.getRole(), null, null);
         syncOrderStatus(saved);
+        if (status == DeliveryStatus.CANCELLED || status == DeliveryStatus.FAILED) {
+            releaseDriver(saved);
+        }
         // Live tracking stops the moment the job reaches a terminal state, so subscribers
         // are told to stop animating rather than waiting for a fix that will never come.
         trackingStopService.maybeStopTracking(saved.getId());
@@ -392,6 +563,55 @@ public class LogisticsService {
                 .status(status)
                 .driverId(job.getDriverId())
                 .build());
+    }
+
+    private void recordDeliveryEvent(LogisticsJob job, Long tripId, String eventType,
+                                     Long actorId, String actorRole, String reason, String metadata) {
+        deliveryEventRepository.save(DeliveryEvent.builder()
+                .deliveryJobId(job.getId())
+                .tripId(tripId)
+                .eventType(eventType)
+                .actorId(actorId)
+                .actorRole(actorRole)
+                .reason(reason)
+                .metadata(metadata)
+                .build());
+    }
+
+    private DeliveryTrip findActiveTrip(LogisticsJob job) {
+        if (job.getDriverId() == null) {
+            return null;
+        }
+        return deliveryTripRepository
+                .findFirstByDeliveryJobIdAndDriverIdAndStatusOrderByCreatedAtDesc(
+                        job.getId(), job.getDriverId(), DeliveryTripStatus.ACTIVE)
+                .orElse(null);
+    }
+
+    private void updateTripStatus(DeliveryTrip trip, DeliveryStatus status) {
+        if (trip == null) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (status == DeliveryStatus.PICKED_UP) {
+            trip.setPickedUpAt(now);
+        } else if (status == DeliveryStatus.DELIVERED) {
+            trip.setStatus(DeliveryTripStatus.COMPLETED);
+            trip.setCompletedAt(now);
+        } else if (status == DeliveryStatus.CANCELLED) {
+            trip.setStatus(DeliveryTripStatus.CANCELLED);
+            trip.setCompletedAt(now);
+        } else if (status == DeliveryStatus.FAILED) {
+            trip.setStatus(DeliveryTripStatus.FAILED);
+            trip.setCompletedAt(now);
+        }
+        deliveryTripRepository.save(trip);
+    }
+
+    private static Long currentActorId() {
+        org.springframework.security.core.Authentication authentication =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getPrincipal() instanceof Long id ? id : null;
     }
 
     /**
@@ -434,8 +654,15 @@ public class LogisticsService {
         }
         job.setStatus(DeliveryStatus.CANCELLED);
         job.setCancellationReason(cancellationReason);
+        job.setCancelledAt(LocalDateTime.now());
+        DeliveryTrip activeTrip = findActiveTrip(job);
+        updateTripStatus(activeTrip, DeliveryStatus.CANCELLED);
         LogisticsJob saved = logisticsJobRepository.save(job);
         recordStatusEvent(saved, DeliveryStatus.CANCELLED);
+        recordDeliveryEvent(saved, activeTrip == null ? null : activeTrip.getId(),
+                "DELIVERY_CANCELLED", currentActorId(),
+                com.kilivana.backend.security.CurrentUser.getRole(), cancellationReason, null);
+        releaseDriver(saved);
         trackingStopService.maybeStopTracking(saved.getId());
         return saved;
     }
@@ -517,11 +744,29 @@ public class LogisticsService {
         ProofOfDelivery savedProof = proofOfDeliveryRepository.save(toSave);
         job.setDeliveryOtpVerified(true);
         job.setStatus(DeliveryStatus.DELIVERED);
+        job.setCompletedAt(LocalDateTime.now());
+        DeliveryTrip activeTrip = findActiveTrip(job);
+        updateTripStatus(activeTrip, DeliveryStatus.DELIVERED);
         logisticsJobRepository.save(job);
         recordStatusEvent(job, DeliveryStatus.DELIVERED);
+        recordDeliveryEvent(job, activeTrip == null ? null : activeTrip.getId(),
+                "DELIVERY_COMPLETED", currentActorId(),
+                com.kilivana.backend.security.CurrentUser.getRole(), null, null);
+        releaseDriver(job);
         syncOrderStatus(job);
         trackingStopService.maybeStopTracking(job.getId());
         return savedProof;
+    }
+
+    private void releaseDriver(LogisticsJob job) {
+        if (job.getDriverId() != null) {
+            driverProfileRepository.findByUserId(job.getDriverId()).ifPresent(profile -> {
+                if (profile.getAvailabilityStatus() == DriverStatus.ON_DELIVERY) {
+                    profile.setAvailabilityStatus(DriverStatus.AVAILABLE);
+                    driverProfileRepository.save(profile);
+                }
+            });
+        }
     }
 
     @PreAuthorize("@resourceAuthorization.admin()")

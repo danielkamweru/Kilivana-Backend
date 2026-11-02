@@ -8,9 +8,12 @@ import com.kilivana.backend.logistics.dto.LocationUpdateRequest;
 import com.kilivana.backend.logistics.dto.LocationUpdateResponse;
 import com.kilivana.backend.logistics.entity.DriverLatestLocation;
 import com.kilivana.backend.logistics.entity.DriverLocation;
+import com.kilivana.backend.logistics.entity.DeliveryTrip;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
+import com.kilivana.backend.logistics.enums.DeliveryTripStatus;
 import com.kilivana.backend.logistics.repository.DriverLatestLocationRepository;
 import com.kilivana.backend.logistics.repository.DriverLocationRepository;
+import com.kilivana.backend.logistics.repository.DeliveryTripRepository;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DriverLocationService {
 
     private final LogisticsJobRepository logisticsJobRepository;
+    private final DeliveryTripRepository deliveryTripRepository;
     private final DriverLocationRepository driverLocationRepository;
     private final DriverLatestLocationRepository latestRepository;
     private final LocationValidator validator;
@@ -45,6 +49,7 @@ public class DriverLocationService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DriverLocationService.class);
 
     public DriverLocationService(LogisticsJobRepository logisticsJobRepository,
+                                 DeliveryTripRepository deliveryTripRepository,
                                  DriverLocationRepository driverLocationRepository,
                                  DriverLatestLocationRepository latestRepository,
                                  LocationValidator validator,
@@ -52,6 +57,7 @@ public class DriverLocationService {
                                  TrackingAuthorizationService authorizationService,
                                  TrackingBroadcastService broadcastService) {
         this.logisticsJobRepository = logisticsJobRepository;
+        this.deliveryTripRepository = deliveryTripRepository;
         this.driverLocationRepository = driverLocationRepository;
         this.latestRepository = latestRepository;
         this.validator = validator;
@@ -83,6 +89,24 @@ public class DriverLocationService {
      */
     @Transactional
     public LocationUpdateResponse submitLocation(Long driverId, LocationUpdateRequest request) {
+        return persistLocation(driverId, request, null);
+    }
+
+    @Transactional
+    public LocationUpdateResponse submitLocationForTrip(Long driverId, Long tripId,
+                                                        LocationUpdateRequest request) {
+        DeliveryTrip trip = deliveryTripRepository.findById(tripId)
+                .orElseThrow(() -> new BadRequestException("Delivery trip not found"));
+        if (!driverId.equals(trip.getDriverId()) || trip.getStatus() != DeliveryTripStatus.ACTIVE) {
+            throw new BadRequestException("You do not have an active trip with this delivery");
+        }
+        request.setTripId(trip.getDeliveryJobId());
+        LocationUpdateResponse response = persistLocation(driverId, request, trip.getId());
+        response.setTripId(trip.getId());
+        return response;
+    }
+
+    private LocationUpdateResponse persistLocation(Long driverId, LocationUpdateRequest request, Long tripId) {
         validator.validateBounds(request);
 
         LogisticsJob job = logisticsJobRepository.findById(request.getTripId())
@@ -111,6 +135,7 @@ public class DriverLocationService {
 
         DriverLocation fix = DriverLocation.builder()
                 .logisticsJobId(request.getTripId())
+                .tripId(tripId)
                 .driverId(driverId)
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
@@ -134,8 +159,16 @@ public class DriverLocationService {
                 .clientTimestamp(saved.getClientTimestamp())
                 .build();
         latestRepository.save(latest);
+        if (tripId != null) {
+            DeliveryTrip trip = deliveryTripRepository.findById(tripId)
+                    .orElseThrow(() -> new BadRequestException("Delivery trip not found"));
+            trip.setLastLatitude(request.getLatitude());
+            trip.setLastLongitude(request.getLongitude());
+            trip.setLastLocationUpdatedAt(saved.getRecordedAt());
+            deliveryTripRepository.save(trip);
+        }
 
-        LocationEvent event = broadcastService.buildEvent(request.getTripId());
+        LocationEvent event = broadcastService.buildEvent(request.getTripId(), tripId);
         if (event != null) {
             broadcastService.push(request.getTripId(), event);
         }

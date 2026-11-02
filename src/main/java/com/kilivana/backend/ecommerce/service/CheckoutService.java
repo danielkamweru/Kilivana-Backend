@@ -17,6 +17,9 @@ import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
 import com.kilivana.backend.ecommerce.service.OrderService;
+import com.kilivana.backend.logistics.dto.PickupStationResponse;
+import com.kilivana.backend.logistics.entity.PickupStation;
+import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,11 +44,12 @@ public class CheckoutService {
     private final AddressRepository addressRepository;
     private final ProductRepository productRepository;
     private final OrderService orderService;
+    private final PickupStationRepository pickupStationRepository;
 
     private final Map<String, QuoteRecord> quotes = new ConcurrentHashMap<>();
 
     public record QuoteRecord(String quoteId, Long userId, Long cartId, String deliveryMethod,
-                             Long addressId, String pickupLocation,
+                             Long addressId, Long pickupStationId, String pickupLocation,
                              BigDecimal subtotal, BigDecimal deliveryFee, BigDecimal total,
                              Instant expiresAt, boolean used) {}
 
@@ -60,6 +64,8 @@ public class CheckoutService {
         }
 
         Long addressId = null;
+        Long pickupStationId = null;
+        PickupStation selectedStation = null;
         String pickupLocation = null;
         BigDecimal deliveryFee;
 
@@ -78,17 +84,25 @@ public class CheckoutService {
             addressId = address.getId();
             deliveryFee = DOOR_DELIVERY_FEE;
         } else if ("PICKUP_STATION".equalsIgnoreCase(deliveryMethod)) {
-            // Pickup delivery is now a one-time manually typed location. There is no
-            // platform station to select — stations are configured by an operator in the
-            // database and the checkout UI has nothing to show until that happens, so
-            // forcing a station choice only ever produced a 400. The buyer simply types
-            // where they want the package handed over.
-            if (request.getPickupLocation() == null || request.getPickupLocation().isBlank()) {
-                throw new BadRequestException("Pickup location is required for pickup delivery");
+            if (request.getPickupStationId() != null) {
+                if (request.getPickupLocation() != null && !request.getPickupLocation().isBlank()) {
+                    throw new BadRequestException("Provide a pickup station ID or legacy pickup location, not both");
+                }
+                selectedStation = pickupStationRepository.findById(request.getPickupStationId())
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "PickupStation", request.getPickupStationId()));
+                if (!Boolean.TRUE.equals(selectedStation.getIsAvailable())) {
+                    throw new BadRequestException("Pickup station is not currently available");
+                }
+                pickupStationId = selectedStation.getId();
+            } else {
+                if (request.getPickupLocation() == null || request.getPickupLocation().isBlank()) {
+                    throw new BadRequestException("Pickup location is required for pickup delivery");
+                }
+                pickupLocation = request.getPickupLocation().trim();
+                if (pickupLocation.length() > 500) {
+                    throw new BadRequestException("Pickup location must be at most 500 characters");
             }
-            pickupLocation = request.getPickupLocation().trim();
-            if (pickupLocation.length() > 500) {
-                throw new BadRequestException("Pickup location must be at most 500 characters");
             }
             deliveryFee = PICKUP_STATION_FEE;
         } else {
@@ -114,7 +128,7 @@ public class CheckoutService {
         Instant expiresAt = Instant.now().plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES);
 
         quotes.put(quoteId, new QuoteRecord(quoteId, userId, cart.getId(), deliveryMethod,
-                addressId, pickupLocation, subtotal, deliveryFee, total, expiresAt, false));
+                addressId, pickupStationId, pickupLocation, subtotal, deliveryFee, total, expiresAt, false));
 
         DeliveryQuoteResponse.DeliveryQuoteResponseBuilder responseBuilder = DeliveryQuoteResponse.builder()
                 .quoteId(quoteId)
@@ -127,6 +141,10 @@ public class CheckoutService {
 
         if (addressId != null) {
             responseBuilder.addressId(addressId);
+        }
+        if (selectedStation != null) {
+            responseBuilder.pickupStationId(selectedStation.getId())
+                    .pickupStation(PickupStationResponse.fromEntity(selectedStation));
         }
         if (pickupLocation != null) {
             responseBuilder.pickupLocation(pickupLocation);
@@ -176,11 +194,11 @@ public class CheckoutService {
         Long deliveryAddressId = quote.addressId();
 
         Order order = orderService.createOrder(userId, deliveryAddressId, quote.deliveryFee(), items,
-                subtotal, total, quote.deliveryMethod(), quote.pickupLocation());
+                subtotal, total, quote.deliveryMethod(), quote.pickupLocation(), quote.pickupStationId());
 
         // mark quote used
         quotes.put(quote.quoteId(), new QuoteRecord(quote.quoteId(), quote.userId(), quote.cartId(),
-                quote.deliveryMethod(), quote.addressId(), quote.pickupLocation(),
+                quote.deliveryMethod(), quote.addressId(), quote.pickupStationId(), quote.pickupLocation(),
                 quote.subtotal(), quote.deliveryFee(), quote.total(), quote.expiresAt(), true));
 
         // transition cart out of checkout processing

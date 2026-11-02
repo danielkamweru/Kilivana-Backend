@@ -58,6 +58,21 @@ public class Order {
     @Column
     private Long addressId;
 
+    @Column(name = "pickup_station_id")
+    private Long pickupStationId;
+
+    @Column(name = "pickup_station_name_snapshot")
+    private String pickupStationNameSnapshot;
+
+    @Column(name = "pickup_station_address_snapshot", length = 500)
+    private String pickupStationAddressSnapshot;
+
+    @Column(name = "pickup_station_latitude_snapshot")
+    private Double pickupStationLatitudeSnapshot;
+
+    @Column(name = "pickup_station_longitude_snapshot")
+    private Double pickupStationLongitudeSnapshot;
+
     @Column(columnDefinition = "TEXT")
     private String pickupLocation;
 
@@ -151,6 +166,46 @@ public class Order {
         this.addressId = addressId;
     }
 
+    public Long getPickupStationId() {
+        return pickupStationId;
+    }
+
+    public void setPickupStationId(Long pickupStationId) {
+        this.pickupStationId = pickupStationId;
+    }
+
+    public String getPickupStationNameSnapshot() {
+        return pickupStationNameSnapshot;
+    }
+
+    public void setPickupStationNameSnapshot(String pickupStationNameSnapshot) {
+        this.pickupStationNameSnapshot = pickupStationNameSnapshot;
+    }
+
+    public String getPickupStationAddressSnapshot() {
+        return pickupStationAddressSnapshot;
+    }
+
+    public void setPickupStationAddressSnapshot(String pickupStationAddressSnapshot) {
+        this.pickupStationAddressSnapshot = pickupStationAddressSnapshot;
+    }
+
+    public Double getPickupStationLatitudeSnapshot() {
+        return pickupStationLatitudeSnapshot;
+    }
+
+    public void setPickupStationLatitudeSnapshot(Double pickupStationLatitudeSnapshot) {
+        this.pickupStationLatitudeSnapshot = pickupStationLatitudeSnapshot;
+    }
+
+    public Double getPickupStationLongitudeSnapshot() {
+        return pickupStationLongitudeSnapshot;
+    }
+
+    public void setPickupStationLongitudeSnapshot(Double pickupStationLongitudeSnapshot) {
+        this.pickupStationLongitudeSnapshot = pickupStationLongitudeSnapshot;
+    }
+
     public String getPickupLocation() {
         return pickupLocation;
     }
@@ -213,6 +268,11 @@ public class Order {
         private BigDecimal total;
         private PaymentStatus paymentStatus;
         private Long addressId;
+        private Long pickupStationId;
+        private String pickupStationNameSnapshot;
+        private String pickupStationAddressSnapshot;
+        private Double pickupStationLatitudeSnapshot;
+        private Double pickupStationLongitudeSnapshot;
         private String pickupLocation;
         private String deliveryMethod;
         private String cancellationReason;
@@ -265,6 +325,31 @@ public class Order {
             return this;
         }
 
+        public OrderBuilder pickupStationId(Long pickupStationId) {
+            this.pickupStationId = pickupStationId;
+            return this;
+        }
+
+        public OrderBuilder pickupStationNameSnapshot(String value) {
+            this.pickupStationNameSnapshot = value;
+            return this;
+        }
+
+        public OrderBuilder pickupStationAddressSnapshot(String value) {
+            this.pickupStationAddressSnapshot = value;
+            return this;
+        }
+
+        public OrderBuilder pickupStationLatitudeSnapshot(Double value) {
+            this.pickupStationLatitudeSnapshot = value;
+            return this;
+        }
+
+        public OrderBuilder pickupStationLongitudeSnapshot(Double value) {
+            this.pickupStationLongitudeSnapshot = value;
+            return this;
+        }
+
         public OrderBuilder pickupLocation(String pickupLocation) {
             this.pickupLocation = pickupLocation;
             return this;
@@ -306,6 +391,11 @@ public class Order {
             order.total = this.total;
             order.paymentStatus = this.paymentStatus;
             order.addressId = this.addressId;
+            order.pickupStationId = this.pickupStationId;
+            order.pickupStationNameSnapshot = this.pickupStationNameSnapshot;
+            order.pickupStationAddressSnapshot = this.pickupStationAddressSnapshot;
+            order.pickupStationLatitudeSnapshot = this.pickupStationLatitudeSnapshot;
+            order.pickupStationLongitudeSnapshot = this.pickupStationLongitudeSnapshot;
             order.pickupLocation = this.pickupLocation;
             order.deliveryMethod = this.deliveryMethod;
             order.cancellationReason = this.cancellationReason;

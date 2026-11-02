@@ -20,6 +20,8 @@ public interface LogisticsJobRepository extends JpaRepository<LogisticsJob, Long
     /** Every delivery job for one order. */
     List<LogisticsJob> findByOrderId(Long orderId);
 
+    List<LogisticsJob> findByOrderIdAndSellerId(Long orderId, Long sellerId);
+
     /** Every delivery job assigned to one driver. */
     List<LogisticsJob> findByDriverId(Long driverId);
 

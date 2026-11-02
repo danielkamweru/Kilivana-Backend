@@ -60,6 +60,27 @@ public class OrderItem {
     @Column(nullable = false)
     private BigDecimal subtotal;
 
+    @Column(name = "dispatch_location_id_snapshot")
+    private Long dispatchLocationIdSnapshot;
+
+    @Column(name = "dispatch_location_type_snapshot", length = 32)
+    private String dispatchLocationTypeSnapshot;
+
+    @Column(name = "dispatch_location_name_snapshot")
+    private String dispatchLocationNameSnapshot;
+
+    @Column(name = "dispatch_address_snapshot", columnDefinition = "TEXT")
+    private String dispatchAddressSnapshot;
+
+    @Column(name = "dispatch_county_snapshot", length = 100)
+    private String dispatchCountySnapshot;
+
+    @Column(name = "dispatch_latitude_snapshot")
+    private Double dispatchLatitudeSnapshot;
+
+    @Column(name = "dispatch_longitude_snapshot")
+    private Double dispatchLongitudeSnapshot;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -85,6 +106,20 @@ public class OrderItem {
     public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
+    public Long getDispatchLocationIdSnapshot() { return dispatchLocationIdSnapshot; }
+    public void setDispatchLocationIdSnapshot(Long value) { this.dispatchLocationIdSnapshot = value; }
+    public String getDispatchLocationTypeSnapshot() { return dispatchLocationTypeSnapshot; }
+    public void setDispatchLocationTypeSnapshot(String value) { this.dispatchLocationTypeSnapshot = value; }
+    public String getDispatchLocationNameSnapshot() { return dispatchLocationNameSnapshot; }
+    public void setDispatchLocationNameSnapshot(String value) { this.dispatchLocationNameSnapshot = value; }
+    public String getDispatchAddressSnapshot() { return dispatchAddressSnapshot; }
+    public void setDispatchAddressSnapshot(String value) { this.dispatchAddressSnapshot = value; }
+    public String getDispatchCountySnapshot() { return dispatchCountySnapshot; }
+    public void setDispatchCountySnapshot(String value) { this.dispatchCountySnapshot = value; }
+    public Double getDispatchLatitudeSnapshot() { return dispatchLatitudeSnapshot; }
+    public void setDispatchLatitudeSnapshot(Double value) { this.dispatchLatitudeSnapshot = value; }
+    public Double getDispatchLongitudeSnapshot() { return dispatchLongitudeSnapshot; }
+    public void setDispatchLongitudeSnapshot(Double value) { this.dispatchLongitudeSnapshot = value; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -103,6 +138,13 @@ public class OrderItem {
         private Integer quantity;
         private BigDecimal unitPrice;
         private BigDecimal subtotal;
+        private Long dispatchLocationIdSnapshot;
+        private String dispatchLocationTypeSnapshot;
+        private String dispatchLocationNameSnapshot;
+        private String dispatchAddressSnapshot;
+        private String dispatchCountySnapshot;
+        private Double dispatchLatitudeSnapshot;
+        private Double dispatchLongitudeSnapshot;
         private LocalDateTime createdAt;
 
         public OrderItemBuilder id(Long id) {
@@ -155,6 +197,41 @@ public class OrderItem {
             return this;
         }
 
+        public OrderItemBuilder dispatchLocationIdSnapshot(Long value) {
+            this.dispatchLocationIdSnapshot = value;
+            return this;
+        }
+
+        public OrderItemBuilder dispatchLocationTypeSnapshot(String value) {
+            this.dispatchLocationTypeSnapshot = value;
+            return this;
+        }
+
+        public OrderItemBuilder dispatchLocationNameSnapshot(String value) {
+            this.dispatchLocationNameSnapshot = value;
+            return this;
+        }
+
+        public OrderItemBuilder dispatchAddressSnapshot(String value) {
+            this.dispatchAddressSnapshot = value;
+            return this;
+        }
+
+        public OrderItemBuilder dispatchCountySnapshot(String value) {
+            this.dispatchCountySnapshot = value;
+            return this;
+        }
+
+        public OrderItemBuilder dispatchLatitudeSnapshot(Double value) {
+            this.dispatchLatitudeSnapshot = value;
+            return this;
+        }
+
+        public OrderItemBuilder dispatchLongitudeSnapshot(Double value) {
+            this.dispatchLongitudeSnapshot = value;
+            return this;
+        }
+
         public OrderItemBuilder createdAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -172,6 +249,13 @@ public class OrderItem {
             orderItem.quantity = this.quantity;
             orderItem.unitPrice = this.unitPrice;
             orderItem.subtotal = this.subtotal;
+            orderItem.dispatchLocationIdSnapshot = this.dispatchLocationIdSnapshot;
+            orderItem.dispatchLocationTypeSnapshot = this.dispatchLocationTypeSnapshot;
+            orderItem.dispatchLocationNameSnapshot = this.dispatchLocationNameSnapshot;
+            orderItem.dispatchAddressSnapshot = this.dispatchAddressSnapshot;
+            orderItem.dispatchCountySnapshot = this.dispatchCountySnapshot;
+            orderItem.dispatchLatitudeSnapshot = this.dispatchLatitudeSnapshot;
+            orderItem.dispatchLongitudeSnapshot = this.dispatchLongitudeSnapshot;
             orderItem.createdAt = this.createdAt;
             return orderItem;
         }

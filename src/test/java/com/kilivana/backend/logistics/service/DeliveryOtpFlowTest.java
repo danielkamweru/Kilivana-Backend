@@ -1,17 +1,21 @@
 package com.kilivana.backend.logistics.service;
 
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.TooManyRequestsException;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.ProofOfDeliveryRepository;
 import com.kilivana.backend.logistics.repository.TrackingEventRepository;
+import com.kilivana.backend.logistics.repository.DeliveryEventRepository;
+import com.kilivana.backend.logistics.repository.DeliveryTripRepository;
 import com.kilivana.backend.mail.DeliveryOtpNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +56,10 @@ class DeliveryOtpFlowTest {
     @Mock private OrderRepository orderRepository;
     @Mock private OrderEventRepository orderEventRepository;
     @Mock private UserRepository userRepository;
+    @Mock private OrderItemRepository orderItemRepository;
+    @Mock private DriverProfileRepository driverProfileRepository;
+    @Mock private DeliveryEventRepository deliveryEventRepository;
+    @Mock private DeliveryTripRepository deliveryTripRepository;
 
     private PasswordEncoder encoder;
     private LogisticsService service;
@@ -63,7 +71,8 @@ class DeliveryOtpFlowTest {
         encoder = new BCryptPasswordEncoder();
         service = new LogisticsService(logisticsJobRepository, trackingEventRepository,
                 proofOfDeliveryRepository, deliveryOtpNotifier, encoder,
-                orderRepository, orderEventRepository, userRepository, null, null);
+                orderRepository, orderEventRepository, userRepository, null, null,
+                orderItemRepository, driverProfileRepository, deliveryEventRepository, deliveryTripRepository);
         when(orderRepository.findById(any())).thenReturn(Optional.of(Order.builder()
                 .id(1L).subtotal(new BigDecimal("100.00")).total(new BigDecimal("100.00")).build()));
         when(logisticsJobRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

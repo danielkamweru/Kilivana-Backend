@@ -28,6 +28,27 @@ public class LogisticsJob {
     @Column(nullable = false)
     private Long orderId;
 
+    @Column(name = "seller_id")
+    private Long sellerId;
+
+    @Column(name = "buyer_id")
+    private Long buyerId;
+
+    @Column(name = "pickup_farm_id")
+    private Long pickupFarmId;
+
+    @Column(name = "pickup_warehouse_id")
+    private Long pickupWarehouseId;
+
+    @Column(name = "pickup_station_id")
+    private Long pickupStationId;
+
+    @Column(name = "destination_type", length = 32)
+    private String destinationType;
+
+    @Column(columnDefinition = "TEXT")
+    private String deliveryInstructions;
+
     @Column(nullable = false)
     private String pickupAddress;
 
@@ -89,6 +110,12 @@ public class LogisticsJob {
     private DeliveryStatus status;
 
     private Long driverId;
+
+    private LocalDateTime assignedAt;
+    private LocalDateTime acceptedAt;
+    private LocalDateTime pickedUpAt;
+    private LocalDateTime completedAt;
+    private LocalDateTime cancelledAt;
 
     @Column(columnDefinition = "TEXT")
     private String cancellationReason;

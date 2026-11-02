@@ -11,6 +11,8 @@ import com.kilivana.backend.ecommerce.controller.*;
 import com.kilivana.backend.ecommerce.entity.*;
 import com.kilivana.backend.ecommerce.repository.*;
 import com.kilivana.backend.ecommerce.service.*;
+import com.kilivana.backend.admin.repository.SupplierWarehouseRepository;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,6 +41,8 @@ class CatalogVisibilityTest {
     @MockBean ProductRepository products;
     @MockBean ProductImageRepository images;
     @MockBean CategoryRepository categories;
+    @MockBean FarmRepository farms;
+    @MockBean SupplierWarehouseRepository warehouses;
     @MockBean StoredImageRepository stored;
     @MockBean ImageStorage storage;
     @MockBean UserService users;

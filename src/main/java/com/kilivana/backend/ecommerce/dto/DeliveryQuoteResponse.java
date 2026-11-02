@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import com.kilivana.backend.logistics.dto.PickupStationResponse;
 
 /**
  * Response containing a delivery fee quote for checkout.
@@ -32,6 +33,12 @@ public class DeliveryQuoteResponse {
 
     @Schema(description = "Delivery address ID (for DOOR_DELIVERY)", example = "8")
     private Long addressId;
+
+    @Schema(description = "Canonical selected station ID", example = "3")
+    private Long pickupStationId;
+
+    @Schema(description = "Canonical station details resolved from the database")
+    private PickupStationResponse pickupStation;
 
     @Schema(description = "One-time buyer-entered pickup location (for PICKUP_STATION)",
             example = "Outside Westlands Mall, near the main entrance")

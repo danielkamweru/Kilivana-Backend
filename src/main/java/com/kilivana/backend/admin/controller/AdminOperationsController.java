@@ -13,7 +13,9 @@ import com.kilivana.backend.ecommerce.service.OrderService;
 import com.kilivana.backend.ecommerce.service.PaymentService;
 import com.kilivana.backend.ecommerce.service.ProductService;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
+import com.kilivana.backend.logistics.dto.DispatchOrderResponse;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.service.DeliveryDispatchService;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +38,7 @@ public class AdminOperationsController {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final LogisticsService logisticsService;
+    private final DeliveryDispatchService deliveryDispatchService;
     private final DashboardService dashboardService;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
@@ -85,8 +88,27 @@ public class AdminOperationsController {
             @RequestParam Long driverId,
             @RequestParam(required = false) String pickupAddress,
             @RequestParam(required = false) String destinationAddress) {
-        return ResponseEntity.ok(ApiResponse.success(
-                orderService.assignOrderToDriver(orderId, driverId, pickupAddress, destinationAddress)));
+        DispatchOrderResponse dispatch = deliveryDispatchService.dispatchSingleSeller(orderId);
+        LogisticsJob job = dispatch.getDeliveryJobs().get(0);
+        if (job.getStatus() == com.kilivana.backend.common.enums.DeliveryStatus.PENDING_ASSIGNMENT) {
+            job = logisticsService.assignDriver(job.getId(), driverId);
+        } else if (!driverId.equals(job.getDriverId())) {
+            throw new com.kilivana.backend.common.exception.BadRequestException(
+                    "The delivery job is already assigned to another driver");
+        }
+        return ResponseEntity.ok(ApiResponse.success(job));
+    }
+
+    @PostMapping("/orders/{orderId}/dispatch")
+    @Operation(summary = "Dispatch a paid order",
+            description = "Creates or reuses one delivery job per seller and dispatch origin.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order dispatch jobs returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Order is unpaid or has invalid delivery locations"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found")
+    })
+    public ResponseEntity<ApiResponse<DispatchOrderResponse>> dispatchOrder(@PathVariable Long orderId) {
+        return ResponseEntity.ok(ApiResponse.success(deliveryDispatchService.dispatchOrder(orderId)));
     }
 
     @GetMapping("/logistics/jobs")
