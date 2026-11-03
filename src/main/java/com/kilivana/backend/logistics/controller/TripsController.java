@@ -7,6 +7,7 @@ import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.DeliveryTrip;
 import com.kilivana.backend.logistics.entity.ProofOfDelivery;
+import com.kilivana.backend.logistics.dto.DeliveryTripResponse;
 import com.kilivana.backend.logistics.dto.LocationUpdateRequest;
 import com.kilivana.backend.logistics.dto.LocationUpdateResponse;
 import com.kilivana.backend.logistics.service.LogisticsService;
@@ -41,8 +42,11 @@ public class TripsController {
 
     @Operation(summary = "List my active delivery trips")
     @GetMapping("/mine")
-    public ResponseEntity<ApiResponse<List<DeliveryTrip>>> getMyTrips() {
-        return ResponseEntity.ok(ApiResponse.success(logisticsService.getTripsForDriver(CurrentUser.id())));
+    public ResponseEntity<ApiResponse<List<DeliveryTripResponse>>> getMyTrips() {
+        List<DeliveryTripResponse> trips = logisticsService.getTripsForDriver(CurrentUser.id()).stream()
+                .map(DeliveryTripResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(trips));
     }
 
     @Operation(summary = "Accept an assigned job and create a trip")

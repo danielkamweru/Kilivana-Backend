@@ -49,6 +49,25 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), error));
     }
 
+    @ExceptionHandler(DispatchLocationMissingException.class)
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> handleDispatchLocationMissing(
+            DispatchLocationMissingException ex) {
+        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("orderId", ex.getOrderId());
+        data.put("invalidItems", ex.getInvalidItems());
+        ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()
+                .code("DISPATCH_LOCATION_REQUIRED")
+                .details(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<java.util.Map<String, Object>>builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .data(data)
+                        .error(error)
+                        .build());
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequestException(BadRequestException ex) {
         ApiResponse.ErrorDetail error = ApiResponse.ErrorDetail.builder()

@@ -59,7 +59,7 @@ public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor,
             props.load(new java.io.InputStreamReader(in, StandardCharsets.UTF_8));
             for (Map.Entry<Object, Object> entry : props.entrySet()) {
                 String key = String.valueOf(entry.getKey()).trim();
-                String value = String.valueOf(entry.getValue());
+                String value = stripWrappingQuotes(String.valueOf(entry.getValue()).trim());
                 if (key.isEmpty()) {
                     continue;
                 }
@@ -91,5 +91,16 @@ public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor,
             }
         }
         return Paths.get(".env").toAbsolutePath().normalize();
+    }
+
+    private static String stripWrappingQuotes(String value) {
+        if (value.length() >= 2) {
+            char first = value.charAt(0);
+            char last = value.charAt(value.length() - 1);
+            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+                return value.substring(1, value.length() - 1);
+            }
+        }
+        return value;
     }
 }

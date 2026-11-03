@@ -73,14 +73,36 @@ public class DeliveryDispatchService {
             throw new BadRequestException("An order without line items cannot be dispatched");
         }
         Map<DispatchKey, List<OrderItem>> groups = new LinkedHashMap<>();
+        List<Map<String, Object>> invalidItems = new ArrayList<>();
         for (OrderItem item : items) {
             if (item.getSellerId() == null || item.getDispatchLocationIdSnapshot() == null
                     || item.getDispatchLocationTypeSnapshot() == null) {
-                throw new BadRequestException("Every ordered product must have an active dispatch location");
+                Map<String, Object> detail = new java.util.LinkedHashMap<>();
+                detail.put("orderItemId", item.getId());
+                detail.put("productId", item.getProductId());
+                detail.put("productName", item.getProductName());
+                detail.put("sellerId", item.getSellerId());
+                detail.put("reason", "NO_ACTIVE_DISPATCH_LOCATION");
+                invalidItems.add(detail);
+                continue;
+            }
+            if ("DELETED_PRODUCT".equals(item.getDispatchLocationTypeSnapshot())) {
+                Map<String, Object> detail = new java.util.LinkedHashMap<>();
+                detail.put("orderItemId", item.getId());
+                detail.put("productId", item.getProductId());
+                detail.put("productName", item.getProductName());
+                detail.put("sellerId", item.getSellerId());
+                detail.put("reason", "PRODUCT_DELETED");
+                invalidItems.add(detail);
+                continue;
             }
             DispatchKey key = new DispatchKey(item.getSellerId(),
                     item.getDispatchLocationTypeSnapshot(), item.getDispatchLocationIdSnapshot());
             groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(item);
+        }
+        if (!invalidItems.isEmpty()) {
+            throw new com.kilivana.backend.common.exception.DispatchLocationMissingException(
+                    orderId, invalidItems);
         }
         if (requireSingleSeller && groups.size() != 1) {
             throw new BadRequestException("This order has multiple dispatch origins; use the dispatch endpoint");

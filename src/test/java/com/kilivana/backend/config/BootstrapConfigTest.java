@@ -29,6 +29,7 @@ class BootstrapConfigTest {
         Files.writeString(tmp, """
                 DARAJA_CONSUMER_KEY=from-file
                 SENDGRID_API_KEY=SG.test
+                DB_PASSWORD="daniel kamweru"
                 """);
 
         try {
@@ -44,6 +45,7 @@ class BootstrapConfigTest {
 
             assertThat(env.getProperty("DARAJA_CONSUMER_KEY")).isEqualTo("from-file");
             assertThat(env.getProperty("SENDGRID_API_KEY")).isEqualTo("SG.test");
+            assertThat(env.getProperty("DB_PASSWORD")).isEqualTo("daniel kamweru");
         } finally {
             Files.deleteIfExists(tmp);
         }

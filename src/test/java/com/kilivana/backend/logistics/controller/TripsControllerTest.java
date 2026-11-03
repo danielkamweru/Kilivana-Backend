@@ -1,8 +1,10 @@
 package com.kilivana.backend.logistics.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.logistics.dto.DeliveryTripResponse;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.entity.DeliveryTrip;
 import com.kilivana.backend.logistics.service.DriverLocationService;
@@ -85,6 +87,21 @@ class TripsControllerTest {
 
         assertThat(response.getBody().getData()).isSameAs(trip);
         verify(logisticsService).getTripForDriver(21L, 17L);
+    }
+
+    @Test
+    void myTripsExposeTripIdInTheResponse() {
+        DeliveryTrip trip = DeliveryTrip.builder().id(21L).deliveryJobId(9L).driverId(17L).build();
+        when(logisticsService.getTripsForDriver(17L)).thenReturn(List.of(trip));
+
+        var response = controller.getMyTrips();
+
+        assertThat(response.getBody().getData())
+                .extracting(DeliveryTripResponse::getTripId)
+                .containsExactly(21L);
+        assertThat(new ObjectMapper().valueToTree(response.getBody().getData()).at("/0/tripId").asLong())
+                .isEqualTo(21L);
+        verify(logisticsService).getTripsForDriver(17L);
     }
 
     @Test

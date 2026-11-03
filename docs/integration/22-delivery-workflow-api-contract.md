@@ -85,7 +85,7 @@ it must not merge different pickup origins.
 | `PUT /api/v1/logistics/jobs/{deliveryJobId}/assign?driverId={id}` | ADMIN | Driver ID | `200`, job `pending_assignment → assigned` |
 | `POST /api/v1/trips/jobs/{deliveryJobId}/accept` | Assigned DRIVER | None; identity from JWT | `200`, creates and returns an active `DeliveryTrip` |
 | `POST /api/v1/logistics/jobs/{deliveryJobId}/reject?reason={reason}` | Assigned DRIVER | Optional reason; identity from JWT | `200`, job returned to dispatch |
-| `GET /api/v1/trips/mine` | DRIVER | None | `200`, caller's active trips |
+| `GET /api/v1/trips/mine` | DRIVER | None | `200`, caller's active trips with `tripId` identifying each trip and its linked `deliveryJobId` |
 | `GET /api/v1/trips/{tripId}` | Assigned DRIVER | None | `200`, own trip |
 | `POST /api/v1/trips/{tripId}/status?status={nextStatus}` | Assigned DRIVER | One legal next status | `200`, linked job/trip advanced |
 | `POST /api/v1/trips/{tripId}/location` | Active trip's DRIVER | Latitude, longitude and optional telemetry/timestamp | `200`, fix accepted; no status transition |

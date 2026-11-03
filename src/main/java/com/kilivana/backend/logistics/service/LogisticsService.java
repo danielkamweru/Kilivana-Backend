@@ -373,8 +373,10 @@ public class LogisticsService {
         }
         DriverProfile profile = driverProfileRepository.findByUserId(driverId)
                 .orElseThrow(() -> new BadRequestException("Driver has no verified driver profile"));
-        if (driver.getStatus() != UserStatus.ACTIVE
-                || driver.getVerificationStatus() != VerificationStatus.VERIFIED
+        boolean accountOk = driver.getStatus() == UserStatus.ACTIVE
+                && (driver.getVerificationStatus() == VerificationStatus.VERIFIED
+                        || driver.getVerificationStatus() == VerificationStatus.NOT_REQUIRED);
+        if (!accountOk
                 || profile.getKycStatus() != KycStatus.VERIFIED
                 || profile.getAvailabilityStatus() != DriverStatus.AVAILABLE
                 || !logisticsJobRepository.findActiveByDriverId(driverId).isEmpty()) {
@@ -408,6 +410,10 @@ public class LogisticsService {
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
         if (!java.util.Objects.equals(job.getDriverId(), driverId)) {
             throw new BadRequestException("Driver not assigned to this job");
+        }
+        // Idempotent: already accepted by this driver — return the job as-is.
+        if (job.getStatus() == DeliveryStatus.ACCEPTED) {
+            return job;
         }
         if (job.getStatus() != DeliveryStatus.ASSIGNED) {
             throw new BadRequestException("Job cannot be accepted in current status");
