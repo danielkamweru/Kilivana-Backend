@@ -55,8 +55,14 @@ From the project root (the Maven wrapper downloads the matching Maven version):
 
 ```bash
 ./mvnw clean install
-./mvnw spring-boot:run
+./start.sh
 ```
+
+`start.sh` runs the Maven wrapper and saves the full startup output to
+`/tmp/kilivana-startup.log` (override the path with `STARTUP_LOG`). If startup
+fails, the script returns Maven's non-zero exit status; inspect the first
+`APPLICATION FAILED TO START` or `Caused by:` message in the log to find the
+underlying problem.
 
 To run against the local Docker database and seed the demo accounts
 (including the administrator) on a fresh database, set the seed variables:
