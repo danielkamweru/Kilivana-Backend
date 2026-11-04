@@ -97,7 +97,7 @@ class DeliveryOtpFlowTest {
 
         assertThat(saved.getDeliveryOtpHash()).isNotNull();
         assertThat(encoder.matches(OTP, saved.getDeliveryOtpHash())).isFalse();
-        assertThat(saved.getDeliveryOtpExpiresAt()).isAfter(LocalDateTime.now());
+        assertThat(saved.getDeliveryOtpExpiresAt()).isNull();
         org.mockito.Mockito.verify(deliveryOtpNotifier).sendOtpToBuyer(any(), any());
     }
 
@@ -112,14 +112,12 @@ class DeliveryOtpFlowTest {
     }
 
     @Test
-    void expiredCodeIsRefused() {
+    void codeWithLegacyExpiredTimestampIsAccepted() {
         LogisticsJob job = liveJob(DeliveryStatus.IN_TRANSIT);
         job.setDeliveryOtpExpiresAt(LocalDateTime.now().minusMinutes(1));
         when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
 
-        assertThatThrownBy(() -> service.verifyDeliveryOtp(1L, OTP))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("expired");
+        assertThat(service.verifyDeliveryOtp(1L, OTP).getDeliveryOtpVerified()).isTrue();
     }
 
     @Test

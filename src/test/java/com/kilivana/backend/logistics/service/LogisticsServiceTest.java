@@ -185,6 +185,61 @@ class LogisticsServiceTest {
     }
 
     @Test
+    void startingAcceptedJobMovesItEnRouteToPickup() {
+        noopJobRepo();
+        LogisticsJob accepted = LogisticsJob.builder()
+                .id(1L).orderId(1L).driverId(5L)
+                .status(DeliveryStatus.ACCEPTED).build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(accepted));
+
+        LogisticsJob started = logisticsService.startJobTracking(1L, 5L);
+
+        assertThat(started.getStatus()).isEqualTo(DeliveryStatus.EN_ROUTE_TO_PICKUP);
+    }
+
+    @Test
+    void startingAssignedJobAcceptsItAndMovesItEnRouteToPickup() {
+        noopJobRepo();
+        LogisticsJob assigned = LogisticsJob.builder()
+                .id(1L).orderId(1L).driverId(5L)
+                .status(DeliveryStatus.ASSIGNED).build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(assigned));
+        when(deliveryTripRepository.findFirstByDeliveryJobIdAndDriverIdAndStatusOrderByCreatedAtDesc(
+                1L, 5L, com.kilivana.backend.logistics.enums.DeliveryTripStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(deliveryTripRepository.save(any(DeliveryTrip.class))).thenAnswer(invocation -> {
+            DeliveryTrip trip = invocation.getArgument(0);
+            trip.setId(91L);
+            return trip;
+        });
+
+        LogisticsJob started = logisticsService.startJobTracking(1L, 5L);
+
+        assertThat(started.getStatus()).isEqualTo(DeliveryStatus.EN_ROUTE_TO_PICKUP);
+    }
+
+    @Test
+    void pickedUpActionRecordsArrivalAndPickupInOrder() {
+        noopJobRepo();
+        LogisticsJob enRoute = LogisticsJob.builder()
+                .id(1L).orderId(1L).driverId(5L)
+                .status(DeliveryStatus.EN_ROUTE_TO_PICKUP).build();
+        when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(enRoute));
+
+        LogisticsJob pickedUp = logisticsService.markJobPickedUp(1L, 5L);
+
+        assertThat(pickedUp.getStatus()).isEqualTo(DeliveryStatus.PICKED_UP);
+        assertThat(pickedUp.getPickedUpAt()).isNotNull();
+        org.mockito.ArgumentCaptor<com.kilivana.backend.logistics.entity.TrackingEvent> events =
+                org.mockito.ArgumentCaptor.forClass(
+                        com.kilivana.backend.logistics.entity.TrackingEvent.class);
+        org.mockito.Mockito.verify(trackingEventRepository, org.mockito.Mockito.times(2)).save(events.capture());
+        assertThat(events.getAllValues()).extracting(
+                com.kilivana.backend.logistics.entity.TrackingEvent::getStatus)
+                .containsExactly(DeliveryStatus.ARRIVED_AT_PICKUP, DeliveryStatus.PICKED_UP);
+    }
+
+    @Test
     void rejectingAssignedJobReturnsItToDispatchAndReleasesDriver() {
         noopJobRepo();
         LogisticsJob assigned = LogisticsJob.builder()
@@ -248,7 +303,7 @@ class LogisticsServiceTest {
 
         assertThat(saved.getDeliveryOtpHash()).isNotNull();
         assertThat(passwordEncoder.matches("^\\d{6}$", saved.getDeliveryOtpHash())).isFalse();
-        assertThat(saved.getDeliveryOtpExpiresAt()).isAfter(LocalDateTime.now());
+        assertThat(saved.getDeliveryOtpExpiresAt()).isNull();
     }
 
     @Test
@@ -291,7 +346,7 @@ class LogisticsServiceTest {
     }
 
     @Test
-    void verifyDeliveryOtp_shouldRejectAnExpiredCode() {
+    void verifyDeliveryOtp_shouldAcceptCodeWithLegacyExpiredTimestamp() {
         noopJobRepo();
         LogisticsJob job = LogisticsJob.builder()
                 .id(1L)
@@ -302,9 +357,11 @@ class LogisticsServiceTest {
                 .build();
         when(logisticsJobRepository.findById(1L)).thenReturn(Optional.of(job));
 
-        assertThatThrownBy(() -> logisticsService.verifyDeliveryOtp(1L, JOB_OTP))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("expired");
+        LogisticsJob verified = logisticsService.verifyDeliveryOtp(1L, JOB_OTP);
+
+        assertThat(verified.getDeliveryOtpVerified()).isTrue();
+        assertThat(verified.getDeliveryOtpHash()).isNull();
+        assertThat(verified.getDeliveryOtpExpiresAt()).isNull();
     }
 
     @Test
@@ -528,6 +585,19 @@ class LogisticsServiceTest {
 
         assertThatThrownBy(() -> logisticsService.createProofOfDelivery(submitted, null))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void createProofOfDelivery_rejectsDeviceLocalPhotoUris() {
+        ProofOfDelivery submitted = ProofOfDelivery.builder()
+                .logisticsJobId(1L)
+                .recipientName("Recipient")
+                .photoUrl("content://media/picker/123")
+                .build();
+
+        assertThatThrownBy(() -> logisticsService.createProofOfDelivery(submitted, JOB_OTP))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("server-accessible URL");
     }
 
     @Test

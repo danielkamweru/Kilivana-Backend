@@ -101,6 +101,20 @@ class LocationValidatorTest {
     }
 
     @Test
+    void acceptsCurrentIsoTimestampWithUtcOffset() {
+        String timestamp = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString();
+
+        assertThat(validator.validateTimestamp(timestamp)).isNotNull();
+    }
+
+    @Test
+    void acceptsCurrentIsoTimestampWithZuluSuffix() {
+        String timestamp = java.time.Instant.now().toString();
+
+        assertThat(validator.validateTimestamp(timestamp)).isNotNull();
+    }
+
+    @Test
     void rejectsUnparseableTimestamp() {
         assertThatThrownBy(() -> validator.validateTimestamp("not-a-date"))
                 .isInstanceOf(BadRequestException.class);

@@ -90,8 +90,6 @@ public class LogisticsService {
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int OTP_LENGTH = 6;
-    @org.springframework.beans.factory.annotation.Value("${app.delivery-otp.expiry-minutes:10}")
-    private long otpValidityMinutes = 10;
     @org.springframework.beans.factory.annotation.Value("${app.delivery-otp.max-attempts:5}")
     private int otpMaxAttempts = 5;
     @org.springframework.beans.factory.annotation.Value("${app.delivery-otp.lockout-minutes:15}")
@@ -167,7 +165,7 @@ public class LogisticsService {
         // still has a code to verify, and so the notifier can address the buyer.
         String otp = generateOtp();
         saved.setDeliveryOtpHash(passwordEncoder.encode(otp));
-        saved.setDeliveryOtpExpiresAt(LocalDateTime.now().plusMinutes(otpValidityMinutes));
+        saved.setDeliveryOtpExpiresAt(null);
         saved.setDeliveryOtpAttempts(0);
         saved = logisticsJobRepository.save(saved);
         deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
@@ -254,10 +252,6 @@ public class LogisticsService {
         if (job.getDeliveryOtpLockedUntil() != null
                 && job.getDeliveryOtpLockedUntil().isAfter(LocalDateTime.now())) {
             throw new TooManyRequestsException("Too many incorrect delivery codes. Try again later.");
-        }
-        if (job.getDeliveryOtpExpiresAt() != null
-                && job.getDeliveryOtpExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("The delivery code has expired");
         }
         if (!passwordEncoder.matches(otp == null ? "" : otp.trim(), job.getDeliveryOtpHash())) {
             int attempts = job.getDeliveryOtpAttempts() == null ? 1 : job.getDeliveryOtpAttempts() + 1;
@@ -446,6 +440,54 @@ public class LogisticsService {
 
     @Transactional
     @PreAuthorize("@resourceAuthorization.jobWrite(#jobId) and @resourceAuthorization.driver(#driverId)")
+    public LogisticsJob startJobTracking(Long jobId, Long driverId) {
+        LogisticsJob job = logisticsJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
+        if (!java.util.Objects.equals(job.getDriverId(), driverId)) {
+            throw new com.kilivana.backend.common.exception.ForbiddenException(
+                    "Only the assigned driver can start tracking this job");
+        }
+
+        if (job.getStatus() == DeliveryStatus.ASSIGNED) {
+            acceptJob(jobId, driverId);
+            job = logisticsJobRepository.findById(jobId)
+                    .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
+        }
+        if (job.getStatus() == DeliveryStatus.ACCEPTED) {
+            return updateJobStatus(jobId, DeliveryStatus.EN_ROUTE_TO_PICKUP);
+        }
+        if (Set.of(DeliveryStatus.EN_ROUTE_TO_PICKUP, DeliveryStatus.ARRIVED_AT_PICKUP,
+                DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT,
+                DeliveryStatus.ARRIVED_AT_DESTINATION).contains(job.getStatus())) {
+            return job;
+        }
+        throw new BadRequestException("Cannot start tracking for trip in status: " + job.getStatus().wire());
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId) and @resourceAuthorization.driver(#driverId)")
+    public LogisticsJob markJobPickedUp(Long jobId, Long driverId) {
+        LogisticsJob job = logisticsJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
+        if (!java.util.Objects.equals(job.getDriverId(), driverId)) {
+            throw new com.kilivana.backend.common.exception.ForbiddenException(
+                    "Only the assigned driver can mark this job as picked up");
+        }
+
+        if (job.getStatus() == DeliveryStatus.PICKED_UP) {
+            return job;
+        }
+        if (job.getStatus() == DeliveryStatus.EN_ROUTE_TO_PICKUP) {
+            updateJobStatus(jobId, DeliveryStatus.ARRIVED_AT_PICKUP);
+        } else if (job.getStatus() != DeliveryStatus.ARRIVED_AT_PICKUP) {
+            throw new BadRequestException("Cannot mark delivery as picked up while it is "
+                    + job.getStatus().wire());
+        }
+        return updateJobStatus(jobId, DeliveryStatus.PICKED_UP);
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.jobWrite(#jobId) and @resourceAuthorization.driver(#driverId)")
     public LogisticsJob rejectJob(Long jobId, Long driverId, String reason) {
         LogisticsJob job = logisticsJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", jobId));
@@ -537,7 +579,7 @@ public class LogisticsService {
         if (status == DeliveryStatus.IN_TRANSIT && job.getDeliveryOtpHash() == null) {
             String otp = generateOtp();
             job.setDeliveryOtpHash(passwordEncoder.encode(otp));
-            job.setDeliveryOtpExpiresAt(LocalDateTime.now().plusMinutes(otpValidityMinutes));
+            job.setDeliveryOtpExpiresAt(null);
             job.setDeliveryOtpAttempts(0);
             LogisticsJob saved = logisticsJobRepository.save(job);
             deliveryOtpNotifier.sendOtpToBuyer(saved, otp);
@@ -718,6 +760,10 @@ public class LogisticsService {
         if (proof.getRecipientName() == null || proof.getRecipientName().isBlank()) {
             throw new BadRequestException("Recipient name is required");
         }
+        if (isDeviceLocalUri(proof.getPhotoUrl())) {
+            throw new BadRequestException(
+                    "photoUrl must be a server-accessible URL; upload the image before filing proof");
+        }
         LogisticsJob job = logisticsJobRepository.findById(proof.getLogisticsJobId())
                 .orElseThrow(() -> new ResourceNotFoundException("LogisticsJob", proof.getLogisticsJobId()));
 
@@ -762,6 +808,16 @@ public class LogisticsService {
         syncOrderStatus(job);
         trackingStopService.maybeStopTracking(job.getId());
         return savedProof;
+    }
+
+    private static boolean isDeviceLocalUri(String value) {
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.trim().toLowerCase(java.util.Locale.ROOT);
+        return normalized.startsWith("content://")
+                || normalized.startsWith("file://")
+                || normalized.startsWith("android.resource://");
     }
 
     private void releaseDriver(LogisticsJob job) {

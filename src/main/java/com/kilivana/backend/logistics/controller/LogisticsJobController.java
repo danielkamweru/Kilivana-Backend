@@ -226,7 +226,7 @@ public class LogisticsJobController {
             description = "Verifies and consumes the customer-supplied six-digit delivery code. This does not complete the job; submit proof of delivery to mark it delivered. Wrong codes are counted and the code locks temporarily after too many failures.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Delivery code verified"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Job has no delivery code, the code has expired, or the code is incorrect"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Job has no delivery code, the job is not underway, or the code is incorrect"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Delivery job not found"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Too many incorrect codes; the delivery code is temporarily locked"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")

@@ -65,7 +65,7 @@ public class FarmerFarmController {
                 .longitude(request.getLongitude())
                 .sizeAcres(request.getSizeAcres())
                 .ownershipType(request.getOwnershipType())
-                .status(FarmStatus.ACTIVE)
+                .status(FarmStatus.PENDING)
                 .description(request.getDescription())
                 .build();
         Farm saved = farmRepository.save(farm);

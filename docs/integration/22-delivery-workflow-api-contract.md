@@ -83,13 +83,16 @@ it must not merge different pickup origins.
 | `GET /api/v1/logistics/jobs` | ADMIN or DRIVER; driver sees only own assigned jobs | None | `200`, all jobs for admin or own jobs for driver |
 | `GET /api/v1/logistics/jobs/status/{status}` | ADMIN | Status in path | `200`, jobs |
 | `PUT /api/v1/logistics/jobs/{deliveryJobId}/assign?driverId={id}` | ADMIN | Driver ID | `200`, job `pending_assignment → assigned` |
-| `POST /api/v1/trips/jobs/{deliveryJobId}/accept` | Assigned DRIVER | None; identity from JWT | `200`, creates and returns an active `DeliveryTrip` |
+| `POST /api/v1/trips/jobs/{deliveryJobId}/accept` | Assigned DRIVER | None; identity from JWT | `200`, creates and returns an active trip including `tripId` and `deliveryJobId` |
 | `POST /api/v1/logistics/jobs/{deliveryJobId}/reject?reason={reason}` | Assigned DRIVER | Optional reason; identity from JWT | `200`, job returned to dispatch |
 | `GET /api/v1/trips/mine` | DRIVER | None | `200`, caller's active trips with `tripId` identifying each trip and its linked `deliveryJobId` |
-| `GET /api/v1/trips/{tripId}` | Assigned DRIVER | None | `200`, own trip |
-| `POST /api/v1/trips/{tripId}/status?status={nextStatus}` | Assigned DRIVER | One legal next status | `200`, linked job/trip advanced |
+| `GET /api/v1/trips/current` | DRIVER | None | `200`, current active trip's job fields plus `tripId` |
+| `GET /api/v1/trips/{tripId}` | Assigned DRIVER | None | `200`, own trip including `tripId` and `deliveryJobId` |
+| `POST /api/v1/trips/{tripId}/tracking/start` | Assigned DRIVER | None | `200`, assigned/accepted job advances to `en_route_to_pickup` |
+| `POST /api/v1/trips/{tripId}/status?status={nextStatus}` | Assigned DRIVER | Next status; `picked_up` from en-route records `arrived_at_pickup` and `picked_up` in order | `200`, linked job/trip advanced |
 | `POST /api/v1/trips/{tripId}/location` | Active trip's DRIVER | Latitude, longitude and optional telemetry/timestamp | `200`, fix accepted; no status transition |
 | `POST /api/v1/trips/{tripId}/otp/verify?otp={code}` | Active trip's DRIVER | Buyer handover code | `200`, code verified |
+| `POST /api/v1/trips/{tripId}/proof-photo` | Active trip's DRIVER | `multipart/form-data`, required image part named `image`; JPEG, PNG, GIF or WebP, max 10 MB | `201`, `{ "success": true, "data": { "url": "..." } }` |
 | `POST /api/v1/trips/{tripId}/proof?otp={code}` | Active trip's DRIVER | Proof recipient/signature/photo fields; code required unless already verified | `200`, linked job/trip completed once |
 | `GET /api/v1/buyer/orders/{orderId}/delivery` | Owning BUYER | None | `200`, own order delivery summary |
 | `GET /api/v1/seller/orders/{orderId}/deliveries` | Seller with an order line | None | `200`, only that seller's delivery jobs |
@@ -97,7 +100,19 @@ it must not merge different pickup origins.
 Dispatch requires an existing active DRIVER account, a verified driver profile, an
 available driver, and no active assignment. The existing job state machine continues
 to validate all transitions. Delivery completion requires the existing hashed,
-attempt-limited buyer code and proof of delivery.
+attempt-limited buyer code and proof of delivery. Delivery codes do not expire, are
+consumed after successful verification, and remain protected by the configured
+incorrect-attempt limit and lockout.
+
+The proof-photo upload is authenticated and scoped to the assigned driver's trip. It is
+available only while the job is `in_transit` or `arrived_at_destination`. The uploaded
+image is stored using the configured image-storage provider and the response URL is meant
+to be sent as `photoUrl` in the JSON proof request; device-local URIs such as Android
+`content://` values are rejected by proof submission. Upload errors use the standard API
+error envelope: `400` for unsupported/missing files, the 10 MB limit, or an inactive job;
+`403` for another driver's trip; and `404` for an unknown trip/job. Configure
+`STORAGE_PROVIDER=database` (the default) for durable database-backed storage and set
+`PUBLIC_BACKEND_URL` so returned image URLs are absolute and usable by other clients.
 
 ## Schema rollout
 

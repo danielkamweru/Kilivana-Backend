@@ -34,7 +34,7 @@ public class ProofOfDeliveryController {
             description = "Files proof of delivery for a delivery job. A job whose delivery code has not been verified yet must supply the correct code.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Proof of delivery filed"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Delivery code missing, expired or incorrect, or malformed request body"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Delivery code missing or incorrect, delivery not active, or malformed request body"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Delivery job not found"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "This delivery has already been confirmed"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Too many incorrect delivery codes; the code is temporarily locked"),

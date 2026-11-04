@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -151,6 +152,12 @@ public class DatabaseImageStorage {
 
     /** Database images are served over HTTP by {@code StoredImageController} at this path. */
     private String urlFor(String publicId) {
-        return publicBaseUrl + "/api/v1/images/" + publicId;
+        if (!publicBaseUrl.isBlank()) {
+            return publicBaseUrl + "/api/v1/images/" + publicId;
+        }
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/v1/images/")
+                .path(publicId)
+                .toUriString();
     }
 }

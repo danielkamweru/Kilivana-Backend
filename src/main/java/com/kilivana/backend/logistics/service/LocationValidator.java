@@ -6,6 +6,7 @@ import com.kilivana.backend.logistics.dto.LocationUpdateRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
@@ -64,8 +65,16 @@ public class LocationValidator {
             return null;
         }
         try {
-            LocalDateTime parsed = LocalDateTime.parse(clientTimestamp);
-            Instant clientInstant = parsed.atZone(ZoneId.systemDefault()).toInstant();
+            LocalDateTime parsed;
+            Instant clientInstant;
+            try {
+                OffsetDateTime offsetDateTime = OffsetDateTime.parse(clientTimestamp);
+                clientInstant = offsetDateTime.toInstant();
+                parsed = LocalDateTime.ofInstant(clientInstant, ZoneId.systemDefault());
+            } catch (DateTimeParseException ex) {
+                parsed = LocalDateTime.parse(clientTimestamp);
+                clientInstant = parsed.atZone(ZoneId.systemDefault()).toInstant();
+            }
             Instant now = Instant.now();
             Duration skew = Duration.between(clientInstant, now).abs();
             if (skew.compareTo(maxClockSkew) > 0) {
