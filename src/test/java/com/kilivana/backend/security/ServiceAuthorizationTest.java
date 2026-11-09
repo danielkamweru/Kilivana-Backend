@@ -9,7 +9,6 @@ import com.kilivana.backend.admin.dto.AddressRequest;
 import com.kilivana.backend.common.enums.*;
 import com.kilivana.backend.common.exception.GlobalExceptionHandler;
 import com.kilivana.backend.common.exception.BadRequestException;
-import com.kilivana.backend.common.exception.ServiceUnavailableException;
 import com.kilivana.backend.common.service.ImageStorage;
 import com.kilivana.backend.ecommerce.dto.*;
 import com.kilivana.backend.ecommerce.entity.*;
@@ -335,8 +334,10 @@ class ServiceAuthorizationTest {
         denied(() -> cartService.removeCartItem(9L, 1L));
         denied(() -> cartService.clearCart(9L));
         denied(() -> cartService.checkout(9L));
-        when(carts.findById(9L)).thenReturn(Optional.of(Cart.builder().id(9L).buyerId(1L).build()));
-        assertThrows(ServiceUnavailableException.class, () -> cartService.checkout(9L));
+        Cart activeCart = Cart.builder().id(9L).buyerId(1L).status(Cart.CartStatus.ACTIVE).build();
+        when(carts.findById(9L)).thenReturn(Optional.of(activeCart));
+        when(carts.findByIdForUpdate(9L)).thenReturn(Optional.of(activeCart));
+        assertThrows(BadRequestException.class, () -> cartService.checkout(9L));
         verify(carts, never()).save(any());
     }
     @ParameterizedTest @ValueSource(strings = {"/api/v1/users/2/addresses", "/api/v1/2/addresses"})

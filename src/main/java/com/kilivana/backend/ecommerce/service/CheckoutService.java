@@ -11,12 +11,10 @@ import com.kilivana.backend.ecommerce.dto.DeliveryQuoteResponse;
 import com.kilivana.backend.ecommerce.entity.Cart;
 import com.kilivana.backend.ecommerce.entity.CartItem;
 import com.kilivana.backend.ecommerce.entity.Order;
-import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
-import com.kilivana.backend.ecommerce.service.OrderService;
 import com.kilivana.backend.logistics.dto.PickupStationResponse;
 import com.kilivana.backend.logistics.entity.PickupStation;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
@@ -51,7 +49,7 @@ public class CheckoutService {
     public record QuoteRecord(String quoteId, Long userId, Long cartId, String deliveryMethod,
                              Long addressId, Long pickupStationId, String pickupLocation,
                              BigDecimal subtotal, BigDecimal deliveryFee, BigDecimal total,
-                             Instant expiresAt, boolean used) {}
+                             Instant expiresAt, boolean used, Long orderId) {}
 
     @Transactional
     public DeliveryQuoteResponse createDeliveryQuote(DeliveryQuoteRequest request) {
@@ -128,7 +126,7 @@ public class CheckoutService {
         Instant expiresAt = Instant.now().plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES);
 
         quotes.put(quoteId, new QuoteRecord(quoteId, userId, cart.getId(), deliveryMethod,
-                addressId, pickupStationId, pickupLocation, subtotal, deliveryFee, total, expiresAt, false));
+                addressId, pickupStationId, pickupLocation, subtotal, deliveryFee, total, expiresAt, false, null));
 
         DeliveryQuoteResponse.DeliveryQuoteResponseBuilder responseBuilder = DeliveryQuoteResponse.builder()
                 .quoteId(quoteId)
@@ -158,13 +156,25 @@ public class CheckoutService {
         Long userId = CurrentUser.id();
         if (userId == null) throw new BadRequestException("Authentication required");
 
-        QuoteRecord quote = quotes.get(request.getQuoteId());
-        if (quote == null) throw new BadRequestException("Quote not found");
-        if (!quote.userId().equals(userId)) throw new BadRequestException("Quote does not belong to this user");
-        if (quote.used()) throw new BadRequestException("Quote already used");
+        QuoteRecord initialQuote = quotes.get(request.getQuoteId());
+        if (initialQuote == null) throw new BadRequestException("Quote not found");
+
+        synchronized (initialQuote) {
+            QuoteRecord quote = quotes.get(request.getQuoteId());
+            if (quote == null) throw new BadRequestException("Quote not found");
+            if (!quote.userId().equals(userId)) throw new BadRequestException("Quote does not belong to this user");
+            if (quote.used()) {
+                if (quote.orderId() == null) throw new BadRequestException("Quote already used");
+                return quote.orderId();
+            }
+            return createOrderFromQuoteLocked(userId, quote);
+        }
+    }
+
+    private Long createOrderFromQuoteLocked(Long userId, QuoteRecord quote) {
         if (Instant.now().isAfter(quote.expiresAt())) throw new BadRequestException("Quote expired");
 
-        Cart cart = cartRepository.findById(quote.cartId())
+        Cart cart = cartRepository.findByIdForUpdate(quote.cartId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", quote.cartId()));
         if (cart.getStatus() != Cart.CartStatus.CHECKOUT_PROCESSING) {
             throw new BadRequestException("Cart is no longer in checkout");
@@ -196,14 +206,13 @@ public class CheckoutService {
         Order order = orderService.createOrder(userId, deliveryAddressId, quote.deliveryFee(), items,
                 subtotal, total, quote.deliveryMethod(), quote.pickupLocation(), quote.pickupStationId());
 
-        // mark quote used
-        quotes.put(quote.quoteId(), new QuoteRecord(quote.quoteId(), quote.userId(), quote.cartId(),
-                quote.deliveryMethod(), quote.addressId(), quote.pickupStationId(), quote.pickupLocation(),
-                quote.subtotal(), quote.deliveryFee(), quote.total(), quote.expiresAt(), true));
-
         // transition cart out of checkout processing
         cart.setStatus(Cart.CartStatus.ABANDONED);
         cartRepository.save(cart);
+
+        quotes.put(quote.quoteId(), new QuoteRecord(quote.quoteId(), quote.userId(), quote.cartId(),
+                quote.deliveryMethod(), quote.addressId(), quote.pickupStationId(), quote.pickupLocation(),
+                quote.subtotal(), quote.deliveryFee(), quote.total(), quote.expiresAt(), true, order.getId()));
 
         return order.getId();
     }

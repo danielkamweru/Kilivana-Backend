@@ -1,6 +1,5 @@
 package com.kilivana.backend.ecommerce.service;
 
-import com.kilivana.backend.ecommerce.dto.CartResponse;
 import com.kilivana.backend.ecommerce.entity.Cart;
 import com.kilivana.backend.ecommerce.entity.CartItem;
 import com.kilivana.backend.ecommerce.entity.Product;
@@ -23,8 +22,8 @@ import java.util.Optional;
  *
  * <p>One active cart per buyer; adding an item creates it if missing. The cart stores a
  * price snapshot on each line so the buyer sees the price they agreed to at checkout even if
- * the product price changes later. Checkout flips the cart to {@code CHECKOUT_PROCESSING}
- * and the order service reads the lines from there.
+ * the product price changes later. Cart lines do not reserve inventory; stock is deducted
+ * only when an order is successfully created during checkout.
  */
 @Service
 @RequiredArgsConstructor
@@ -65,18 +64,22 @@ public class CartService {
         if (quantity == null || quantity < 1) {
             throw new BadRequestException("Quantity must be at least 1");
         }
-        Product product = orderableProduct(productId, quantity);
+        Cart cart = getActiveCartForUpdate(buyerId);
+        Product product = lockOrderableProduct(productId);
 
-        Cart cart = getCartByBuyer(buyerId);
         Optional<CartItem> existing = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId);
         if (existing.isPresent()) {
             CartItem item = existing.get();
-            item.setQuantity(item.getQuantity() + quantity);
+            int currentQuantity = item.getQuantity();
+            int newQuantity = Math.addExact(currentQuantity, quantity);
+            requireAvailableStock(product, newQuantity);
+            item.setQuantity(newQuantity);
             // The snapshot is what the buyer agreed to, refreshed here because the price may
             // have moved since the line was first added.
             item.setPriceSnapshot(product.getPrice());
             cartItemRepository.save(item);
         } else {
+            requireAvailableStock(product, quantity);
             CartItem item = CartItem.builder()
                     .cartId(cart.getId())
                     .productId(productId)
@@ -88,21 +91,30 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
-    /**
-     * Validates that a product exists, is active, and has enough stock.
-     */
-    private Product orderableProduct(Long productId, int quantity) {
-        Product product = productRepository.findById(productId)
+    private Product lockOrderableProduct(Long productId) {
+        Product product = productRepository.findByIdForUpdate(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
         if (product.getStatus() != ProductStatus.ACTIVE) {
             throw new BadRequestException(
                     "Product is not available for purchase: " + product.getStatus());
         }
-        int stock = product.getStockQty() == null ? 0 : product.getStockQty();
-        if (stock < quantity) {
-            throw new BadRequestException("Only " + stock + " left in stock for product " + productId);
-        }
         return product;
+    }
+
+    private static int availableStock(Product product) {
+        int stock = product.getStockQty() == null ? 0 : product.getStockQty();
+        if (stock < 0) {
+            throw new BadRequestException("Invalid stock state for product " + product.getId());
+        }
+        return stock;
+    }
+
+    private static void requireAvailableStock(Product product, int quantity) {
+        int available = availableStock(product);
+        if (available < quantity) {
+            throw new BadRequestException(
+                    "Only " + available + " left in stock for product " + product.getId());
+        }
     }
 
     /**
@@ -114,13 +126,21 @@ public class CartService {
     @Transactional
     @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public Cart updateCartItem(Long cartId, Long productId, Integer quantity) {
-        CartItem item = cartItemRepository.findByCartIdAndProductId(cartId, productId)
-                .orElseThrow(() -> new ResourceNotFoundException("CartItem", productId));
+        requireActiveCartForUpdate(cartId);
         if (quantity == null || quantity < 1) {
             throw new BadRequestException("Quantity must be at least 1");
         }
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
+        CartItem item = cartItemRepository.findByCartIdAndProductId(cartId, productId)
+                .orElseThrow(() -> new ResourceNotFoundException("CartItem", productId));
+        if (product.getStatus() != ProductStatus.ACTIVE) {
+            throw new BadRequestException(
+                    "Product is not available for purchase: " + product.getStatus());
+        }
+        requireAvailableStock(product, quantity);
         item.setQuantity(quantity);
-        item.setPriceSnapshot(orderableProduct(productId, quantity).getPrice());
+        item.setPriceSnapshot(product.getPrice());
         cartItemRepository.save(item);
         return cartRepository.findById(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
@@ -132,8 +152,12 @@ public class CartService {
     @Transactional
     @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void removeCartItem(Long cartId, Long productId) {
-        cartItemRepository.findByCartIdAndProductId(cartId, productId)
-                .ifPresent(cartItemRepository::delete);
+        requireActiveCartForUpdate(cartId);
+        CartItem item = cartItemRepository.findByCartIdAndProductId(cartId, productId).orElse(null);
+        if (item == null) {
+            return;
+        }
+        cartItemRepository.delete(item);
     }
 
     /**
@@ -147,7 +171,7 @@ public class CartService {
     @Transactional
     @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void checkout(Long cartId) {
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByIdForUpdate(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
 
         if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
@@ -173,12 +197,28 @@ public class CartService {
     @Transactional
     @PreAuthorize("@resourceAuthorization.cart(#cartId)")
     public void clearCart(Long cartId) {
-        cartItemRepository.findByCartId(cartId).forEach(cartItemRepository::delete);
-        Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
+        Cart cart = requireActiveCartForUpdate(cartId);
+        cartItemRepository.deleteAll(cartItemRepository.findByCartId(cartId));
         // Abandoned is a terminal state: the cart is kept for analytics but
         // will never be reactivated.
         cart.setStatus(Cart.CartStatus.ABANDONED);
         cartRepository.save(cart);
+    }
+
+    private Cart getActiveCartForUpdate(Long buyerId) {
+        return cartRepository.findByBuyerIdAndStatusForUpdate(buyerId, Cart.CartStatus.ACTIVE)
+                .orElseGet(() -> cartRepository.save(Cart.builder()
+                        .buyerId(buyerId)
+                        .status(Cart.CartStatus.ACTIVE)
+                        .build()));
+    }
+
+    private Cart requireActiveCartForUpdate(Long cartId) {
+        Cart cart = cartRepository.findByIdForUpdate(cartId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", cartId));
+        if (cart.getStatus() != Cart.CartStatus.ACTIVE) {
+            throw new BadRequestException("Cart is not active and cannot be changed");
+        }
+        return cart;
     }
 }

@@ -1,4 +1,4 @@
-package com.kilivana.backend.admin.dto;
+'package com.kilivana.backend.admin.dto;
 
 import com.kilivana.backend.admin.entity.BuyerProfile;
 import io.swagger.v3.oas.annotations.media.Schema;

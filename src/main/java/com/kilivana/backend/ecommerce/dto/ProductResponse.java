@@ -41,9 +41,9 @@ public class ProductResponse {
     private String unit;
     @Schema(description = "Price per unit", example = "1200.50")
     private BigDecimal price;
-    @Schema(description = "Stock quantity available", example = "50")
+    @Schema(description = "Current quantity available for purchase", example = "47")
     private Integer stockQty;
-    @Schema(description = "Quantity reserved for open orders", example = "5")
+    @Schema(description = "Quantity held for open orders", example = "3")
     private Integer reservedQty;
     @Schema(description = "Quantity already sold", example = "120")
     private Integer soldQty;

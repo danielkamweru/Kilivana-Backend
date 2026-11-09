@@ -156,6 +156,8 @@ class OrderServiceTest {
         assertEquals("ORD-00100", order.getCode());
         assertEquals(OrderStatus.PLACED, order.getStatus());
         assertEquals(PaymentStatus.PENDING, order.getPaymentStatus());
+        assertEquals(8, product.getStockQty());
+        assertEquals(2, product.getReservedQty());
     }
 
     @Test
@@ -254,7 +256,7 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("refuses more units than are unreserved")
+    @DisplayName("refuses more units than remain in stock")
     void refusesOverselling() {
         List<OrderItemRequest> greedy = List.of(OrderItemRequest.builder()
                 .productId(PRODUCT_ID).quantity(11).unitPrice(new BigDecimal("50.00")).build());
@@ -284,6 +286,8 @@ class OrderServiceTest {
     @DisplayName("cancelling an unpaid order releases its reserved stock")
     void cancelReleasesStock() {
         Order order = placedOrder();
+        product.setStockQty(8);
+        product.setReservedQty(2);
         when(orderItemRepository.findByOrderId(100L)).thenReturn(List.of(OrderItem.builder()
                 .orderId(100L).productId(PRODUCT_ID).quantity(2).build()));
 
@@ -295,6 +299,7 @@ class OrderServiceTest {
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
         assertEquals(0, captor.getValue().getReservedQty());
+        assertEquals(10, captor.getValue().getStockQty());
     }
 
     @Test
@@ -328,7 +333,11 @@ class OrderServiceTest {
         Order delivered = placedOrder();
         delivered.setStatus(OrderStatus.DELIVERED);
         delivered.setPaymentStatus(PaymentStatus.HELD);
+        product.setStockQty(8);
+        product.setReservedQty(2);
         when(orderRepository.findById(100L)).thenReturn(Optional.of(delivered));
+        when(orderItemRepository.findByOrderId(100L)).thenReturn(List.of(OrderItem.builder()
+                .orderId(100L).productId(PRODUCT_ID).quantity(2).build()));
         when(paymentRepository.findByOrderId(100L)).thenReturn(List.of(
                 com.kilivana.backend.ecommerce.entity.Payment.builder()
                         .id(1L).orderId(100L).build()));
@@ -337,6 +346,8 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.COMPLETED, completed.getStatus());
         assertEquals(PaymentStatus.SETTLED, completed.getPaymentStatus());
+        assertEquals(8, product.getStockQty());
+        assertEquals(0, product.getReservedQty());
     }
 
     @Test void manipulatedCatalogPriceRejectedBeforeReservation() {
@@ -352,13 +363,14 @@ class OrderServiceTest {
         assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, List.of(request.get(0), request.get(0)), null, null));
         verify(productRepository, never()).save(any());
     }
-    @Test void minimumAndReservedStockEnforced() {
+    @Test void minimumOrderAndRemainingStockAreEnforced() {
         Product product = productRepository.findById(PRODUCT_ID).orElseThrow();
         product.setMinimumOrderQty(3);
         assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null));
         product.setMinimumOrderQty(1); product.setReservedQty(9);
-        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null));
-        verify(productRepository, never()).save(any());
+        orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null);
+        assertEquals(8, product.getStockQty());
+        assertEquals(11, product.getReservedQty());
     }
     @Test void reservationUsesLockedCatalogRecord() {
         orderService.createOrder(BUYER_ID, ADDRESS_ID, null, items(), null, null);

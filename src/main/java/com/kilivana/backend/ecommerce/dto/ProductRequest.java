@@ -56,7 +56,7 @@ public class ProductRequest {
 
     @NotNull(message = "Stock quantity is required")
     @Min(value = 0, message = "Stock quantity cannot be negative")
-    @Schema(description = "Stock quantity available", example = "50")
+    @Schema(description = "Current quantity available for purchase", example = "50")
     private Integer stockQty;
 
     @NotNull(message = "Minimum order quantity is required")

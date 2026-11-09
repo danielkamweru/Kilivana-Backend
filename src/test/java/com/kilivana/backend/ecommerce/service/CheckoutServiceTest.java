@@ -3,10 +3,12 @@ package com.kilivana.backend.ecommerce.service;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.enums.ProductStatus;
+import com.kilivana.backend.ecommerce.dto.CheckoutOrderRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteResponse;
 import com.kilivana.backend.ecommerce.entity.Cart;
 import com.kilivana.backend.ecommerce.entity.CartItem;
+import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
@@ -25,8 +27,14 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -135,5 +143,30 @@ class CheckoutServiceTest {
         assertEquals(5L, response.getPickupStationId());
         assertEquals("Canonical address", response.getPickupStation().getAddress());
         assertEquals(-1.28, response.getPickupStation().getLatitude());
+    }
+
+    @Test
+    void repeatedOrderRequest_returnsTheOriginalOrderWithoutDeductingStockAgain() {
+        String pickupLocation = "Outside Westlands Mall, near the main entrance";
+        DeliveryQuoteResponse quote = checkoutService.createDeliveryQuote(DeliveryQuoteRequest.builder()
+                .deliveryMethod("PICKUP_STATION")
+                .pickupLocation(pickupLocation)
+                .build());
+        Cart cart = Cart.builder().id(CART_ID).buyerId(BUYER_ID)
+                .status(Cart.CartStatus.CHECKOUT_PROCESSING).build();
+        when(cartRepository.findByIdForUpdate(CART_ID)).thenReturn(Optional.of(cart));
+        when(orderService.createOrder(eq(BUYER_ID), isNull(), any(BigDecimal.class), anyList(),
+                any(BigDecimal.class), any(BigDecimal.class), eq("PICKUP_STATION"), eq(pickupLocation),
+                isNull())).thenReturn(Order.builder().id(99L).build());
+
+        CheckoutOrderRequest request = CheckoutOrderRequest.builder().quoteId(quote.getQuoteId()).build();
+        Long firstOrderId = checkoutService.createOrderFromQuote(request);
+        Long replayedOrderId = checkoutService.createOrderFromQuote(request);
+
+        assertEquals(99L, firstOrderId);
+        assertEquals(firstOrderId, replayedOrderId);
+        verify(orderService, times(1)).createOrder(eq(BUYER_ID), isNull(), any(BigDecimal.class), anyList(),
+                any(BigDecimal.class), any(BigDecimal.class), eq("PICKUP_STATION"), eq(pickupLocation),
+                isNull());
     }
 }

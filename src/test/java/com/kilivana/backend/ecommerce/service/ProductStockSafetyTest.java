@@ -2,7 +2,6 @@ package com.kilivana.backend.ecommerce.service;
 
 import com.kilivana.backend.admin.service.UserService;
 import com.kilivana.backend.common.enums.ProductStatus;
-import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.service.ImageStorage;
 import com.kilivana.backend.ecommerce.dto.ProductRequest;
 import com.kilivana.backend.ecommerce.entity.Product;
@@ -19,18 +18,19 @@ class ProductStockSafetyTest {
             mock(com.kilivana.backend.security.ProductVisibility.class),
             mock(com.kilivana.backend.farm.repository.FarmRepository.class),
             mock(com.kilivana.backend.admin.repository.SupplierWarehouseRepository.class));
-    @Test void editingCannotEraseReservations() {
+    @Test void stockQuantityCanBeEditedIndependentlyOfOpenOrderCount() {
         when(products.findByIdForUpdate(1L)).thenReturn(Optional.of(Product.builder().id(1L).stockQty(10).reservedQty(8).build()));
-        assertThrows(BadRequestException.class, () -> service.updateProduct(1L, ProductRequest.builder().stockQty(7).build()));
-        verify(products, never()).save(any());
+        when(products.save(any())).thenAnswer(i -> i.getArgument(0));
+        var response = service.updateProduct(1L, ProductRequest.builder().stockQty(7).build());
+        assertEquals(7, response.getStockQty());
     }
     @Test void validEditPreservesReservationsAndPendingModeration() {
         var product = Product.builder().id(1L).stockQty(10).reservedQty(8).status(ProductStatus.PENDING_APPROVAL).build();
         when(products.findByIdForUpdate(1L)).thenReturn(Optional.of(product));
         when(products.save(any())).thenAnswer(i -> i.getArgument(0));
-        service.updateProduct(1L, ProductRequest.builder().stockQty(12).build());
+        service.updateProduct(1L, ProductRequest.builder().stockQty(7).build());
         assertEquals(8, product.getReservedQty());
         assertEquals(ProductStatus.PENDING_APPROVAL, product.getStatus());
-        assertEquals(12, product.getStockQty());
+        assertEquals(7, product.getStockQty());
     }
 }

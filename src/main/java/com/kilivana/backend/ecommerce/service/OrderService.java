@@ -98,12 +98,12 @@ public class OrderService {
 
     /**
      * Places an order: validates the buyer, the delivery address/pickup station and every
-     * line item, reserves the stock, computes the figures and writes the
+     * line item, deducts the stock, computes the figures and writes the
      * order, its items and its first timeline event in one transaction.
      *
      * @throws BadRequestException when the buyer is not a buyer account, the
      *     address/station is not valid, a product does not exist or has not
-     *     enough unreserved stock, or the caller's figures disagree with the
+     *     enough stock, or the caller's figures disagree with the
      *     computed ones
      */
     @Transactional
@@ -116,12 +116,12 @@ public class OrderService {
 
     /**
      * Places an order with delivery method support: validates the buyer, the delivery address/pickup station and every
-     * line item, reserves the stock, computes the figures and writes the
+     * line item, deducts the stock, computes the figures and writes the
      * order, its items and its first timeline event in one transaction.
      *
      * @throws BadRequestException when the buyer is not a buyer account, the
      *     address/station is not valid, a product does not exist or has not
-     *     enough unreserved stock, or the caller's figures disagree with the
+     *     enough stock, or the caller's figures disagree with the
      *     computed ones
      */
     @Transactional
@@ -233,11 +233,11 @@ public class OrderService {
                 throw new BadRequestException("Unit price does not match the current catalog price");
             int stock = nullToZero(product.getStockQty());
             int reserved = nullToZero(product.getReservedQty());
-            if (stock < 0 || reserved < 0 || reserved > stock)
+            if (stock < 0 || reserved < 0)
                 throw new BadRequestException("Invalid stock state");
             if (item.getQuantity() < Math.max(1, nullToZero(product.getMinimumOrderQty())))
                 throw new BadRequestException("Quantity is below the minimum order quantity");
-            if (stock - reserved < item.getQuantity()) throw new BadRequestException("Insufficient available stock");
+            if (stock < item.getQuantity()) throw new BadRequestException("Insufficient available stock");
             dispatchOrigins.put(product.getId(), dispatchOrigin(product));
             subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
@@ -255,6 +255,7 @@ public class OrderService {
 
         for (OrderItemRequest item : items) {
             Product product = locked.get(item.getProductId());
+            product.setStockQty(nullToZero(product.getStockQty()) - item.getQuantity());
             product.setReservedQty(nullToZero(product.getReservedQty()) + item.getQuantity());
             productRepository.save(product);
         }
@@ -382,8 +383,7 @@ public class OrderService {
         if (reason != null && !reason.isBlank()) {
             order.setCancellationReason(reason.trim());
         }
-        // Release the reserved stock back to available inventory so other buyers
-        // can purchase it.
+        // Restore stock consumed when the order was placed.
         releaseStock(order);
         if (order.getPaymentStatus().isRefundable()) {
             order.setPaymentStatus(PaymentStatus.REFUNDED);
@@ -407,6 +407,7 @@ public class OrderService {
         if (order.getStatus() != OrderStatus.DELIVERED) {
             throw new BadRequestException("Only a delivered order can be completed");
         }
+        releaseOpenOrderReservations(order);
         order.setStatus(OrderStatus.COMPLETED);
         if (order.getPaymentStatus() == PaymentStatus.PAID
                 || order.getPaymentStatus() == PaymentStatus.HELD) {
@@ -620,8 +621,19 @@ public class OrderService {
         });
     }
 
-    /** Returns the units a cancelled order had reserved. */
+    /** Restores stock consumed by a cancelled order and clears its open-order reservation. */
     private void releaseStock(Order order) {
+        orderItemRepository.findByOrderId(order.getId()).forEach(item -> {
+            productRepository.findByIdForUpdate(item.getProductId()).ifPresent(product -> {
+                int reserved = nullToZero(product.getReservedQty()) - item.getQuantity();
+                product.setReservedQty(Math.max(0, reserved));
+                product.setStockQty(Math.addExact(nullToZero(product.getStockQty()), item.getQuantity()));
+                productRepository.save(product);
+            });
+        });
+    }
+
+    private void releaseOpenOrderReservations(Order order) {
         orderItemRepository.findByOrderId(order.getId()).forEach(item -> {
             productRepository.findByIdForUpdate(item.getProductId()).ifPresent(product -> {
                 int reserved = nullToZero(product.getReservedQty()) - item.getQuantity();

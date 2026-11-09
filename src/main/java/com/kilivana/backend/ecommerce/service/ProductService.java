@@ -173,8 +173,8 @@ import java.util.stream.Collectors;
                 || (request.getCategory() != null && !request.getCategory().isBlank())) {
             product.setCategoryId(resolveCategoryId(request, product.getSellerType()));
         }
-        if (request.getStockQty() == null || request.getStockQty() < Math.max(0, product.getReservedQty() == null ? 0 : product.getReservedQty()))
-            throw new BadRequestException("Stock cannot be less than reserved quantity");
+        if (request.getStockQty() == null || request.getStockQty() < 0)
+            throw new BadRequestException("Stock quantity cannot be negative");
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setUnit(request.getUnit());

@@ -486,7 +486,7 @@ public class SeedDataRunner {
 
     /**
      * Writes an order with the given reference, its line items and its
-     * opening timeline event, and reserves the stock the lines buy. The
+     * opening timeline event, and deducts the stock the lines buy. The
      * figures are computed from the items, exactly as the placement
      * endpoint computes them.
      */
@@ -502,7 +502,8 @@ public class SeedDataRunner {
             Product product = line.product;
             subtotal = subtotal.add(product.getPrice()
                     .multiply(BigDecimal.valueOf(line.quantity)));
-            // Reserve the stock now, the way a live order would.
+            // Deduct stock now, the way a live order does at checkout.
+            product.setStockQty(nullToZero(product.getStockQty()) - line.quantity);
             product.setReservedQty(nullToZero(product.getReservedQty()) + line.quantity);
             productRepository.save(product);
             items.add(OrderItem.builder()

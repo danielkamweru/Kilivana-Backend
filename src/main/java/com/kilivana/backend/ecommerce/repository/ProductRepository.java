@@ -16,7 +16,7 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    /** Serialize stock changes with order reservations; no schema change required. */
+    /** Serialize inventory changes with cart and order reservations. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id")
     Optional<Product> findByIdForUpdate(@Param("id") Long id);
@@ -44,7 +44,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "(CAST(:name AS VARCHAR) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
            "(CAST(:categoryId AS BIGINT) IS NULL OR p.category_id = :categoryId) AND " +
            "(CAST(:sellerType AS VARCHAR) IS NULL OR p.seller_type = :sellerType) AND " +
-           "p.status = 'ACTIVE'", nativeQuery = true)
+           "p.status = 'ACTIVE' AND p.stock_qty > 0", nativeQuery = true)
     Page<Product> searchProducts(@Param("name") String name,
                                  @Param("categoryId") Long categoryId,
                                  @Param("sellerType") String sellerType,
