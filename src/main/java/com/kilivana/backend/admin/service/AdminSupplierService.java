@@ -2,9 +2,12 @@ package com.kilivana.backend.admin.service;
 
 import com.kilivana.backend.admin.dto.AdminSupplierResponse;
 import com.kilivana.backend.admin.dto.SupplierRegistrationRequest;
+import com.kilivana.backend.admin.dto.SupplierWarehouseResponse;
 import com.kilivana.backend.admin.entity.SupplierProfile;
+import com.kilivana.backend.admin.entity.SupplierWarehouse;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.SupplierProfileRepository;
+import com.kilivana.backend.admin.repository.SupplierWarehouseRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.SellerType;
 import com.kilivana.backend.common.enums.UserRole;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +42,7 @@ public class AdminSupplierService {
 
     private final UserRepository userRepository;
     private final SupplierProfileRepository supplierProfileRepository;
+    private final SupplierWarehouseRepository supplierWarehouseRepository;
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
@@ -112,9 +117,18 @@ public class AdminSupplierService {
         for (SupplierProfile profile : supplierProfileRepository.findAll()) {
             profiles.put(profile.getUserId(), profile);
         }
+        Map<Long, List<SupplierWarehouse>> warehousesByUser = new HashMap<>();
+        if (!suppliers.isEmpty()) {
+            for (SupplierWarehouse warehouse : supplierWarehouseRepository.findByUserIdInOrderById(
+                    suppliers.stream().map(User::getId).toList())) {
+                warehousesByUser.computeIfAbsent(warehouse.getUserId(), ignored -> new ArrayList<>())
+                        .add(warehouse);
+            }
+        }
 
         return suppliers.stream()
-                .map(user -> toResponse(user, profiles.get(user.getId())))
+                .map(user -> toResponse(user, profiles.get(user.getId()),
+                        warehousesByUser.getOrDefault(user.getId(), List.of())))
                 .toList();
     }
 
@@ -122,7 +136,7 @@ public class AdminSupplierService {
     public AdminSupplierResponse getSupplier(Long userId) {
         User user = supplierUser(userId);
         SupplierProfile profile = supplierProfileRepository.findByUserId(userId).orElse(null);
-        return toResponse(user, profile);
+        return toResponse(user, profile, supplierWarehouseRepository.findByUserIdOrderById(userId));
     }
 
     @Transactional
@@ -178,7 +192,7 @@ public class AdminSupplierService {
 
         User savedUser = userRepository.save(user);
         SupplierProfile savedProfile = supplierProfileRepository.save(profile);
-        return toResponse(savedUser, savedProfile);
+        return toResponse(savedUser, savedProfile, supplierWarehouseRepository.findByUserIdOrderById(userId));
     }
 
     private static void validateSupplierRequest(SupplierRegistrationRequest request, boolean isCreate) {
@@ -256,7 +270,8 @@ public class AdminSupplierService {
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier", userId));
     }
 
-    private AdminSupplierResponse toResponse(User user, SupplierProfile profile) {
+    private AdminSupplierResponse toResponse(
+            User user, SupplierProfile profile, List<SupplierWarehouse> warehouses) {
         int productsCount = profile == null
                 ? 0
                 : productRepository.findBySellerIdAndSellerType(user.getId(), SellerType.SUPPLIER).size();
@@ -281,6 +296,11 @@ public class AdminSupplierService {
                 user.getCreatedAt()
         );
         response.setEmailVerified(user.isEmailVerified());
+        response.setBusinessDetails(profile == null ? null : profile.getBusinessDetails());
+        response.setVerificationInfo(profile == null ? null : profile.getVerificationInfo());
+        response.setWarehouses(warehouses.stream()
+                .map(SupplierWarehouseResponse::fromEntity)
+                .toList());
         return response;
     }
 

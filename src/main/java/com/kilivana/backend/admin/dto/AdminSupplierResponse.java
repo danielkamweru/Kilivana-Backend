@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * A supplier as the administration roster reads them.
@@ -57,8 +58,17 @@ public class AdminSupplierResponse {
     @Schema(description = "Physical address", example = "Plot 45, Nakuru-Eldoret Road")
     private String address;
 
+    @Schema(description = "Additional details about the supplier's business")
+    private String businessDetails;
+
+    @Schema(description = "Supplier verification documents or references")
+    private String verificationInfo;
+
     @Schema(description = "Product category", example = "Vegetables")
     private String category;
+
+    @Schema(description = "Supplier warehouse and dispatch locations")
+    private List<SupplierWarehouseResponse> warehouses;
 
     @Schema(description = "Contract end date", example = "2026-12-31")
     private LocalDate contractEndDate;

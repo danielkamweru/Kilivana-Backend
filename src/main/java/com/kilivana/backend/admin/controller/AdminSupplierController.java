@@ -66,7 +66,8 @@ public class AdminSupplierController {
      */
     @Operation(
         summary = "List suppliers",
-        description = "Every supplier account with its profile, product count and status."
+        description = "Every supplier account with its business profile, contact details, "
+                + "warehouse locations, product count and status."
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Suppliers listed")
     @GetMapping
@@ -82,7 +83,8 @@ public class AdminSupplierController {
      */
     @Operation(
         summary = "Get a supplier",
-        description = "One supplier by user id, in the same shape as the list."
+        description = "One supplier by user id, including business details, contact details "
+                + "and all warehouse locations."
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Supplier found"),
