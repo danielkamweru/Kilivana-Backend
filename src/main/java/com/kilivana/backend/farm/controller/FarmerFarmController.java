@@ -142,7 +142,6 @@ public class FarmerFarmController {
             farm.setLongitude(request.getLongitude());
         }
         farm.setSizeAcres(request.getSizeAcres());
-        farm.setOwnershipType(request.getOwnershipType());
         farm.setDescription(request.getDescription());
         Farm saved = farmRepository.save(farm);
         return ResponseEntity.ok(ApiResponse.success(toFullResponse(saved)));

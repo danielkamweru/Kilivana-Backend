@@ -133,6 +133,7 @@ class DisputeServiceTest {
         order.setPaymentStatus(PaymentStatus.HELD);
         when(disputeRepository.findById(DISPUTE_ID)).thenReturn(Optional.of(openDispute()));
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(paymentRepository.findByOrderId(ORDER_ID)).thenReturn(List.of(
                 Payment.builder().id(1L).orderId(ORDER_ID).status(PaymentStatus.HELD).build()));
 
@@ -141,6 +142,7 @@ class DisputeServiceTest {
 
         assertEquals(OrderStatus.CANCELLED, order.getStatus());
         assertEquals(PaymentStatus.REFUNDED, order.getPaymentStatus());
+        org.mockito.Mockito.verify(orderService).rollbackDisputedInventory(order);
         ArgumentCaptor<Dispute> disputes = ArgumentCaptor.forClass(Dispute.class);
         org.mockito.Mockito.verify(disputeRepository).save(disputes.capture());
         assertEquals(DisputeStatus.RESOLVED, disputes.getValue().getStatus());
@@ -155,6 +157,7 @@ class DisputeServiceTest {
         order.setPaymentStatus(PaymentStatus.HELD);
         when(disputeRepository.findById(DISPUTE_ID)).thenReturn(Optional.of(openDispute()));
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(paymentRepository.findByOrderId(ORDER_ID)).thenReturn(List.of());
 
         disputeService.resolveDispute(DISPUTE_ID, DisputeResolutionRequest.builder()
@@ -162,6 +165,7 @@ class DisputeServiceTest {
 
         assertEquals(OrderStatus.COMPLETED, order.getStatus());
         assertEquals(PaymentStatus.SETTLED, order.getPaymentStatus());
+        org.mockito.Mockito.verify(orderService).recordSalesForDisputedOrder(order);
     }
 
     @Test

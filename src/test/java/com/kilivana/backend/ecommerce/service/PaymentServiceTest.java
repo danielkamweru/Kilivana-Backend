@@ -2,6 +2,7 @@ package com.kilivana.backend.ecommerce.service;
 
 import com.kilivana.backend.common.enums.PaymentMethod;
 import com.kilivana.backend.common.enums.PaymentStatus;
+import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Payment;
@@ -74,6 +75,7 @@ class PaymentServiceTest {
                 .id(1L).orderId(50L).status(PaymentStatus.PENDING).build();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
 
         Payment paid = paymentService.updatePaymentStatus(1L, PaymentStatus.PAID);
 
@@ -93,11 +95,41 @@ class PaymentServiceTest {
                 .paidAt(firstArrival).build();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
 
         Payment settled = paymentService.updatePaymentStatus(1L, PaymentStatus.SETTLED);
 
         // The escrow steps after arrival must not re-stamp the arrival time.
         assertEquals(firstArrival, settled.getPaidAt());
         assertEquals(PaymentStatus.SETTLED, settled.getStatus());
+    }
+
+    @Test
+    @DisplayName("a failed payment reverses a previously recorded delivery sale")
+    void failedPaymentReversesRecordedSale() {
+        Order order = Order.builder().id(50L).paymentStatus(PaymentStatus.PAID).build();
+        Payment payment = Payment.builder()
+                .id(1L).orderId(50L).status(PaymentStatus.PAID).build();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
+
+        paymentService.updatePaymentStatus(1L, PaymentStatus.FAILED);
+
+        verify(orderService).reverseSalesForRefund(order);
+    }
+
+    @Test
+    @DisplayName("a successful payment records sales for an already delivered order")
+    void successfulPaymentRecordsDeliveredOrderSale() {
+        Order order = Order.builder().id(50L).status(OrderStatus.DELIVERED)
+                .paymentStatus(PaymentStatus.PENDING).build();
+        Payment payment = Payment.builder()
+                .id(1L).orderId(50L).status(PaymentStatus.PENDING).build();
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
+
+        paymentService.updatePaymentStatus(1L, PaymentStatus.PAID);
+
+        verify(orderService).recordSalesForPaidDelivery(order);
     }
 }

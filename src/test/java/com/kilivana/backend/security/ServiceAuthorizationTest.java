@@ -65,6 +65,7 @@ class ServiceAuthorizationTest {
         @Bean CartItemRepository cartItems() { return mock(CartItemRepository.class); }
         @Bean AddressRepository addresses() { return mock(AddressRepository.class); }
         @Bean FarmerProfileRepository farmers() { return mock(FarmerProfileRepository.class); }
+        @Bean SupplierProfileRepository suppliers() { return mock(SupplierProfileRepository.class); }
         @Bean DriverProfileRepository drivers() { return mock(DriverProfileRepository.class); }
         @Bean LogisticsJobRepository jobs() { return mock(LogisticsJobRepository.class); }
         @Bean com.kilivana.backend.logistics.repository.TrackingEventRepository tracking() { return mock(com.kilivana.backend.logistics.repository.TrackingEventRepository.class); }

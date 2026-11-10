@@ -6,6 +6,9 @@ import com.kilivana.backend.admin.entity.DriverProfile;
 import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.FarmerProfileRepository;
+import com.kilivana.backend.admin.entity.FarmerProfile;
+import com.kilivana.backend.admin.entity.SupplierProfile;
+import com.kilivana.backend.admin.repository.SupplierProfileRepository;
 import com.kilivana.backend.admin.repository.SupplierWarehouseRepository;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.admin.entity.SupplierWarehouse;
@@ -22,6 +25,7 @@ import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.dto.OrderItemRequest;
 import com.kilivana.backend.ecommerce.dto.OrderItemResponse;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.dto.SellerResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
@@ -50,6 +54,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Order placement and the order lifecycle.
@@ -74,6 +81,7 @@ public class OrderService {
     private final AddressRepository addressRepository;
     private final PickupStationRepository pickupStationRepository;
     private final FarmerProfileRepository farmerProfileRepository;
+    private final SupplierProfileRepository supplierProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final LogisticsService logisticsService;
     private final LogisticsJobRepository logisticsJobRepository;
@@ -424,7 +432,7 @@ public class OrderService {
         }
         Order saved = orderRepository.save(order);
         orderEventRepository.save(OrderEvent.builder()
-                .orderId(orderId).status(OrderStatus.CANCELLED).build());
+                .orderId(order.getId()).status(OrderStatus.CANCELLED).build());
         return saved;
     }
 
@@ -494,27 +502,6 @@ public class OrderService {
 
     @Transactional
     @PreAuthorize("@resourceAuthorization.admin()")
-    public void completeDisputedOrder(Order order) {
-        if (order.getStatus() == OrderStatus.COMPLETED) {
-            return;
-        }
-        if (order.getStatus() != OrderStatus.DISPUTED) {
-            throw new BadRequestException("Only a disputed order can be completed by dispute resolution");
-        }
-        recordSuccessfulSale(order);
-        order.setStatus(OrderStatus.COMPLETED);
-        if (order.getPaymentStatus() == PaymentStatus.PAID
-                || order.getPaymentStatus() == PaymentStatus.HELD) {
-            order.setPaymentStatus(PaymentStatus.SETTLED);
-            setPaymentStatusForOrder(order.getId(), PaymentStatus.SETTLED);
-        }
-        orderRepository.save(order);
-        orderEventRepository.save(OrderEvent.builder()
-                .orderId(order.getId()).status(OrderStatus.COMPLETED).build());
-    }
-
-    @Transactional
-    @PreAuthorize("@resourceAuthorization.admin()")
     public void cancelDisputedOrder(Order order) {
         if (order.getStatus() != OrderStatus.DISPUTED) {
             throw new BadRequestException("Only a disputed order can be cancelled by dispute resolution");
@@ -565,25 +552,16 @@ public class OrderService {
         return orderEventRepository.findByOrderIdOrderByCreatedAtAsc(orderId);
     }
 
-    /** The order's line items, for the response the panel renders. */
+    /** The order's line items, including their seller details. */
     @PreAuthorize("@resourceAuthorization.order(#orderId)")
+    @Transactional(readOnly = true)
     public List<OrderItemResponse> getOrderItems(Long orderId) {
-        return orderItemRepository.findByOrderId(orderId).stream()
-                .map(item -> OrderItemResponse.builder()
-                        .id(item.getId())
-                        .productId(item.getProductId())
-                        .sellerId(item.getSellerId())
-                        .productName(item.getProductName())
-                        .unit(item.getUnit())
-                        .quantity(item.getQuantity())
-                        .unitPrice(item.getUnitPrice())
-                        .subtotal(item.getSubtotal())
-                        .build())
-                .toList();
+        return mapOrderItems(orderItemRepository.findByOrderId(orderId)).items();
     }
 
     /** The panel-facing view of an order, line items included. */
     @PreAuthorize("@resourceAuthorization.order(#order.id)")
+    @Transactional(readOnly = true)
     public OrderResponse toResponse(Order order) {
         LogisticsJob job = latestJob(order.getId());
         User driver = job == null || job.getDriverId() == null
@@ -594,15 +572,9 @@ public class OrderService {
                 : driverProfileRepository.findByUserId(driver.getId()).orElse(null);
         User buyer = order.getBuyerId() == null ? null
                 : userRepository.findById(order.getBuyerId()).orElse(null);
-        OrderItem firstItem = orderItemRepository.findByOrderId(order.getId()).stream()
-                .filter(item -> item.getSellerId() != null)
-                .findFirst().orElse(null);
-        User seller = firstItem == null ? null
-                : userRepository.findById(firstItem.getSellerId()).orElse(null);
-        String sellerLocation = firstItem == null ? null
-                : farmerProfileRepository.findByUserId(firstItem.getSellerId())
-                        .map(com.kilivana.backend.admin.entity.FarmerProfile::getLocation)
-                        .orElse(null);
+        SellerMapping sellerMapping = mapOrderItems(orderItemRepository.findByOrderId(order.getId()));
+        SellerResponse singleSeller = sellerMapping.sellers().size() == 1
+                ? sellerMapping.sellers().get(0) : null;
         Payment payment = paymentRepository.findByOrderId(order.getId()).stream()
                 .findFirst().orElse(null);
         return OrderResponse.builder()
@@ -630,19 +602,85 @@ public class OrderService {
                 .buyerPhone(buyer == null ? null : buyer.getPhone())
                 .buyerCounty(buyer == null ? null : buyer.getRegion())
                 .deliveryAddress(orderAddress(order.getId()))
-                .sellerName(seller == null ? null : seller.getName())
-                .sellerPhone(seller == null ? null : seller.getPhone())
-                .sellerCounty(seller == null ? null : seller.getRegion())
-                .sellerLocation(sellerLocation)
+                .sellerName(singleSeller == null ? null : singleSeller.getSellerName())
+                .sellerPhone(singleSeller == null ? null : singleSeller.getSellerPhone())
+                .sellerCounty(singleSeller == null ? null : singleSeller.getSellerCounty())
+                .sellerLocation(singleSeller == null ? null : singleSeller.getSellerLocation())
+                .sellers(sellerMapping.sellers())
                 .paymentMethod(payment == null ? null
                         : payment.getMethod() == null ? null : payment.getMethod().wire())
                 .paymentReference(payment == null ? null : payment.getReference())
                 .paidAt(payment == null ? null : payment.getPaidAt())
-                .items(getOrderItems(order.getId()))
+                .items(sellerMapping.items())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();
     }
+
+    private SellerMapping mapOrderItems(List<OrderItem> items) {
+        Set<Long> sellerIds = new LinkedHashSet<>();
+        for (OrderItem item : items) {
+            if (item.getSellerId() != null) {
+                sellerIds.add(item.getSellerId());
+            }
+        }
+
+        Map<Long, User> usersById = new HashMap<>();
+        Map<Long, FarmerProfile> farmersByUserId = new HashMap<>();
+        Map<Long, SupplierProfile> suppliersByUserId = new HashMap<>();
+        if (!sellerIds.isEmpty()) {
+            List<Long> distinctSellerIds = new java.util.ArrayList<>(sellerIds);
+            userRepository.findAllById(distinctSellerIds).forEach(user -> usersById.put(user.getId(), user));
+            farmerProfileRepository.findByUserIdIn(distinctSellerIds)
+                    .forEach(profile -> farmersByUserId.put(profile.getUserId(), profile));
+            supplierProfileRepository.findByUserIdIn(distinctSellerIds)
+                    .forEach(profile -> suppliersByUserId.put(profile.getUserId(), profile));
+        }
+
+        Map<Long, SellerResponse> sellersById = new LinkedHashMap<>();
+        for (Long sellerId : sellerIds) {
+            User seller = usersById.get(sellerId);
+            String location = null;
+            if (seller != null && seller.getRole() == UserRole.FARMER) {
+                FarmerProfile profile = farmersByUserId.get(sellerId);
+                location = profile == null ? null : profile.getLocation();
+            } else if (seller != null && seller.getRole() == UserRole.SUPPLIER) {
+                SupplierProfile profile = suppliersByUserId.get(sellerId);
+                location = profile == null ? null : profile.getLocation();
+            }
+            sellersById.put(sellerId, SellerResponse.builder()
+                    .sellerId(sellerId)
+                    .sellerName(seller == null ? null : seller.getName())
+                    .sellerPhone(seller == null ? null : seller.getPhone())
+                    .sellerCounty(seller == null ? null : seller.getRegion())
+                    .sellerLocation(location)
+                    .build());
+        }
+
+        List<SellerResponse> sellers = new java.util.ArrayList<>(sellersById.values());
+        List<OrderItemResponse> responses = items.stream()
+                .map(item -> {
+                    SellerResponse seller = sellersById.get(item.getSellerId());
+                    return OrderItemResponse.builder()
+                            .id(item.getId())
+                            .productId(item.getProductId())
+                            .sellerId(item.getSellerId())
+                            .sellerName(seller == null ? null : seller.getSellerName())
+                            .sellerPhone(seller == null ? null : seller.getSellerPhone())
+                            .sellerCounty(seller == null ? null : seller.getSellerCounty())
+                            .sellerLocation(seller == null ? null : seller.getSellerLocation())
+                            .productName(item.getProductName())
+                            .unit(item.getUnit())
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getUnitPrice())
+                            .subtotal(item.getSubtotal())
+                            .build();
+                })
+                .toList();
+        return new SellerMapping(responses, sellers);
+    }
+
+    private record SellerMapping(List<OrderItemResponse> items, List<SellerResponse> sellers) {}
 
     /**
      * Dispatches an order to a driver: reuses the order's pending

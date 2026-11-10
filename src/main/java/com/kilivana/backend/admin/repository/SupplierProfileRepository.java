@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Access to the {@link SupplierProfile} table. A supplier profile is optional — a registered
@@ -14,6 +16,8 @@ import java.util.Optional;
 public interface SupplierProfileRepository extends JpaRepository<SupplierProfile, Long> {
 
     Optional<SupplierProfile> findByUserId(Long userId);
+
+    List<SupplierProfile> findByUserIdIn(Collection<Long> userIds);
 
     boolean existsByUserId(Long userId);
 }

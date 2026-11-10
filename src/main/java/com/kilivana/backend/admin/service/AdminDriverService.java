@@ -45,7 +45,6 @@ public class AdminDriverService {
     private final LogisticsJobRepository logisticsJobRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
-    private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
     /**
      * Registers a driver: the login account and the profile in one call.
@@ -82,10 +81,9 @@ public class AdminDriverService {
                     + String.join(", ", KenyanIdType.all()));
         }
 
-        User user = userRepository.save(User.builder()
+        User user = User.builder()
                 .name(request.getFullName().trim())
                 .email(email)
-                .emailVerified(false)
                 .phone(phone)
                 .username(request.getUsername() == null ? null : request.getUsername().trim())
                 .region(county)
@@ -95,7 +93,9 @@ public class AdminDriverService {
                 // KYC is a licence check recorded on the profile, not an email confirmation.
                 .verificationStatus(VerificationStatus.NOT_REQUIRED)
                 .referenceCode(referenceCodeGenerator.nextCode(UserRole.DRIVER))
-                .build());
+                .build();
+        user.setEmailVerified(true);
+        user = userRepository.save(user);
 
         DriverProfile profile = driverProfileRepository.save(DriverProfile.builder()
                 .userId(user.getId())
@@ -117,10 +117,7 @@ public class AdminDriverService {
                         : request.getAvailabilityStatus())
                 .build());
 
-        var challenge = emailVerificationService.startForNewAccount(user);
-        var response = toResponse(user, profile, Map.of(user.getId(), 0L));
-        response.setEmailVerificationChallengeId(challenge.challengeId());
-        return response;
+        return toResponse(user, profile, Map.of(user.getId(), 0L));
     }
 
     @Transactional
@@ -154,6 +151,7 @@ public class AdminDriverService {
 
         user.setName(request.getFullName().trim());
         user.setEmail(email);
+        user.setEmailVerified(true);
         user.setPhone(phone);
         user.setUsername(request.getUsername() != null && !request.getUsername().isBlank()
                 ? request.getUsername().trim() : null);

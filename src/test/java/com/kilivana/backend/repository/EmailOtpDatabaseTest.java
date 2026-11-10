@@ -130,26 +130,28 @@ class EmailOtpDatabaseTest {
         verify(created);var user=saved(created.getId());assertEquals(UserRole.INSPECTOR,user.getRole());
         assertEquals(UserStatus.PENDING_VERIFICATION,user.getStatus());assertEquals(VerificationStatus.PENDING,user.getVerificationStatus());
     }
-    @Test void specializedAdminSupplierProvisioningUsesSameEmailGateAndPreservesPendingStatus() {
-        String email="admin-supplier@example.invalid";limiter.acquireSend(email);
+    @Test void specializedAdminSupplierProvisioningSkipsOtpAndPreservesPendingStatus() {
+        String email="admin-supplier@example.invalid";
         var response=supplierProvisioning.registerSupplier(SupplierRegistrationRequest.builder()
             .companyName("Fixture Supplier").contactPerson("Fixture Contact").username("fixture-supplier")
             .email(email).phone("0700000001").region("Kiambu").category("Fertilizer").password("fixture-password").build());
-        assertFalse(response.isEmailVerified());assertNotNull(response.getEmailVerificationChallengeId());
-        otp.verify(input(response.getEmailVerificationChallengeId(),email,codes.get(email)));
+        assertTrue(response.isEmailVerified());assertNull(response.getEmailVerificationChallengeId());
         assertTrue(saved(response.getUserId()).isEmailVerified());assertEquals(UserRole.SUPPLIER,saved(response.getUserId()).getRole());
         assertEquals(UserStatus.PENDING_VERIFICATION,saved(response.getUserId()).getStatus());
+        assertEquals(0,challenges.count());
+        assertEquals(0,delivered.get());
     }
-    @Test void specializedAdminDriverProvisioningUsesSameEmailGateAndPreservesKyc() {
-        String email="admin-driver@example.invalid";limiter.acquireSend(email);
+    @Test void specializedAdminDriverProvisioningSkipsOtpAndPreservesKyc() {
+        String email="admin-driver@example.invalid";
         var response=driverProvisioning.registerDriver(DriverRegistrationRequest.builder()
             .fullName("Fixture Driver").username("fixture-driver").password("fixture-password").phone("0700000002")
             .email(email).region("Kiambu").idType("National ID").idNumber("12345678").licenceNumber("TEST-DL")
             .licenceExpiry(java.time.LocalDate.of(2030,1,1)).vehicleType(VehicleType.PICKUP).vehicleCapacity("1T").plateNumber("TEST 001").build());
-        assertFalse(response.isEmailVerified());assertNotNull(response.getEmailVerificationChallengeId());
-        otp.verify(input(response.getEmailVerificationChallengeId(),email,codes.get(email)));
+        assertTrue(response.isEmailVerified());assertNull(response.getEmailVerificationChallengeId());
         assertTrue(saved(response.getUserId()).isEmailVerified());assertEquals(UserRole.DRIVER,saved(response.getUserId()).getRole());
         assertEquals(KycStatus.PENDING,driverProvisioning.findDriver(response.getUserId()).orElseThrow().getKycStatus());
+        assertEquals(0,challenges.count());
+        assertEquals(0,delivered.get());
     }
     @Test void publicInspectorAndAdminAreRejectedWithoutPersistingOrSending() {
         for(var role:List.of(UserRole.INSPECTOR,UserRole.ADMIN))

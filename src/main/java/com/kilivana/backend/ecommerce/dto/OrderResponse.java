@@ -77,15 +77,17 @@ public class OrderResponse {
     private String buyerCounty;
     @Schema(description = "Full delivery address", example = "Mombasa Road, Nairobi")
     private String deliveryAddress;
-    /** First seller on the order, with the farm or shop location. */
-    @Schema(description = "Seller display name", example = "Green Valley Farm")
+    /** Populated only when the order has exactly one distinct seller. */
+    @Schema(description = "Seller display name when the order has exactly one seller", example = "Green Valley Farm")
     private String sellerName;
-    @Schema(description = "Seller phone number", example = "+254734567890")
+    @Schema(description = "Seller phone number when the order has exactly one seller", example = "+254734567890")
     private String sellerPhone;
-    @Schema(description = "Seller county", example = "Kiambu")
+    @Schema(description = "Seller county when the order has exactly one seller", example = "Kiambu")
     private String sellerCounty;
-    @Schema(description = "Seller farm or shop location", example = "Karura, Kiambu")
+    @Schema(description = "Seller profile location when the order has exactly one seller", example = "Karura, Kiambu")
     private String sellerLocation;
+    @Schema(description = "Distinct sellers represented by the order items")
+    private List<SellerResponse> sellers;
     /** First payment row, so the panel can show how the order was paid. */
     @Schema(description = "Payment method used", example = "MPESA")
     private String paymentMethod;

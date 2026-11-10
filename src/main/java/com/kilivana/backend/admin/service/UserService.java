@@ -36,19 +36,16 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final com.kilivana.backend.common.service.UserReferenceCodeGenerator referenceCodeGenerator;
     private final DriverProfileRepository driverProfileRepository;
-    private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
     /**
      * Creates a new user account. Only administrators can call this method.
      *
-     * <p>Email verification behavior varies by role:
-     * <ul>
-     *   <li>Staff roles (ADMIN, INSPECTOR, DRIVER): Pre-verified immediately since they're created by trusted admins</li>
-     *   <li>Self-registered roles (BUYER, FARMER, SUPPLIER): Require OTP verification via email</li>
-     * </ul>
+     * <p>Every account created through this administrator-only method is pre-verified.
+     * Self-service registrations use {@link com.kilivana.backend.common.service.AuthService}
+     * and continue to require email OTP verification.
      *
      * @param request the user registration details
-     * @return the created user response, with verification challenge ID if OTP is required
+     * @return the created, email-verified user response
      * @throws BadRequestException if email or phone already exists
      */
     @Transactional
@@ -79,22 +76,9 @@ public class UserService {
                 .referenceCode(referenceCodeGenerator.nextCode(request.getRole()))
                 .build();
 
+        user.setEmailVerified(true);
         User saved = userRepository.save(user);
-
-        // Staff roles (ADMIN, INSPECTOR, DRIVER) created by admin are pre-verified
-        // Self-registered roles (BUYER, FARMER, SUPPLIER) require OTP verification
-        if (request.getRole() == UserRole.BUYER || request.getRole() == UserRole.FARMER || request.getRole() == UserRole.SUPPLIER) {
-            var challenge = emailVerificationService.startForNewAccount(saved);
-            UserResponse response = mapToResponse(saved);
-            response.setEmailVerificationChallengeId(challenge.challengeId());
-            return response;
-        } else {
-            // Mark staff accounts as verified immediately
-            saved.setEmailVerified(true);
-            saved.setEmailVerifiedAt(java.time.Instant.now());
-            userRepository.save(saved);
-            return mapToResponse(saved);
-        }
+        return mapToResponse(saved);
     }
 
     @PreAuthorize("@resourceAuthorization.self(#id)")
@@ -145,6 +129,7 @@ public class UserService {
             throw new BadRequestException("Email already exists");
         }
         user.setEmail(email);
+        user.setEmailVerified(true);
 
         // Admin-set password: only update when a new one is provided, so a profile edit
         // that leaves the password field blank does not wipe the existing hash.

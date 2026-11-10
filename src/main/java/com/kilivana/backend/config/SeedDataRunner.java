@@ -192,6 +192,7 @@ public class SeedDataRunner {
                 .region("Nairobi")
                 .referenceCode(referenceCodeGenerator.nextCode(role))
                 .build();
+        user.setEmailVerified(true);
         return new SeededUser(userRepository.save(user), true);
     }
 

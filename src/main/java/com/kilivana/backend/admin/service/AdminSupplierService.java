@@ -41,7 +41,6 @@ public class AdminSupplierService {
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReferenceCodeGenerator referenceCodeGenerator;
-    private final com.kilivana.backend.common.service.EmailVerificationService emailVerificationService;
 
     /**
      * Registers a supplier: the login account and the profile in one call.
@@ -79,10 +78,9 @@ public class AdminSupplierService {
 
         UserStatus userStatus = parseStatus(request.getStatus(), UserStatus.PENDING_VERIFICATION);
 
-        User user = userRepository.save(User.builder()
+        User user = User.builder()
                 .name(request.getContactPerson().trim())
                 .email(email)
-                .emailVerified(false)
                 .phone(phone)
                 .username(request.getUsername() != null ? request.getUsername().trim() : null)
                 .region(county)
@@ -91,7 +89,9 @@ public class AdminSupplierService {
                 .status(userStatus)
                 .verificationStatus(VerificationStatus.NOT_REQUIRED)
                 .referenceCode(referenceCodeGenerator.nextCode(UserRole.SUPPLIER))
-                .build());
+                .build();
+        user.setEmailVerified(true);
+        user = userRepository.save(user);
 
         SupplierProfile profile = supplierProfileRepository.save(SupplierProfile.builder()
                 .userId(user.getId())
@@ -102,10 +102,7 @@ public class AdminSupplierService {
                 .contractEndDate(request.getContractEndDate())
                 .build());
 
-        var challenge = emailVerificationService.startForNewAccount(user);
-        var response = toResponse(user, profile);
-        response.setEmailVerificationChallengeId(challenge.challengeId());
-        return response;
+        return toResponse(user, profile);
     }
 
     @Transactional(readOnly = true)
@@ -158,6 +155,7 @@ public class AdminSupplierService {
 
         user.setName(request.getContactPerson().trim());
         user.setEmail(email);
+        user.setEmailVerified(true);
         user.setPhone(phone);
         user.setUsername(request.getUsername() != null && !request.getUsername().isBlank()
                 ? request.getUsername().trim() : null);

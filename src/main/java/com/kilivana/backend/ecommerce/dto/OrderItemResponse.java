@@ -27,6 +27,18 @@ public class OrderItemResponse {
     @Schema(description = "Seller ID", example = "12")
     private Long sellerId;
 
+    @Schema(description = "Seller display name", example = "John Kamau")
+    private String sellerName;
+
+    @Schema(description = "Seller phone number", example = "+254712345678")
+    private String sellerPhone;
+
+    @Schema(description = "Seller county or region", example = "Kiambu")
+    private String sellerCounty;
+
+    @Schema(description = "Seller profile location", example = "Thika")
+    private String sellerLocation;
+
     @Schema(description = "Product name at time of purchase", example = "Organic Tomatoes")
     private String productName;
 

@@ -43,8 +43,8 @@ public class User {
 
     /**
      * Transient flag for email verification status.
-     * Defaults to false for new accounts. Set to true for staff accounts (ADMIN, INSPECTOR, DRIVER)
-     * created by admin, and for self-registered accounts (BUYER, FARMER, SUPPLIER) after OTP verification.
+     * Defaults to false for new accounts. Admin-provisioned accounts are marked verified;
+     * self-registered accounts become verified after successful OTP verification.
      * This field is not persisted to the database; the persisted version is emailVerifiedAt.
      */
     @Transient
@@ -53,7 +53,7 @@ public class User {
 
     /**
      * Timestamp when email was verified. Null for unverified accounts.
-     * Populated only by successful email verification via OTP.
+     * Populated by admin provisioning or successful email verification via OTP.
      * This is the persisted version of the email verification status in the database.
      */
     private java.time.Instant emailVerifiedAt;

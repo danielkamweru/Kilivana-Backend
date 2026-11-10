@@ -197,6 +197,10 @@ docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V29__persist_checkout_quotes.sql
 docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V30__reconcile_completed_product_sales.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V31__verify_existing_driver_accounts.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V32__verify_existing_admin_staff_accounts.sql
 ```
 
 Product lifecycle states also require the manual migration below. It widens

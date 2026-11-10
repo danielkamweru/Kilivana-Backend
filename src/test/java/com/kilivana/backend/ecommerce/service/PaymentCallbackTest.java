@@ -56,6 +56,7 @@ class PaymentCallbackTest {
                 .reference("CHECKOUT_1").status(PaymentStatus.PENDING).build();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
 
         Payment result = paymentService.updatePaymentStatus(1L, PaymentStatus.PENDING);
 
@@ -74,6 +75,7 @@ class PaymentCallbackTest {
                 .reference("CHECKOUT_1").status(PaymentStatus.PENDING).build();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
 
         Payment result = paymentService.updatePaymentStatus(1L, PaymentStatus.PAID);
 
@@ -93,6 +95,7 @@ class PaymentCallbackTest {
                 .paidAt(arrival).build();
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(order));
 
         Payment settled = paymentService.updatePaymentStatus(1L, PaymentStatus.SETTLED);
 

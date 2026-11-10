@@ -30,10 +30,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final com.kilivana.backend.common.service.EmailOtpRequestLimiter emailOtpRequestLimiter;
     private final UserService userService;
 
-    @Operation(summary = "Create a new user", description = "Registers a new user account with the provided details. Returns the created user.")
+    @Operation(summary = "Create a new user", description = "Creates an email-verified account without an email OTP challenge. Self-service registrations use the public auth registration endpoint and require OTP verification.")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "User created successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload"),
@@ -42,7 +41,6 @@ public class UserController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@jakarta.validation.Valid @RequestBody UserRegistrationRequest request) {
-        emailOtpRequestLimiter.acquireSend(request.getEmail());
         UserResponse user = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(user));
     }

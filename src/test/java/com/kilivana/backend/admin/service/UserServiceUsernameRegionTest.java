@@ -22,6 +22,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -34,14 +37,12 @@ class UserServiceUsernameRegionTest {
     @Mock private UserReferenceCodeGenerator referenceCodeGenerator;
     @Mock private DriverProfileRepository driverProfileRepository;
 
-    @Mock private com.kilivana.backend.common.service.EmailVerificationService verification;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         userService = new UserService(
-                userRepository, passwordEncoder, referenceCodeGenerator, driverProfileRepository, verification);
-        when(verification.startForNewAccount(any())).thenReturn(com.kilivana.backend.common.dto.EmailOtpChallengeResponse.accepted(java.util.UUID.randomUUID()));
+                userRepository, passwordEncoder, referenceCodeGenerator, driverProfileRepository);
         when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(referenceCodeGenerator.nextCode(any())).thenReturn("F-001");
         org.mockito.Mockito.lenient().when(userRepository.save(any(User.class))).thenAnswer(inv -> {
@@ -73,7 +74,11 @@ class UserServiceUsernameRegionTest {
         User saved = captor.getValue();
         assertEquals("jane.farmer", saved.getUsername());
         assertEquals("Kiambu", saved.getRegion());
+        assertTrue(saved.isEmailVerified());
+        assertNotNull(saved.getEmailVerifiedAt());
         assertEquals("jane.wanjiku@example.com", response.getEmail());
+        assertNull(response.getEmailVerificationChallengeId());
+        org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.times(1)).save(saved);
     }
 
     @Test
@@ -84,6 +89,7 @@ class UserServiceUsernameRegionTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         org.mockito.Mockito.verify(userRepository).save(captor.capture());
         assertEquals("Kiambu", captor.getValue().getRegion());
+        assertTrue(captor.getValue().isEmailVerified());
     }
 
     @Test
@@ -110,5 +116,26 @@ class UserServiceUsernameRegionTest {
         userService.updateUser(1L, request("Murang'a"));
 
         assertEquals("Murang'a", existing.getRegion());
+    }
+
+    @Test
+    @DisplayName("an administrator changing an account email does not re-enable OTP")
+    void adminEmailChangeKeepsAccountVerified() {
+        User existing = User.builder()
+                .id(1L)
+                .name("Jane Wanjiku")
+                .email("jane.wanjiku@example.com")
+                .phone("+254712345678")
+                .passwordHash("hashed")
+                .role(UserRole.FARMER)
+                .build();
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(existing));
+
+        UserRegistrationRequest update = request("Kiambu");
+        update.setEmail("jane.updated@example.com");
+        userService.updateUser(1L, update);
+
+        assertEquals("jane.updated@example.com", existing.getEmail());
+        assertTrue(existing.isEmailVerified());
     }
 }

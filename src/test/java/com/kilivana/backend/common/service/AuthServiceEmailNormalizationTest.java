@@ -54,6 +54,7 @@ class AuthServiceEmailNormalizationTest {
 
     @Test void pendingFarmerCanLoginAndRefreshWithoutChangingVerification() {
         User user = User.builder().id(7L).email("pending@example.com").role(UserRole.FARMER)
+                .emailVerified(true)
                 .status(com.kilivana.backend.common.enums.UserStatus.PENDING_VERIFICATION)
                 .verificationStatus(com.kilivana.backend.common.enums.VerificationStatus.PENDING)
                 .passwordHash(new BCryptPasswordEncoder().encode("probe12345")).build();
@@ -106,12 +107,15 @@ class AuthServiceEmailNormalizationTest {
             return user;
         });
 
-        authService.register(request("  Jane.Example@Example.COM ", "0700000011"));
+        var response = authService.register(request("  Jane.Example@Example.COM ", "0700000011"));
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         org.mockito.Mockito.verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getEmail()).isEqualTo("jane.example@example.com");
         assertThat(captor.getValue().getPhone()).isEqualTo("0700000011");
+        assertThat(captor.getValue().isEmailVerified()).isFalse();
+        assertThat(response.getEmailVerificationChallengeId()).isNotNull();
+        org.mockito.Mockito.verify(verification).startForNewAccount(captor.getValue());
     }
 
     @Test
@@ -130,6 +134,7 @@ class AuthServiceEmailNormalizationTest {
         User user = User.builder()
                 .id(7L)
                 .email("jane.example@example.com")
+                .emailVerified(true)
                 .passwordHash(new BCryptPasswordEncoder().encode("probe12345"))
                 .role(UserRole.DRIVER)
                 .build();

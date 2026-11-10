@@ -4,6 +4,9 @@ import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.admin.repository.DriverProfileRepository;
 import com.kilivana.backend.admin.repository.FarmerProfileRepository;
+import com.kilivana.backend.admin.entity.FarmerProfile;
+import com.kilivana.backend.admin.entity.SupplierProfile;
+import com.kilivana.backend.admin.repository.SupplierProfileRepository;
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.enums.OrderStatus;
@@ -16,6 +19,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.dto.OrderItemRequest;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.dto.SellerResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.entity.Product;
@@ -38,6 +42,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -67,6 +73,7 @@ class OrderServiceTest {
     @Mock private AddressRepository addressRepository;
     @Mock private PickupStationRepository pickupStationRepository;
     @Mock private FarmerProfileRepository farmerProfileRepository;
+    @Mock private SupplierProfileRepository supplierProfileRepository;
     @Mock private DriverProfileRepository driverProfileRepository;
     @Mock private LogisticsService logisticsService;
     @Mock private LogisticsJobRepository logisticsJobRepository;
@@ -85,7 +92,8 @@ class OrderServiceTest {
         orderService = new OrderService(orderRepository, orderItemRepository,
                 orderEventRepository, paymentRepository, productRepository,
                 userRepository, addressRepository, pickupStationRepository,
-                farmerProfileRepository, driverProfileRepository, logisticsService, logisticsJobRepository,
+                farmerProfileRepository, supplierProfileRepository, driverProfileRepository,
+                logisticsService, logisticsJobRepository,
                 farmRepository, warehouseRepository);
 
         when(userRepository.existsById(BUYER_ID)).thenReturn(true);
@@ -158,6 +166,7 @@ class OrderServiceTest {
         assertEquals(PaymentStatus.PENDING, order.getPaymentStatus());
         assertEquals(8, product.getStockQty());
         assertEquals(2, product.getReservedQty());
+        assertEquals(0, product.getSoldQty());
     }
 
     @Test
@@ -300,6 +309,117 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("a single farmer's details appear on the order and its items")
+    void mapsSingleFarmerSellerDetailsForIndividualAndPagedOrderResponses() {
+        Order order = responseOrder(200L);
+        List<OrderItem> items = List.of(responseItem(1L, 9L, 42L));
+        User farmer = User.builder().id(9L).name("John Kamau").phone("+254712345678")
+                .region("Kiambu").role(UserRole.FARMER).build();
+        when(orderItemRepository.findByOrderId(200L)).thenReturn(items);
+        when(orderRepository.findById(200L)).thenReturn(Optional.of(order));
+        when(userRepository.findAllById(List.of(9L))).thenReturn(List.of(farmer));
+        when(farmerProfileRepository.findByUserIdIn(List.of(9L))).thenReturn(List.of(
+                FarmerProfile.builder().userId(9L).location("Thika").build()));
+        when(orderRepository.searchOrders(null, null, null, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(order)));
+
+        OrderResponse detail = orderService.toResponse(order);
+        OrderResponse listed = orderService.searchOrders(null, null, null, Pageable.unpaged())
+                .map(orderService::toResponse).getContent().get(0);
+
+        assertEquals("John Kamau", detail.getSellerName());
+        assertEquals("+254712345678", detail.getSellerPhone());
+        assertEquals("Kiambu", detail.getSellerCounty());
+        assertEquals("Thika", detail.getSellerLocation());
+        assertEquals(1, detail.getSellers().size());
+        assertEquals("John Kamau", detail.getItems().get(0).getSellerName());
+        assertEquals("Thika", detail.getItems().get(0).getSellerLocation());
+        assertEquals(detail.getSellers(), listed.getSellers());
+        assertEquals(detail.getItems(), listed.getItems());
+    }
+
+    @Test
+    @DisplayName("a single supplier's profile location is returned")
+    void mapsSingleSupplierSellerDetails() {
+        Order order = responseOrder(201L);
+        User supplier = User.builder().id(10L).name("Mary Wanjiku").phone("+254723456789")
+                .region("Nakuru").role(UserRole.SUPPLIER).build();
+        when(orderItemRepository.findByOrderId(201L)).thenReturn(List.of(responseItem(2L, 10L, 43L)));
+        when(orderRepository.findById(201L)).thenReturn(Optional.of(order));
+        when(userRepository.findAllById(List.of(10L))).thenReturn(List.of(supplier));
+        when(supplierProfileRepository.findByUserIdIn(List.of(10L))).thenReturn(List.of(
+                SupplierProfile.builder().userId(10L).location("Naivasha").build()));
+
+        OrderResponse response = orderService.toResponse(order);
+
+        assertEquals("Mary Wanjiku", response.getSellerName());
+        assertEquals("Nakuru", response.getSellerCounty());
+        assertEquals("Naivasha", response.getSellerLocation());
+        assertEquals("Naivasha", response.getItems().get(0).getSellerLocation());
+    }
+
+    @Test
+    @DisplayName("mixed and repeated seller lines return distinct sellers without a first-seller fallback")
+    void mapsMultipleFarmersAndSuppliersWithoutDuplicates() {
+        Order order = responseOrder(202L);
+        List<OrderItem> items = List.of(
+                responseItem(3L, 9L, 42L),
+                responseItem(4L, 10L, 43L),
+                responseItem(5L, 9L, 44L));
+        User farmer = User.builder().id(9L).name("John Kamau").phone("+254712345678")
+                .region("Kiambu").role(UserRole.FARMER).build();
+        User supplier = User.builder().id(10L).name("Mary Wanjiku").phone("+254723456789")
+                .region("Nakuru").role(UserRole.SUPPLIER).build();
+        when(orderItemRepository.findByOrderId(202L)).thenReturn(items);
+        when(orderRepository.findById(202L)).thenReturn(Optional.of(order));
+        when(userRepository.findAllById(List.of(9L, 10L))).thenReturn(List.of(farmer, supplier));
+        when(farmerProfileRepository.findByUserIdIn(List.of(9L, 10L))).thenReturn(List.of(
+                FarmerProfile.builder().userId(9L).location("Thika").build()));
+        when(supplierProfileRepository.findByUserIdIn(List.of(9L, 10L))).thenReturn(List.of(
+                SupplierProfile.builder().userId(10L).location("Naivasha").build()));
+
+        OrderResponse response = orderService.toResponse(order);
+
+        assertNull(response.getSellerName());
+        assertNull(response.getSellerPhone());
+        assertNull(response.getSellerCounty());
+        assertNull(response.getSellerLocation());
+        assertEquals(2, response.getSellers().size());
+        assertEquals(List.of(9L, 10L), response.getSellers().stream().map(SellerResponse::getSellerId).toList());
+        assertEquals("Thika", response.getItems().get(0).getSellerLocation());
+        assertEquals("Naivasha", response.getItems().get(1).getSellerLocation());
+        assertEquals("John Kamau", response.getItems().get(2).getSellerName());
+    }
+
+    @Test
+    @DisplayName("seller without a profile is returned without a location")
+    void missingSellerProfileDoesNotBreakOrderResponse() {
+        Order order = responseOrder(203L);
+        User farmer = User.builder().id(9L).name("John Kamau").role(UserRole.FARMER).build();
+        when(orderItemRepository.findByOrderId(203L)).thenReturn(List.of(responseItem(6L, 9L, 42L)));
+        when(orderRepository.findById(203L)).thenReturn(Optional.of(order));
+        when(userRepository.findAllById(List.of(9L))).thenReturn(List.of(farmer));
+
+        OrderResponse response = orderService.toResponse(order);
+
+        assertEquals(1, response.getSellers().size());
+        assertNull(response.getSellerLocation());
+        assertNull(response.getItems().get(0).getSellerLocation());
+    }
+
+    private static Order responseOrder(Long id) {
+        return Order.builder().id(id).buyerId(BUYER_ID).status(OrderStatus.PLACED)
+                .subtotal(BigDecimal.ZERO).deliveryFee(BigDecimal.ZERO).total(BigDecimal.ZERO)
+                .paymentStatus(PaymentStatus.PENDING).build();
+    }
+
+    private static OrderItem responseItem(Long id, Long sellerId, Long productId) {
+        return OrderItem.builder().id(id).orderId(200L).productId(productId).sellerId(sellerId)
+                .productName("Produce " + productId).unit("kg").quantity(1)
+                .unitPrice(BigDecimal.TEN).subtotal(BigDecimal.TEN).build();
+    }
+
+    @Test
     @DisplayName("cancelling an unpaid order releases its reserved stock")
     void cancelReleasesStock() {
         Order order = placedOrder();
@@ -317,6 +437,7 @@ class OrderServiceTest {
         verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
         assertEquals(0, captor.getValue().getReservedQty());
         assertEquals(10, captor.getValue().getStockQty());
+        assertEquals(0, product.getSoldQty());
     }
 
     @Test
@@ -353,6 +474,7 @@ class OrderServiceTest {
         product.setStockQty(8);
         product.setReservedQty(2);
         when(orderRepository.findById(100L)).thenReturn(Optional.of(delivered));
+        when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(delivered));
         when(orderItemRepository.findByOrderId(100L)).thenReturn(List.of(OrderItem.builder()
                 .orderId(100L).productId(PRODUCT_ID).quantity(2).build()));
         when(paymentRepository.findByOrderId(100L)).thenReturn(List.of(
@@ -365,6 +487,76 @@ class OrderServiceTest {
         assertEquals(PaymentStatus.SETTLED, completed.getPaymentStatus());
         assertEquals(8, product.getStockQty());
         assertEquals(0, product.getReservedQty());
+        assertEquals(2, product.getSoldQty());
+        org.junit.jupiter.api.Assertions.assertTrue(completed.isSalesRecorded());
+
+        assertEquals(completed, orderService.confirmReceipt(100L));
+        assertEquals(2, product.getSoldQty());
+    }
+
+    @Test
+    @DisplayName("delivery records multiple products and combines repeated historical order lines")
+    void deliveryRecordsAggregatedQuantitiesForMultipleProducts() {
+        Order delivered = placedOrder();
+        delivered.setPaymentStatus(PaymentStatus.PAID);
+        Product secondProduct = Product.builder()
+                .id(43L).stockQty(6).reservedQty(4).soldQty(1).build();
+        product.setStockQty(5);
+        product.setReservedQty(5);
+        when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(delivered));
+        when(productRepository.findByIdForUpdate(43L)).thenReturn(Optional.of(secondProduct));
+        when(orderItemRepository.findByOrderId(100L)).thenReturn(List.of(
+                OrderItem.builder().orderId(100L).productId(PRODUCT_ID).quantity(2).build(),
+                OrderItem.builder().orderId(100L).productId(PRODUCT_ID).quantity(3).build(),
+                OrderItem.builder().orderId(100L).productId(43L).quantity(4).build()));
+
+        orderService.updateOrderStatus(100L, OrderStatus.DELIVERED);
+
+        assertEquals(5, product.getSoldQty());
+        assertEquals(0, product.getReservedQty());
+        assertEquals(5, product.getStockQty());
+        assertEquals(5, secondProduct.getSoldQty());
+        assertEquals(0, secondProduct.getReservedQty());
+        assertEquals(6, secondProduct.getStockQty());
+    }
+
+    @Test
+    @DisplayName("an unpaid or failed order cannot be completed as a sale")
+    void refusesToCompleteUnpaidOrder() {
+        Order delivered = placedOrder();
+        delivered.setStatus(OrderStatus.DELIVERED);
+        delivered.setPaymentStatus(PaymentStatus.FAILED);
+        product.setStockQty(8);
+        product.setReservedQty(2);
+        when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(delivered));
+
+        assertThrows(BadRequestException.class, () -> orderService.confirmReceipt(100L));
+
+        assertEquals(0, product.getSoldQty());
+        assertEquals(2, product.getReservedQty());
+        verify(productRepository, never()).save(any());
+
+        delivered.setPaymentStatus(PaymentStatus.REFUNDED);
+        assertThrows(BadRequestException.class, () -> orderService.confirmReceipt(100L));
+        assertEquals(0, product.getSoldQty());
+    }
+
+    @Test
+    @DisplayName("repeated product lines are combined before stock reservation")
+    void combinesDuplicateLinesWhenCreatingOrder() {
+        OrderItemRequest one = OrderItemRequest.builder()
+                .productId(PRODUCT_ID).quantity(2).unitPrice(new BigDecimal("50.00")).build();
+        OrderItemRequest two = OrderItemRequest.builder()
+                .productId(PRODUCT_ID).quantity(2).unitPrice(new BigDecimal("50.00")).build();
+
+        orderService.createOrder(BUYER_ID, ADDRESS_ID, BigDecimal.ZERO, List.of(one, two), null, null);
+
+        assertEquals(6, product.getStockQty());
+        assertEquals(4, product.getReservedQty());
+        assertEquals(0, product.getSoldQty());
+        ArgumentCaptor<OrderItem> items = ArgumentCaptor.forClass(OrderItem.class);
+        verify(orderItemRepository).save(items.capture());
+        assertEquals(4, items.getValue().getQuantity());
     }
 
     @Test void manipulatedCatalogPriceRejectedBeforeReservation() {

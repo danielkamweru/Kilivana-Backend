@@ -42,13 +42,13 @@ class EmailOtpAuthorizationTest {
         assertThrows(AccessDeniedException.class,()->service.createUser(UserRegistrationRequest.builder().role(UserRole.INSPECTOR).build()));
         verify(users,never()).save(any());
     }
-    @Test void adminProvisioningCreatesUnverifiedInspectorWithChallenge() {
+    @Test void adminProvisioningCreatesVerifiedInspectorWithoutChallenge() {
         actor(UserRole.ADMIN,true);UUID id=UUID.randomUUID();
         when(users.save(any())).thenAnswer(i->{User u=i.getArgument(0);u.setId(9L);return u;});
-        when(verification.startForNewAccount(any())).thenReturn(EmailOtpChallengeResponse.accepted(id));
         var response=service.createUser(UserRegistrationRequest.builder().name("Inspector").email("inspector@example.invalid")
             .phone("0700000000").password("test-password").role(UserRole.INSPECTOR).build());
-        assertEquals(UserRole.INSPECTOR,response.getRole());assertFalse(response.isEmailVerified());
-        assertEquals(id,response.getEmailVerificationChallengeId());
+        assertEquals(UserRole.INSPECTOR,response.getRole());assertTrue(response.isEmailVerified());
+        assertNull(response.getEmailVerificationChallengeId());
+        verifyNoInteractions(verification);
     }
 }

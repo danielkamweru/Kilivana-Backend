@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Access to the {@link FarmerProfile} table. A farmer profile is optional — a registered farmer
@@ -14,6 +16,8 @@ import java.util.Optional;
 public interface FarmerProfileRepository extends JpaRepository<FarmerProfile, Long> {
 
     Optional<FarmerProfile> findByUserId(Long userId);
+
+    List<FarmerProfile> findByUserIdIn(Collection<Long> userIds);
 
     boolean existsByUserId(Long userId);
 }
