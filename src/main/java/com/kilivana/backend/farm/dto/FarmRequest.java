@@ -34,10 +34,10 @@ public class FarmRequest {
     @Schema(description = "Postal address of the farm", example = "P.O. Box 123, Nairobi")
     private String address;
 
-    @Schema(description = "Latitude coordinate of the farm", example = "-1.2921")
+    @Schema(description = "Optional latitude coordinate; farmers may omit coordinates", example = "-1.2921")
     private Double latitude;
 
-    @Schema(description = "Longitude coordinate of the farm", example = "36.8219")
+    @Schema(description = "Optional longitude coordinate; farmers may omit coordinates", example = "36.8219")
     private Double longitude;
 
     @NotNull(message = "Farm size is required")

@@ -5,6 +5,7 @@ import com.kilivana.backend.admin.entity.SupplierWarehouse;
 import com.kilivana.backend.admin.service.UserService;
 import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.common.enums.ProductStatus;
+import com.kilivana.backend.common.enums.QualityGrade;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.service.ImageStorage;
@@ -35,13 +36,14 @@ class ProductCreationTest {
     private final UserService users = mock(UserService.class);
     private final FarmRepository farms = mock(FarmRepository.class);
     private final SupplierWarehouseRepository warehouses = mock(SupplierWarehouseRepository.class);
+    private final ProductVisibility visibility = mock(ProductVisibility.class);
     private final ProductService service = new ProductService(
             products,
             mock(ProductImageRepository.class),
             mock(CategoryRepository.class),
             mock(ImageStorage.class),
             users,
-            mock(ProductVisibility.class),
+            visibility,
             farms,
             warehouses);
 
@@ -70,6 +72,7 @@ class ProductCreationTest {
                 .minimumOrderQty(1)
                 .categoryId(1L)
                 .farmId(3L)
+                .qualityGrade(QualityGrade.GRADE_A)
                 .build();
 
         var response = service.createProduct(request, 4L);
@@ -77,7 +80,73 @@ class ProductCreationTest {
         assertEquals(ProductStatus.PENDING_APPROVAL, response.getStatus());
         verify(products).save(org.mockito.ArgumentMatchers.argThat(
                 product -> product.getStatus() == ProductStatus.PENDING_APPROVAL
-                        && product.getFarmId().equals(3L)));
+                        && product.getFarmId().equals(3L)
+                        && product.getQualityGrade() == QualityGrade.GRADE_A));
+    }
+
+    @Test
+    void updatesQualityGradeWhenSubmitted() {
+        Product product = editableProduct();
+        product.setQualityGrade(QualityGrade.GRADE_C);
+        when(products.findByIdForUpdate(42L)).thenReturn(Optional.of(product));
+        when(products.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateProduct(42L, updateRequest(QualityGrade.GRADE_A));
+
+        assertEquals(QualityGrade.GRADE_A, product.getQualityGrade());
+    }
+
+    @Test
+    void updateWithoutQualityGradePreservesExistingGrade() {
+        Product product = editableProduct();
+        product.setQualityGrade(QualityGrade.GRADE_B);
+        when(products.findByIdForUpdate(42L)).thenReturn(Optional.of(product));
+        when(products.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateProduct(42L, updateRequest(null));
+
+        assertEquals(QualityGrade.GRADE_B, product.getQualityGrade());
+    }
+
+    @Test
+    void sellerProductsReturnPersistedSalesAndQualityValues() {
+        Product product = editableProduct();
+        product.setSoldQty(5);
+        product.setQualityGrade(QualityGrade.GRADE_A);
+        product.setStatus(ProductStatus.ACTIVE);
+        when(products.findBySellerId(4L)).thenReturn(java.util.List.of(product));
+
+        var response = service.getProductsBySeller(4L).get(0);
+
+        assertEquals(5, response.getSoldQty());
+        assertEquals(QualityGrade.GRADE_A, response.getQualityGrade());
+    }
+
+    @Test
+    void createsFarmerProductWhenFarmHasNoCoordinates() {
+        when(users.getUserById(4L)).thenReturn(UserResponse.builder().id(4L).role(UserRole.FARMER).build());
+        when(farms.findById(3L)).thenReturn(Optional.of(Farm.builder()
+                .id(3L)
+                .farmerId(4L)
+                .status(FarmStatus.ACTIVE)
+                .address("Farm road, Kiambu")
+                .build()));
+        when(products.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ProductRequest request = ProductRequest.builder()
+                .name("Fresh cabbages")
+                .description("Fresh produce")
+                .unit("kg")
+                .price(BigDecimal.TEN)
+                .stockQty(10)
+                .minimumOrderQty(1)
+                .categoryId(1L)
+                .farmId(3L)
+                .build();
+
+        service.createProduct(request, 4L);
+
+        verify(products).save(org.mockito.ArgumentMatchers.argThat(
+                product -> product.getFarmId().equals(3L)));
     }
 
     @Test
@@ -128,6 +197,35 @@ class ProductCreationTest {
                 .stockQty(10)
                 .minimumOrderQty(1)
                 .categoryId(1L)
+                .build();
+    }
+
+    private static Product editableProduct() {
+        return Product.builder()
+                .id(42L)
+                .sellerId(4L)
+                .sellerType(com.kilivana.backend.common.enums.SellerType.FARMER)
+                .name("Fresh cabbages")
+                .description("Fresh produce")
+                .unit("kg")
+                .price(BigDecimal.TEN)
+                .stockQty(10)
+                .reservedQty(0)
+                .soldQty(0)
+                .minimumOrderQty(1)
+                .status(ProductStatus.PENDING_APPROVAL)
+                .build();
+    }
+
+    private static ProductRequest updateRequest(QualityGrade grade) {
+        return ProductRequest.builder()
+                .name("Fresh cabbages")
+                .description("Fresh produce")
+                .unit("kg")
+                .price(BigDecimal.TEN)
+                .stockQty(10)
+                .minimumOrderQty(1)
+                .qualityGrade(grade)
                 .build();
     }
 }

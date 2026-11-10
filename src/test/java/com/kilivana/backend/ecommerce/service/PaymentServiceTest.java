@@ -36,12 +36,13 @@ class PaymentServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private com.kilivana.backend.service.DarajaService darajaService;
     @Mock private com.kilivana.backend.admin.repository.UserRepository userRepository;
+    @Mock private OrderService orderService;
 
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
-        paymentService = new PaymentService(paymentRepository, orderRepository, darajaService, userRepository);
+        paymentService = new PaymentService(paymentRepository, orderRepository, darajaService, userRepository, orderService);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 

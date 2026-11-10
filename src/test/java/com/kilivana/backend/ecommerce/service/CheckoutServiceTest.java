@@ -1,5 +1,6 @@
 package com.kilivana.backend.ecommerce.service;
 
+import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.enums.ProductStatus;
@@ -8,10 +9,12 @@ import com.kilivana.backend.ecommerce.dto.DeliveryQuoteRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteResponse;
 import com.kilivana.backend.ecommerce.entity.Cart;
 import com.kilivana.backend.ecommerce.entity.CartItem;
+import com.kilivana.backend.ecommerce.entity.CheckoutQuote;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Product;
 import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
+import com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
 import com.kilivana.backend.logistics.entity.PickupStation;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
@@ -21,7 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,9 +56,11 @@ class CheckoutServiceTest {
     private CartItemRepository cartItemRepository;
     private AddressRepository addressRepository;
     private ProductRepository productRepository;
+    private CheckoutQuoteRepository checkoutQuoteRepository;
     private OrderService orderService;
     private PickupStationRepository pickupStationRepository;
     private CheckoutService checkoutService;
+    private final Map<String, CheckoutQuote> savedQuotes = new HashMap<>();
 
     @BeforeEach
     void setUp() {
@@ -61,10 +68,19 @@ class CheckoutServiceTest {
         cartItemRepository = mock(CartItemRepository.class);
         addressRepository = mock(AddressRepository.class);
         productRepository = mock(ProductRepository.class);
+        checkoutQuoteRepository = mock(CheckoutQuoteRepository.class);
         orderService = mock(OrderService.class);
         pickupStationRepository = mock(PickupStationRepository.class);
+        savedQuotes.clear();
         checkoutService = new CheckoutService(cartRepository, cartItemRepository, addressRepository,
-                productRepository, orderService, pickupStationRepository);
+                productRepository, orderService, pickupStationRepository, checkoutQuoteRepository);
+        when(checkoutQuoteRepository.save(any(CheckoutQuote.class))).thenAnswer(invocation -> {
+            CheckoutQuote quote = invocation.getArgument(0);
+            savedQuotes.put(quote.getQuoteId(), quote);
+            return quote;
+        });
+        when(checkoutQuoteRepository.findByQuoteIdForUpdate(any())).thenAnswer(invocation ->
+                Optional.ofNullable(savedQuotes.get(invocation.getArgument(0))));
 
         // CurrentUser.id() reads the caller from the Spring SecurityContext, so the
         // test has to populate it the same way the JWT filter does.
@@ -99,6 +115,26 @@ class CheckoutServiceTest {
         BadRequestException ex = assertThrows(BadRequestException.class,
                 () -> checkoutService.createDeliveryQuote(request));
         assertEquals("Pickup location is required for pickup delivery", ex.getMessage());
+    }
+
+    @Test
+    void doorDeliveryQuote_acceptsAddressWithoutCoordinates() {
+        Address address = Address.builder()
+                .id(8L)
+                .userId(BUYER_ID)
+                .addressText("Mamlaka Road")
+                .build();
+        when(addressRepository.findById(8L)).thenReturn(Optional.of(address));
+
+        DeliveryQuoteResponse response = checkoutService.createDeliveryQuote(DeliveryQuoteRequest.builder()
+                .deliveryMethod("DOOR_DELIVERY")
+                .addressId(8L)
+                .build());
+
+        assertNotNull(response.getQuoteId());
+        assertEquals("DOOR_DELIVERY", response.getDeliveryMethod());
+        assertEquals(8L, response.getAddressId());
+        assertEquals(new BigDecimal("101.00"), response.getTotal());
     }
 
     @Test
@@ -161,7 +197,9 @@ class CheckoutServiceTest {
 
         CheckoutOrderRequest request = CheckoutOrderRequest.builder().quoteId(quote.getQuoteId()).build();
         Long firstOrderId = checkoutService.createOrderFromQuote(request);
-        Long replayedOrderId = checkoutService.createOrderFromQuote(request);
+        CheckoutService restartedCheckoutService = new CheckoutService(cartRepository, cartItemRepository,
+                addressRepository, productRepository, orderService, pickupStationRepository, checkoutQuoteRepository);
+        Long replayedOrderId = restartedCheckoutService.createOrderFromQuote(request);
 
         assertEquals(99L, firstOrderId);
         assertEquals(firstOrderId, replayedOrderId);

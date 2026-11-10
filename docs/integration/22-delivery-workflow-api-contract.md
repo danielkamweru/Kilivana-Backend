@@ -29,6 +29,21 @@ envelope.
 | `DELETE /api/v1/admin/pickup-stations/{id}` | ADMIN | None | `200`, deactivated station |
 | `GET /api/v1/pickup-stations/nearest?lat={lat}&lng={lng}&radiusKm={km}&limit={n}` | Authenticated | Valid coordinates; radius `> 0` and at most 100 km; limit 1–100 | `200`, nearest available stations in radius, possibly empty |
 
+Latitude and longitude are required when an admin creates or updates a station. Send
+decimal WGS84 coordinates; latitude must be between -90 and 90, and longitude between
+-180 and 180. For example:
+
+```json
+{
+  "name": "Kilivana Westlands Pickup Point",
+  "address": "Soin Arcade, Westlands, Nairobi, Kenya",
+  "latitude": -1.2653443,
+  "longitude": 36.8039078,
+  "region": "Nairobi",
+  "isAvailable": true
+}
+```
+
 Existing available, region, detail, availability, and `/my-stations` routes remain
 supported. A saved station is only a buyer preference. Checkout resolves a selected
 station by ID and uses its canonical database address and coordinates.
@@ -40,7 +55,16 @@ external map links without a separate map provider or nearest-station request. T
 
 ## Seller dispatch locations
 
-Farmer farm management remains at `/api/v1/farmers/me/farms`. Supplier warehouses use
+Farmer farm creation and updates at `/api/v1/farmers/me/farms` do not require latitude
+or longitude; provide both only when known. Farmers can create products and receive
+orders without entering coordinates. If coordinates are omitted at order time, an admin
+must add valid farm coordinates through `PUT /api/v1/admin/farms/{id}` before dispatch.
+Dispatch uses the order's coordinate snapshot when present and falls back to the farm's
+current address and coordinates when the order was placed without coordinates. Dispatch
+still requires valid coordinates so map routes have a real origin; no coordinates are
+invented from a text address.
+
+Supplier warehouses use
 the following routes; the authenticated supplier owns all resources, with no owner ID
 accepted from the request:
 
@@ -54,9 +78,10 @@ accepted from the request:
 | `PUT /api/v1/suppliers/me/warehouses/{id}/default` | SUPPLIER, own warehouse | None | `200`, warehouse |
 
 Product requests must specify `farmId` for a farmer or `warehouseId` for a supplier.
-The service validates seller type, ownership, active status, address and coordinates
-before accepting the listing. Existing products without a dispatch location need a
-seller/admin to select one before they can be ordered and dispatched.
+The service validates seller type, ownership, active status and address before accepting
+the listing. Supplier warehouse coordinates remain required for orders. Existing
+products without a dispatch location need a seller/admin to select one before they can
+be ordered and dispatched.
 
 ## Checkout, orders and dispatch
 
@@ -67,6 +92,13 @@ canonical station details. `DOOR_DELIVERY` continues to use a buyer-owned `addre
 
 `POST /api/v1/checkout/order` retains its existing quote-based request and response.
 The station selection is bound to the authenticated buyer's server-side quote.
+Door-delivery quotes require a buyer-owned saved address, but the address may omit
+latitude and longitude so buyers can place orders without entering map coordinates.
+Seller farms may also omit coordinates at order time; admins must add farm coordinates
+before dispatch. Supplier warehouses still require coordinates when the order is
+created. Door-delivery dispatch requires destination coordinates to build a map-ready
+delivery job, so add or update the buyer address before dispatch if it was saved without
+coordinates.
 
 `POST /api/v1/admin/orders/{orderId}/dispatch` creates/reuses one job per seller and
 dispatch origin, using the selected products' active farm/warehouse origins and an

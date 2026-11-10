@@ -11,6 +11,7 @@ import com.kilivana.backend.common.service.ImageStorage;
 import com.kilivana.backend.security.AccountAccessValidator;
 import com.kilivana.backend.security.JwtService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -27,6 +28,7 @@ import java.util.Optional;
 
 import static com.kilivana.backend.support.JwtTestSupport.asFarmer;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -102,6 +104,30 @@ class FarmerFarmControllerTest {
     }
 
     @Test
+    void createFarm_coordinatesAreOptional() throws Exception {
+        FarmRequest request = FarmRequest.builder()
+                .name("Green Valley Farm")
+                .county("Nairobi")
+                .address("P.O. Box 123")
+                .sizeAcres(10.0)
+                .ownershipType(OwnershipType.OWNED)
+                .build();
+        when(farmRepository.save(any(Farm.class))).thenAnswer(invocation -> {
+            Farm farm = invocation.getArgument(0);
+            farm.setId(2L);
+            return farm;
+        });
+
+        mockMvc.perform(post("/api/v1/farmers/me/farms")
+                        .with(asFarmer(jwtService, 10L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.latitude").doesNotExist())
+                .andExpect(jsonPath("$.data.longitude").doesNotExist());
+    }
+
+    @Test
     void createFarm_invalidFarmData_shouldReturn400() throws Exception {
         FarmRequest request = FarmRequest.builder()
                 .name("") // Invalid: blank name
@@ -124,6 +150,8 @@ class FarmerFarmControllerTest {
                 .farmerId(10L)
                 .name("Old Name")
                 .county("Nairobi")
+                .latitude(-1.2921)
+                .longitude(36.8219)
                 .sizeAcres(5.0)
                 .ownershipType(OwnershipType.OWNED)
                 .status(com.kilivana.backend.common.enums.FarmStatus.ACTIVE)
@@ -138,20 +166,8 @@ class FarmerFarmControllerTest {
                 .description("Updated description")
                 .build();
 
-        Farm updatedFarm = Farm.builder()
-                .id(1L)
-                .farmerId(10L)
-                .name("Updated Name")
-                .county("Kiambu")
-                .sizeAcres(15.0)
-                .ownershipType(OwnershipType.LEASED)
-                .status(com.kilivana.backend.common.enums.FarmStatus.ACTIVE)
-                .description("Updated description")
-                .createdAt(LocalDateTime.now())
-                .build();
-
         when(farmRepository.findById(1L)).thenReturn(Optional.of(existingFarm));
-        when(farmRepository.save(any(Farm.class))).thenReturn(updatedFarm);
+        when(farmRepository.save(any(Farm.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc.perform(put("/api/v1/farmers/me/farms/1")
                         .with(asFarmer(jwtService, 10L))
@@ -160,7 +176,14 @@ class FarmerFarmControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("Updated Name"))
                 .andExpect(jsonPath("$.data.county").value("Kiambu"))
-                .andExpect(jsonPath("$.data.sizeAcres").value(15.0));
+                .andExpect(jsonPath("$.data.sizeAcres").value(15.0))
+                .andExpect(jsonPath("$.data.latitude").value(-1.2921))
+                .andExpect(jsonPath("$.data.longitude").value(36.8219));
+
+        ArgumentCaptor<Farm> farmCaptor = ArgumentCaptor.forClass(Farm.class);
+        verify(farmRepository).save(farmCaptor.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(-1.2921, farmCaptor.getValue().getLatitude());
+        org.junit.jupiter.api.Assertions.assertEquals(36.8219, farmCaptor.getValue().getLongitude());
     }
 
     @Test

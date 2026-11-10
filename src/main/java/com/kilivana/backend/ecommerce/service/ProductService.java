@@ -79,6 +79,7 @@ import java.util.stream.Collectors;
                 .reservedQty(0)
                 .soldQty(0)
                 .minimumOrderQty(request.getMinimumOrderQty())
+                .qualityGrade(request.getQualityGrade())
                 .farmId(farmId)
                 .supplierWarehouseId(request.getWarehouseId())
                 .status(ProductStatus.PENDING_APPROVAL)
@@ -181,6 +182,9 @@ import java.util.stream.Collectors;
         product.setPrice(request.getPrice());
         product.setStockQty(request.getStockQty());
         product.setMinimumOrderQty(request.getMinimumOrderQty());
+        if (request.getQualityGrade() != null) {
+            product.setQualityGrade(request.getQualityGrade());
+        }
         if (request.getFarmId() != null || request.getWarehouseId() != null) {
             Long farmId = validateDispatchLocation(request, product.getSellerId(), product.getSellerType());
             product.setFarmId(farmId);
@@ -206,7 +210,7 @@ import java.util.stream.Collectors;
             if (farm.getStatus() != FarmStatus.ACTIVE) {
                 throw new BadRequestException("An inactive farm cannot be used as a dispatch origin");
             }
-            requireDispatchLocationCoordinates(farm.getAddress(), farm.getLatitude(), farm.getLongitude());
+            requireDispatchLocationAddress(farm.getAddress());
             return farm.getId();
         }
         if (request.getFarmId() != null) {
@@ -231,6 +235,12 @@ import java.util.stream.Collectors;
                 || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
             throw new BadRequestException(
                     "Product dispatch location requires an address and valid coordinates");
+        }
+    }
+
+    private static void requireDispatchLocationAddress(String address) {
+        if (address == null || address.isBlank()) {
+            throw new BadRequestException("Product dispatch location requires an address");
         }
     }
 

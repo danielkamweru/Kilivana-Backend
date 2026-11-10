@@ -10,6 +10,7 @@ import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.enums.FarmStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.service.ImageStorage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -55,6 +56,7 @@ public class FarmerFarmController {
     public ResponseEntity<ApiResponse<FarmResponse>> createFarm(
             @AuthenticationPrincipal Long authenticatedUserId,
             @Valid @RequestBody FarmRequest request) {
+        validateOptionalCoordinatePair(request);
         Farm farm = Farm.builder()
                 .farmerId(authenticatedUserId)
                 .name(request.getName())
@@ -125,6 +127,7 @@ public class FarmerFarmController {
             @AuthenticationPrincipal Long authenticatedUserId,
             @Parameter(description = "ID of the farm to update") @PathVariable Long id,
             @Valid @RequestBody FarmRequest request) {
+        validateOptionalCoordinatePair(request);
         Farm farm = farmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Farm", id));
         if (!farm.getFarmerId().equals(authenticatedUserId)) {
@@ -134,13 +137,29 @@ public class FarmerFarmController {
         farm.setCounty(request.getCounty());
         farm.setSubCounty(request.getSubCounty());
         farm.setAddress(request.getAddress());
-        farm.setLatitude(request.getLatitude());
-        farm.setLongitude(request.getLongitude());
+        if (request.getLatitude() != null) {
+            farm.setLatitude(request.getLatitude());
+            farm.setLongitude(request.getLongitude());
+        }
         farm.setSizeAcres(request.getSizeAcres());
         farm.setOwnershipType(request.getOwnershipType());
         farm.setDescription(request.getDescription());
         Farm saved = farmRepository.save(farm);
         return ResponseEntity.ok(ApiResponse.success(toFullResponse(saved)));
+    }
+
+    private static void validateOptionalCoordinatePair(FarmRequest request) {
+        boolean hasLatitude = request.getLatitude() != null;
+        boolean hasLongitude = request.getLongitude() != null;
+        if (hasLatitude != hasLongitude) {
+            throw new BadRequestException("Provide both latitude and longitude, or omit both");
+        }
+        if (hasLatitude && (!Double.isFinite(request.getLatitude())
+                || !Double.isFinite(request.getLongitude())
+                || request.getLatitude() < -90 || request.getLatitude() > 90
+                || request.getLongitude() < -180 || request.getLongitude() > 180)) {
+            throw new BadRequestException("Coordinates must be valid latitude/longitude values");
+        }
     }
 
     @Operation(summary = "Upload a farm image",

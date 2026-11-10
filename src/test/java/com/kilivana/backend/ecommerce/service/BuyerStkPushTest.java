@@ -57,12 +57,13 @@ class BuyerStkPushTest {
     @Mock private OrderRepository orderRepository;
     @Mock private DarajaService darajaService;
     @Mock private UserRepository userRepository;
+    @Mock private OrderService orderService;
 
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
-        paymentService = new PaymentService(paymentRepository, orderRepository, darajaService, userRepository);
+        paymentService = new PaymentService(paymentRepository, orderRepository, darajaService, userRepository, orderService);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(99L);

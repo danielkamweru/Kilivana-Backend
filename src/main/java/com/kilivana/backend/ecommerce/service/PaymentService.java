@@ -47,6 +47,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final DarajaService darajaService;
     private final UserRepository userRepository;
+    private final OrderService orderService;
 
     /**
      * Creates a new payment record for an order. Validates the payment method
@@ -275,13 +276,18 @@ public class PaymentService {
         // the payment rather than being set separately and drifting. Only forward
         // moves are applied: an accepted STK Push (PENDING) must not flip the order
         // to paid, and a failure must not regress it either.
-        orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+        orderRepository.findByIdForUpdate(payment.getOrderId()).ifPresent(order -> {
             PaymentStatus current = order.getPaymentStatus();
             if (current != null && status.ordinal() <= current.ordinal()) {
                 return;
             }
             order.setPaymentStatus(status);
             orderRepository.save(order);
+            if (status == PaymentStatus.REFUNDED || status == PaymentStatus.FAILED) {
+                orderService.reverseSalesForRefund(order);
+            } else if (status == PaymentStatus.PAID) {
+                orderService.recordSalesForPaidDelivery(order);
+            }
         });
         return saved;
     }

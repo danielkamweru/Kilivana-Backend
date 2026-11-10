@@ -49,6 +49,7 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Order placement and the order lifecycle.
@@ -207,14 +208,35 @@ public class OrderService {
         }
 
         if (items == null || items.isEmpty()) throw new BadRequestException("Order must have items");
-        // Lock in ID order so competing multi-product orders do not invert lock acquisition.
-        var locked = new java.util.TreeMap<Long, Product>();
+        // Combine repeated product lines before stock checks and reserve in stable lock order.
+        var normalizedItems = new TreeMap<Long, OrderItemRequest>();
         for (OrderItemRequest item : items) {
             if (item == null || item.getProductId() == null || item.getQuantity() == null || item.getQuantity() < 1)
                 throw new BadRequestException("Each item requires a product and positive whole quantity");
-            if (locked.putIfAbsent(item.getProductId(), Product.builder().build()) != null)
-                throw new BadRequestException("Duplicate product lines are not supported");
+            OrderItemRequest existing = normalizedItems.get(item.getProductId());
+            if (existing == null) {
+                normalizedItems.put(item.getProductId(), OrderItemRequest.builder()
+                        .productId(item.getProductId())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .build());
+            } else {
+                if (existing.getUnitPrice() == null || item.getUnitPrice() == null
+                        || existing.getUnitPrice().compareTo(item.getUnitPrice()) != 0) {
+                    throw new BadRequestException("Duplicate product lines must use the same unit price");
+                }
+                try {
+                    existing.setQuantity(Math.addExact(existing.getQuantity(), item.getQuantity()));
+                } catch (ArithmeticException ex) {
+                    throw new BadRequestException("Combined product quantity is too large");
+                }
+            }
         }
+        items = new java.util.ArrayList<>(normalizedItems.values());
+
+        // Lock in ID order so competing multi-product orders do not invert lock acquisition.
+        var locked = new TreeMap<Long, Product>();
+        normalizedItems.keySet().forEach(id -> locked.put(id, Product.builder().build()));
         for (Long id : locked.keySet()) {
             locked.put(id, productRepository.findByIdForUpdate(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Product", id)));
@@ -322,7 +344,7 @@ public class OrderService {
             if (farm.getStatus() != FarmStatus.ACTIVE) {
                 throw new BadRequestException("Product dispatch farm is inactive");
             }
-            requireDispatchCoordinates(farm.getLatitude(), farm.getLongitude(), farm.getAddress());
+            requireDispatchAddress(farm.getAddress());
             return new DispatchOriginSnapshot(farm.getId(), "FARM", farm.getName(), farm.getAddress(),
                     farm.getCounty(), farm.getLatitude(), farm.getLongitude());
         }
@@ -353,6 +375,12 @@ public class OrderService {
         }
     }
 
+    private static void requireDispatchAddress(String address) {
+        if (address == null || address.isBlank()) {
+            throw new BadRequestException("Product dispatch location requires an address");
+        }
+    }
+
     private record DispatchOriginSnapshot(Long id, String type, String name, String address,
                                           String county, Double latitude, Double longitude) {}
 
@@ -376,6 +404,10 @@ public class OrderService {
     public Order cancelOrder(Long orderId, String reason) {
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        return cancelOrderLocked(order, reason);
+    }
+
+    private Order cancelOrderLocked(Order order, String reason) {
         if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.COMPLETED) {
             throw new BadRequestException("A " + order.getStatus().wire() + " order cannot be cancelled");
         }
@@ -383,6 +415,7 @@ public class OrderService {
         if (reason != null && !reason.isBlank()) {
             order.setCancellationReason(reason.trim());
         }
+        reverseRecordedSales(order);
         // Restore stock consumed when the order was placed.
         releaseStock(order);
         if (order.getPaymentStatus().isRefundable()) {
@@ -404,10 +437,14 @@ public class OrderService {
     public Order confirmReceipt(Long orderId) {
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            return order;
+        }
         if (order.getStatus() != OrderStatus.DELIVERED) {
             throw new BadRequestException("Only a delivered order can be completed");
         }
-        releaseOpenOrderReservations(order);
+        requireSuccessfulPayment(order);
+        recordSuccessfulSale(order);
         order.setStatus(OrderStatus.COMPLETED);
         if (order.getPaymentStatus() == PaymentStatus.PAID
                 || order.getPaymentStatus() == PaymentStatus.HELD) {
@@ -425,10 +462,101 @@ public class OrderService {
     public Order updateOrderStatus(Long orderId, OrderStatus status) {
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+        if (status == OrderStatus.COMPLETED) {
+            if (order.getStatus() == OrderStatus.COMPLETED) {
+                return order;
+            }
+            if (order.getStatus() != OrderStatus.DELIVERED) {
+                throw new BadRequestException("Only a delivered order can be completed");
+            }
+            requireSuccessfulPayment(order);
+            recordSuccessfulSale(order);
+            if (order.getPaymentStatus() == PaymentStatus.PAID
+                    || order.getPaymentStatus() == PaymentStatus.HELD) {
+                order.setPaymentStatus(PaymentStatus.SETTLED);
+                setPaymentStatusForOrder(order.getId(), PaymentStatus.SETTLED);
+            }
+        } else if (status == OrderStatus.DELIVERED) {
+            if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.COMPLETED) {
+                throw new BadRequestException("A " + order.getStatus().wire() + " order cannot be delivered");
+            }
+            requireSuccessfulPayment(order);
+            order.setStatus(status);
+            recordSuccessfulSale(order);
+        } else if (status == OrderStatus.CANCELLED) {
+            return cancelOrderLocked(order, null);
+        }
         order.setStatus(status);
         Order saved = orderRepository.save(order);
         orderEventRepository.save(OrderEvent.builder().orderId(orderId).status(status).build());
         return saved;
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void completeDisputedOrder(Order order) {
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            return;
+        }
+        if (order.getStatus() != OrderStatus.DISPUTED) {
+            throw new BadRequestException("Only a disputed order can be completed by dispute resolution");
+        }
+        recordSuccessfulSale(order);
+        order.setStatus(OrderStatus.COMPLETED);
+        if (order.getPaymentStatus() == PaymentStatus.PAID
+                || order.getPaymentStatus() == PaymentStatus.HELD) {
+            order.setPaymentStatus(PaymentStatus.SETTLED);
+            setPaymentStatusForOrder(order.getId(), PaymentStatus.SETTLED);
+        }
+        orderRepository.save(order);
+        orderEventRepository.save(OrderEvent.builder()
+                .orderId(order.getId()).status(OrderStatus.COMPLETED).build());
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void cancelDisputedOrder(Order order) {
+        if (order.getStatus() != OrderStatus.DISPUTED) {
+            throw new BadRequestException("Only a disputed order can be cancelled by dispute resolution");
+        }
+        reverseRecordedSales(order);
+        releaseStock(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        orderEventRepository.save(OrderEvent.builder()
+                .orderId(order.getId()).status(OrderStatus.CANCELLED).build());
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void recordSalesForPaidDelivery(Order order) {
+        if ((order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.COMPLETED)
+                && hasSuccessfulPayment(order.getPaymentStatus())) {
+            recordSuccessfulSale(order);
+        }
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void recordSalesForDisputedOrder(Order order) {
+        if (order.getStatus() != OrderStatus.DISPUTED) {
+            throw new BadRequestException("Only a disputed order can be resolved");
+        }
+        requireSuccessfulPayment(order);
+        recordSuccessfulSale(order);
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void rollbackDisputedInventory(Order order) {
+        reverseRecordedSales(order);
+        releaseStock(order);
+    }
+
+    @Transactional
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public void reverseSalesForRefund(Order order) {
+        reverseRecordedSales(order);
     }
 
     @PreAuthorize("@resourceAuthorization.order(#orderId) || @resourceAuthorization.orderSeller(#orderId)")
@@ -621,23 +749,63 @@ public class OrderService {
         });
     }
 
-    /** Restores stock consumed by a cancelled order and clears its open-order reservation. */
-    private void releaseStock(Order order) {
-        orderItemRepository.findByOrderId(order.getId()).forEach(item -> {
-            productRepository.findByIdForUpdate(item.getProductId()).ifPresent(product -> {
-                int reserved = nullToZero(product.getReservedQty()) - item.getQuantity();
-                product.setReservedQty(Math.max(0, reserved));
-                product.setStockQty(Math.addExact(nullToZero(product.getStockQty()), item.getQuantity()));
-                productRepository.save(product);
-            });
-        });
+    private void recordSuccessfulSale(Order order) {
+        if (order.isSalesRecorded() || !hasSuccessfulPayment(order.getPaymentStatus())) {
+            return;
+        }
+        Map<Long, Integer> quantities = orderQuantities(order);
+        for (Map.Entry<Long, Integer> entry : quantities.entrySet()) {
+            Product product = productRepository.findByIdForUpdate(entry.getKey())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", entry.getKey()));
+            product.setSoldQty(Math.addExact(nullToZero(product.getSoldQty()), entry.getValue()));
+            product.setReservedQty(Math.max(0, nullToZero(product.getReservedQty()) - entry.getValue()));
+            productRepository.save(product);
+        }
+        order.setSalesRecorded(true);
     }
 
-    private void releaseOpenOrderReservations(Order order) {
-        orderItemRepository.findByOrderId(order.getId()).forEach(item -> {
-            productRepository.findByIdForUpdate(item.getProductId()).ifPresent(product -> {
-                int reserved = nullToZero(product.getReservedQty()) - item.getQuantity();
+    private void reverseRecordedSales(Order order) {
+        if (!order.isSalesRecorded()) {
+            return;
+        }
+        for (Map.Entry<Long, Integer> entry : orderQuantities(order).entrySet()) {
+            productRepository.findByIdForUpdate(entry.getKey()).ifPresent(product -> {
+                product.setSoldQty(Math.max(0, nullToZero(product.getSoldQty()) - entry.getValue()));
+                productRepository.save(product);
+            });
+        }
+        order.setSalesRecorded(false);
+    }
+
+    private Map<Long, Integer> orderQuantities(Order order) {
+        Map<Long, Integer> quantities = new TreeMap<>();
+        for (OrderItem item : orderItemRepository.findByOrderId(order.getId())) {
+            try {
+                quantities.merge(item.getProductId(), item.getQuantity(), Math::addExact);
+            } catch (ArithmeticException ex) {
+                throw new BadRequestException("Combined order product quantity is too large");
+            }
+        }
+        return quantities;
+    }
+
+    private static boolean hasSuccessfulPayment(PaymentStatus status) {
+        return status == PaymentStatus.PAID || status == PaymentStatus.HELD || status == PaymentStatus.SETTLED;
+    }
+
+    private static void requireSuccessfulPayment(Order order) {
+        if (!hasSuccessfulPayment(order.getPaymentStatus())) {
+            throw new BadRequestException("Only an order with a successful payment can be delivered or completed");
+        }
+    }
+
+    /** Restores stock consumed by a cancelled order and clears its open-order reservation. */
+    private void releaseStock(Order order) {
+        orderQuantities(order).forEach((productId, quantity) -> {
+            productRepository.findByIdForUpdate(productId).ifPresent(product -> {
+                int reserved = nullToZero(product.getReservedQty()) - quantity;
                 product.setReservedQty(Math.max(0, reserved));
+                product.setStockQty(Math.addExact(nullToZero(product.getStockQty()), quantity));
                 productRepository.save(product);
             });
         });

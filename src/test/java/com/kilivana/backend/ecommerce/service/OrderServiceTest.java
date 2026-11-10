@@ -173,6 +173,23 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("creates an order when a farmer farm has no coordinates yet")
+    void createsOrderWithFarmDispatchCoordinatesToBeAddedLater() {
+        when(farmRepository.findById(3L)).thenReturn(Optional.of(Farm.builder()
+                .id(3L).farmerId(9L).status(FarmStatus.ACTIVE)
+                .name("Test farm").address("Farm road").build()));
+
+        orderService.createOrder(BUYER_ID, ADDRESS_ID,
+                new BigDecimal("25.00"), items(), null, null);
+
+        verify(orderRepository).save(any(Order.class));
+        verify(orderItemRepository).save(org.mockito.ArgumentMatchers.argThat(item ->
+                item.getDispatchLocationIdSnapshot().equals(3L)
+                        && item.getDispatchLatitudeSnapshot() == null
+                        && item.getDispatchLongitudeSnapshot() == null));
+    }
+
+    @Test
     @DisplayName("persists a buyer-entered pickup location without a station or address ID")
     void persistsManualPickupLocation() {
         String pickupLocation = "Outside Westlands Mall, near the main entrance";
@@ -356,11 +373,9 @@ class OrderServiceTest {
         verify(productRepository, never()).save(any());
         verify(orderRepository, never()).save(any());
     }
-    @Test void invalidAndDuplicateQuantitiesRejectedBeforeWrites() {
+    @Test void invalidQuantitiesRejectedBeforeWrites() {
         var request = items(); request.get(0).setQuantity(0);
         assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, request, null, null));
-        request.get(0).setQuantity(2);
-        assertThrows(BadRequestException.class, () -> orderService.createOrder(BUYER_ID, ADDRESS_ID, null, List.of(request.get(0), request.get(0)), null, null));
         verify(productRepository, never()).save(any());
     }
     @Test void minimumOrderAndRemainingStockAreEnforced() {

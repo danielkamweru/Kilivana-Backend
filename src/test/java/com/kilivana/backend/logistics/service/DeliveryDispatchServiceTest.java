@@ -80,6 +80,35 @@ class DeliveryDispatchServiceTest {
     }
 
     @Test
+    void dispatchUsesCoordinatesAddedToFarmAfterOrderCreation() {
+        Order order = Order.builder().id(2L).buyerId(7L).addressId(4L)
+                .deliveryMethod("DOOR_DELIVERY").status(OrderStatus.PLACED)
+                .paymentStatus(PaymentStatus.PAID).build();
+        OrderItem item = OrderItem.builder().orderId(2L).sellerId(9L)
+                .productName("Avocado").quantity(3)
+                .dispatchLocationIdSnapshot(5L).dispatchLocationTypeSnapshot("FARM")
+                .dispatchAddressSnapshot("Farm road").build();
+        Farm farm = Farm.builder().id(5L).farmerId(9L).status(FarmStatus.ACTIVE)
+                .address("Farm road, Kiambu").latitude(-1.2).longitude(36.8).build();
+        Address address = Address.builder().id(4L).userId(7L).addressText("Buyer road")
+                .latitude(-1.3).longitude(36.9).build();
+        when(orderRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findByOrderId(2L)).thenReturn(List.of(item));
+        when(farmRepository.findById(5L)).thenReturn(Optional.of(farm));
+        when(addressRepository.findById(4L)).thenReturn(Optional.of(address));
+        when(jobRepository.findByOrderIdAndSellerId(2L, 9L)).thenReturn(List.of());
+        when(logisticsService.createJob(any(LogisticsJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        dispatchService.dispatchOrder(2L);
+
+        ArgumentCaptor<LogisticsJob> jobCaptor = ArgumentCaptor.forClass(LogisticsJob.class);
+        verify(logisticsService).createJob(jobCaptor.capture());
+        assertThat(jobCaptor.getValue().getPickupAddress()).isEqualTo("Farm road, Kiambu");
+        assertThat(jobCaptor.getValue().getPickupLatitude()).isEqualTo(-1.2);
+        assertThat(jobCaptor.getValue().getPickupLongitude()).isEqualTo(36.8);
+    }
+
+    @Test
     void dispatchRejectsUnpaidOrdersBeforeCreatingJobs() {
         when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(Order.builder()
                 .id(1L).status(OrderStatus.PLACED).paymentStatus(PaymentStatus.PENDING).build()));

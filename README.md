@@ -193,6 +193,10 @@ docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V6__unique_email_case_insensitive.sql
 docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
   < db/migrations/V19__payment_status_check_and_lookup_indexes.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V29__persist_checkout_quotes.sql
+docker exec -i kilivana-postgres psql -U kilivana_user -d kilivana \
+  < db/migrations/V30__reconcile_completed_product_sales.sql
 ```
 
 Product lifecycle states also require the manual migration below. It widens
@@ -801,7 +805,10 @@ This project is currently configured for internal development use. Add a license
 For `POST /api/v1/checkout/delivery-quote`, choose `DOOR_DELIVERY` with an `addressId`,
 or choose `PICKUP_STATION` with exactly one of `pickupStationId` and `pickupLocation`.
 `pickupLocation` is a one-time, buyer-entered location (up to 500 characters); it is
-stored on the order and is not added to the buyer's saved pickup stations.
+stored on the order and is not added to the buyer's saved pickup stations. Submit the
+returned `quoteId` in `POST /api/v1/checkout/order` as `{"quoteId":"..."}` within 15
+minutes. Quotes are stored in PostgreSQL so order creation continues to work after an
+application restart or when requests reach different backend instances.
 
 ### Ecommerce — Disputes
 - `POST /api/v1/disputes` — Create dispute

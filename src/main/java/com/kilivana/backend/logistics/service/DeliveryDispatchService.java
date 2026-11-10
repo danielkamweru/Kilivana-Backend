@@ -126,6 +126,7 @@ public class DeliveryDispatchService {
             }
             validateOrigin(first);
             validateLocationOwnership(key);
+            DispatchOriginLocation origin = resolveOrigin(first, key);
             LogisticsJob request = LogisticsJob.builder()
                     .orderId(orderId)
                     .sellerId(key.sellerId())
@@ -134,9 +135,9 @@ public class DeliveryDispatchService {
                     .pickupWarehouseId("WAREHOUSE".equals(key.type()) ? key.locationId() : null)
                     .pickupStationId(destination.stationId())
                     .destinationType(destination.type())
-                    .pickupAddress(first.getDispatchAddressSnapshot())
-                    .pickupLatitude(first.getDispatchLatitudeSnapshot())
-                    .pickupLongitude(first.getDispatchLongitudeSnapshot())
+                    .pickupAddress(origin.address())
+                    .pickupLatitude(origin.latitude())
+                    .pickupLongitude(origin.longitude())
                     .destinationAddress(destination.address())
                     .destinationLatitude(destination.latitude())
                     .destinationLongitude(destination.longitude())
@@ -183,12 +184,39 @@ public class DeliveryDispatchService {
     }
 
     private static void validateOrigin(OrderItem item) {
-        validateCoordinates(item.getDispatchLatitudeSnapshot(), item.getDispatchLongitudeSnapshot(),
-                item.getDispatchAddressSnapshot());
         if (item.getDispatchLocationTypeSnapshot() == null
                 || !List.of("FARM", "WAREHOUSE").contains(item.getDispatchLocationTypeSnapshot())) {
             throw new BadRequestException("Product has an unsupported dispatch location type");
         }
+    }
+
+    private DispatchOriginLocation resolveOrigin(OrderItem item, DispatchKey key) {
+        if (hasValidCoordinates(item.getDispatchAddressSnapshot(), item.getDispatchLatitudeSnapshot(),
+                item.getDispatchLongitudeSnapshot())) {
+            return new DispatchOriginLocation(item.getDispatchAddressSnapshot(),
+                    item.getDispatchLatitudeSnapshot(), item.getDispatchLongitudeSnapshot());
+        }
+
+        if ("FARM".equals(key.type())) {
+            Farm farm = farmRepository.findById(key.locationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Farm", key.locationId()));
+            validateCoordinates(farm.getLatitude(), farm.getLongitude(), farm.getAddress());
+            return new DispatchOriginLocation(farm.getAddress(), farm.getLatitude(), farm.getLongitude());
+        }
+
+        SupplierWarehouse warehouse = warehouseRepository.findByIdAndUserId(key.locationId(), key.sellerId())
+                .orElseThrow(() -> new BadRequestException(
+                        "The product's warehouse does not belong to its supplier"));
+        validateCoordinates(warehouse.getLatitude(), warehouse.getLongitude(), warehouse.getAddress());
+        return new DispatchOriginLocation(warehouse.getAddress(), warehouse.getLatitude(), warehouse.getLongitude());
+    }
+
+    private static boolean hasValidCoordinates(String address, Double latitude, Double longitude) {
+        return address != null && !address.isBlank()
+                && latitude != null && longitude != null
+                && Double.isFinite(latitude) && Double.isFinite(longitude)
+                && latitude >= -90 && latitude <= 90
+                && longitude >= -180 && longitude <= 180;
     }
 
     private void validateLocationOwnership(DispatchKey key) {
@@ -240,5 +268,6 @@ public class DeliveryDispatchService {
     }
 
     private record DispatchKey(Long sellerId, String type, Long locationId) {}
+    private record DispatchOriginLocation(String address, Double latitude, Double longitude) {}
     private record Destination(Long stationId, String type, String address, Double latitude, Double longitude) {}
 }

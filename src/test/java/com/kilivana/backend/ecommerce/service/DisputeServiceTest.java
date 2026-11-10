@@ -44,6 +44,7 @@ class DisputeServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private OrderEventRepository orderEventRepository;
     @Mock private PaymentRepository paymentRepository;
+    @Mock private OrderService orderService;
 
     private DisputeService disputeService;
 
@@ -53,7 +54,7 @@ class DisputeServiceTest {
     @BeforeEach
     void setUp() {
         disputeService = new DisputeService(disputeRepository, orderRepository,
-                orderEventRepository, paymentRepository);
+                orderEventRepository, paymentRepository, orderService);
 
         when(disputeRepository.save(any(Dispute.class))).thenAnswer(inv -> {
             Dispute dispute = inv.getArgument(0);

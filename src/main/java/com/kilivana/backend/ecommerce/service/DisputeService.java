@@ -44,6 +44,7 @@ public class DisputeService {
     private final OrderRepository orderRepository;
     private final OrderEventRepository orderEventRepository;
     private final PaymentRepository paymentRepository;
+    private final OrderService orderService;
 
     /**
      * Creates a new dispute for an order. Marks the order as DISPUTED and
@@ -126,7 +127,7 @@ public class DisputeService {
             throw new BadRequestException("This dispute is already resolved");
         }
 
-        Order order = orderRepository.findById(dispute.getOrderId())
+        Order order = orderRepository.findByIdForUpdate(dispute.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", dispute.getOrderId()));
 
         dispute.setResolution(request.getResolution());
@@ -136,6 +137,7 @@ public class DisputeService {
         // Buyer wins: cancel the order and refund the money (it was held in escrow).
         // Farmer wins: complete the order and release the payment to the seller.
         if (request.getOutcome() == DisputeOutcome.BUYER) {
+            orderService.rollbackDisputedInventory(order);
             order.setStatus(OrderStatus.CANCELLED);
             if (order.getPaymentStatus().isRefundable()) {
                 order.setPaymentStatus(PaymentStatus.REFUNDED);
@@ -144,6 +146,7 @@ public class DisputeService {
             orderEventRepository.save(OrderEvent.builder()
                     .orderId(order.getId()).status(OrderStatus.CANCELLED).build());
         } else {
+            orderService.recordSalesForDisputedOrder(order);
             order.setStatus(OrderStatus.COMPLETED);
             if (order.getPaymentStatus() == PaymentStatus.PAID
                     || order.getPaymentStatus() == PaymentStatus.HELD) {

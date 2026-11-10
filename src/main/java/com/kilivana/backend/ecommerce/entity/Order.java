@@ -83,6 +83,9 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String cancellationReason;
 
+    @Column(name = "sales_recorded", nullable = false)
+    private boolean salesRecorded;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -230,6 +233,14 @@ public class Order {
         this.cancellationReason = cancellationReason;
     }
 
+    public boolean isSalesRecorded() {
+        return salesRecorded;
+    }
+
+    public void setSalesRecorded(boolean salesRecorded) {
+        this.salesRecorded = salesRecorded;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -276,6 +287,7 @@ public class Order {
         private String pickupLocation;
         private String deliveryMethod;
         private String cancellationReason;
+        private boolean salesRecorded;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
         private List<OrderItem> orderItems;
@@ -365,6 +377,11 @@ public class Order {
             return this;
         }
 
+        public OrderBuilder salesRecorded(boolean salesRecorded) {
+            this.salesRecorded = salesRecorded;
+            return this;
+        }
+
         public OrderBuilder createdAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -399,6 +416,7 @@ public class Order {
             order.pickupLocation = this.pickupLocation;
             order.deliveryMethod = this.deliveryMethod;
             order.cancellationReason = this.cancellationReason;
+            order.salesRecorded = this.salesRecorded;
             order.createdAt = this.createdAt;
             order.updatedAt = this.updatedAt;
             order.orderItems = this.orderItems;
