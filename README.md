@@ -58,9 +58,10 @@ From the project root (the Maven wrapper downloads the matching Maven version):
 ./start.sh
 ```
 
-`start.sh` runs the Maven wrapper and saves the full startup output to
-`/tmp/kilivana-startup.log` (override the path with `STARTUP_LOG`). If startup
-fails, the script returns Maven's non-zero exit status; inspect the first
+`start.sh` cleans and rebuilds compiled classes before each launch, then saves
+the full startup output to `/tmp/kilivana-startup.log` (override the path with
+`STARTUP_LOG`). This avoids startup failures caused by stale generated classes.
+If startup fails, the script returns Maven's non-zero exit status; inspect the first
 `APPLICATION FAILED TO START` or `Caused by:` message in the log to find the
 underlying problem.
 
@@ -76,7 +77,7 @@ SEED_DATA=true \
 SEED_ADMIN_PASSWORD='Admin@123' \
 SEED_DEMO_PASSWORD='Kilivana#2026' \
 SEED_ENFORCE_PASSWORDS=true \
-./mvnw spring-boot:run
+./start.sh
 ```
 
 The backend will run on:
@@ -389,7 +390,7 @@ so a missing API key can never turn an unrelated business failure into a 500.
 SENDGRID_ENABLED=true \
 SENDGRID_API_KEY=your_key \
 SENDGRID_FROM_EMAIL=no-reply@kilivana.com \
-mvn spring-boot:run
+./start.sh
 ```
 
 Verify the integration:
@@ -581,7 +582,7 @@ Test credentials for every role and a per-endpoint verified-status table live in
 
 ```bash
 ./mvnw clean install
-./mvnw spring-boot:run
+./start.sh
 ./mvnw test
 ./mvnw clean package
 ```

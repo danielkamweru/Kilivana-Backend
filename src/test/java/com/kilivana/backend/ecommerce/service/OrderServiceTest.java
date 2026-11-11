@@ -19,6 +19,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.dto.OrderItemRequest;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.dto.OrderStatsResponse;
 import com.kilivana.backend.ecommerce.dto.SellerResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
@@ -151,6 +152,23 @@ class OrderServiceTest {
     private List<OrderItemRequest> items() {
         return List.of(OrderItemRequest.builder()
                 .productId(PRODUCT_ID).quantity(2).unitPrice(new BigDecimal("50.00")).build());
+    }
+
+    @Test
+    @DisplayName("returns global order counts from the repository aggregate")
+    void getOrderManagementStatsMapsRepositoryCounts() {
+        when(orderRepository.getOrderManagementStats())
+                .thenReturn(List.<Object[]>of(new Object[]{150L, 20L, 30L, 40L, 45L, 15L}));
+
+        OrderStatsResponse stats = orderService.getOrderManagementStats();
+
+        assertEquals(150L, stats.getTotalOrders());
+        assertEquals(20L, stats.getPlaced());
+        assertEquals(30L, stats.getConfirmed());
+        assertEquals(40L, stats.getProcessing());
+        assertEquals(45L, stats.getDelivered());
+        assertEquals(15L, stats.getCancelled());
+        verify(orderRepository).getOrderManagementStats();
     }
 
     @Test

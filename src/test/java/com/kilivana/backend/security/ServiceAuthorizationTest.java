@@ -262,10 +262,19 @@ class ServiceAuthorizationTest {
         denied(() -> orderService.getOrderById(11L));
         denied(() -> orderService.getOrdersByBuyer(2L));
         denied(() -> orderService.searchOrders(null, null, null, org.springframework.data.domain.Pageable.unpaged()));
+        denied(() -> orderService.getOrderManagementStats());
         denied(() -> orderService.confirmReceipt(11L));
         denied(() -> orderService.updateOrderStatus(10L, OrderStatus.COMPLETED));
         verify(orders, never()).save(any());
         assertEquals(10L, orderService.getOrderById(10L).getId());
+    }
+
+    @Test void administratorCanReadGlobalOrderManagementStats() {
+        actor(9L, UserRole.ADMIN);
+        when(orders.getOrderManagementStats())
+                .thenReturn(List.<Object[]>of(new Object[]{1L, 1L, 0L, 0L, 0L, 0L}));
+
+        assertEquals(1L, orderService.getOrderManagementStats().getTotalOrders());
     }
 
     @Test void sellersCanOnlySeeTheirOwnDeliveryJobsForAnOrder() {

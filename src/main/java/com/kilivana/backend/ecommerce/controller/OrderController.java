@@ -2,6 +2,7 @@ package com.kilivana.backend.ecommerce.controller;
 
 import com.kilivana.backend.ecommerce.dto.OrderRequest;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.dto.OrderStatsResponse;
 import com.kilivana.backend.ecommerce.dto.SellerOrderSummary;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
@@ -103,6 +104,18 @@ public class OrderController {
         Page<OrderResponse> orders = orderService.searchOrders(buyerId, sellerId, status, pageable)
                 .map(orderService::toResponse);
         return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
+    @Operation(summary = "Get global order management statistics",
+            description = "Returns global counts by order status, independent of order-list pagination.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order statistics retrieved"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Administrator access required")
+    })
+    @GetMapping("/admin/stats")
+    public ResponseEntity<ApiResponse<OrderStatsResponse>> getOrderManagementStats() {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getOrderManagementStats()));
     }
 
     /**

@@ -16,6 +16,16 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    @Query(value = "SELECT COUNT(*), " +
+           "COALESCE(SUM(CASE WHEN status = 'PLACED' THEN 1 ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN status = 'CONFIRMED' THEN 1 ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN status IN ('PROCESSING', 'IN_TRANSIT') THEN 1 ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN status IN ('DELIVERED', 'COMPLETED') THEN 1 ELSE 0 END), 0), " +
+           "COALESCE(SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END), 0) " +
+           "FROM orders",
+           nativeQuery = true)
+    List<Object[]> getOrderManagementStats();
+
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findByIdForUpdate(@Param("id") Long id);

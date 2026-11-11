@@ -49,7 +49,7 @@ SEED_ADMIN_EMAIL="admin.test@kilivana.local" \
 SEED_ADMIN_PASSWORD="Kilivana#2026" \
 CORS_ALLOWED_ORIGINS="http://localhost:4200,https://*.ngrok-free.dev" \
 STORAGE_PROVIDER=database \
-./mvnw spring-boot:run
+./start.sh
 ```
 
 ## API Endpoints

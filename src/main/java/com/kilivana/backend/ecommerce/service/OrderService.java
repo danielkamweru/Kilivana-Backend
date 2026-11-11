@@ -25,6 +25,7 @@ import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.dto.OrderItemRequest;
 import com.kilivana.backend.ecommerce.dto.OrderItemResponse;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.dto.OrderStatsResponse;
 import com.kilivana.backend.ecommerce.dto.SellerResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
@@ -103,6 +104,19 @@ public class OrderService {
     public Page<Order> searchOrders(Long buyerId, Long sellerId, String status, Pageable pageable) {
         OrderStatus orderStatus = status != null ? OrderStatus.from(status) : null;
         return orderRepository.searchOrders(buyerId, sellerId, orderStatus, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public OrderStatsResponse getOrderManagementStats() {
+        Object[] counts = orderRepository.getOrderManagementStats().get(0);
+        return new OrderStatsResponse(
+                ((Number) counts[0]).longValue(),
+                ((Number) counts[1]).longValue(),
+                ((Number) counts[2]).longValue(),
+                ((Number) counts[3]).longValue(),
+                ((Number) counts[4]).longValue(),
+                ((Number) counts[5]).longValue());
     }
 
     /**

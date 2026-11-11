@@ -8,7 +8,7 @@ umask 077
 
 printf 'Starting Kilivana Backend. Startup output: %s\n' "$log_file"
 set +e
-./mvnw spring-boot:run 2>&1 | tee "$log_file"
+./mvnw clean spring-boot:run 2>&1 | tee "$log_file"
 status=${PIPESTATUS[0]}
 set -e
 
