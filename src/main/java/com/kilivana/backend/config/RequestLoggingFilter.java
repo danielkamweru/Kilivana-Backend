@@ -1,5 +1,6 @@
 package com.kilivana.backend.config;
 
+import com.kilivana.backend.mail.DevelopmentOtpLogger;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -73,7 +74,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         if (request.getRequestURI().equals(HEALTH_PATH)) {
             return;
         }
-        log.info("{} {} -> {} ({} ms)", request.getMethod(), request.getRequestURI(),
-                status, durationMs);
+        Object developmentOtp = request.getAttribute(DevelopmentOtpLogger.REQUEST_ATTRIBUTE);
+        if (developmentOtp instanceof String otpDetails) {
+            log.info("{} {} -> {} ({} ms) | {}", request.getMethod(), request.getRequestURI(),
+                    status, durationMs, otpDetails);
+            request.removeAttribute(DevelopmentOtpLogger.REQUEST_ATTRIBUTE);
+            return;
+        }
+        log.info("{} {} -> {} ({} ms)", request.getMethod(), request.getRequestURI(), status, durationMs);
     }
 }

@@ -3,6 +3,9 @@ package com.kilivana.backend.mail;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.Map;
@@ -41,6 +44,20 @@ class DevelopmentOtpLoggerTest {
                     assertThat(event.getFormattedMessage()).contains("farmer@example.test",
                             "EMAIL_VERIFICATION","2026-11-11T20:00:00Z","001234"));
         } finally {logger.detachAppender(appender);appender.stop();}
+    }
+
+    @Test
+    void synchronousOtpIsAttachedToHttpRequestForStatusLine() {
+        var request=new MockHttpServletRequest("POST","/api/v1/auth/register");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            new DevelopmentOtpLogger().log("farmer@example.test","EMAIL_VERIFICATION",
+                    Instant.parse("2026-11-11T20:00:00Z"),"001234");
+            assertThat(request.getAttribute(DevelopmentOtpLogger.REQUEST_ATTRIBUTE).toString())
+                    .contains("farmer@example.test","EMAIL_VERIFICATION","001234");
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
     }
 
     private void assertLoggerAvailable(String[] profiles, boolean expected) {
