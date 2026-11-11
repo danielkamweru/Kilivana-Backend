@@ -437,7 +437,10 @@ one request per 60 seconds and five requests per email per hour.
 For local OTP troubleshooting, run with `SPRING_PROFILES_ACTIVE=dev`. The OTP is logged
 before hashing with recipient, purpose and expiry, and is never returned by the API or stored
 in plaintext. The development logger is disabled when `prod` or `production` is active;
-never activate `dev` on a shared or production deployment.
+never activate `dev` on a shared or production deployment. In this local profile, a logged
+OTP is saved as a normal hashed challenge and can be verified even if SendGrid submission
+fails. This development fallback is disabled in production, where failed initial delivery
+still fails registration.
 
 Gmail's `421 4.7.32` requires the From domain to align with an authenticated SPF or DKIM
 organizational domain. In SendGrid, authenticate the domain used by `SENDGRID_FROM_EMAIL`

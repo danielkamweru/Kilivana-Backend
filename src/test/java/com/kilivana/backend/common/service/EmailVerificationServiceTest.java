@@ -133,6 +133,20 @@ class EmailVerificationServiceTest {
         assertThrows(ServiceUnavailableException.class,()->service.startForNewAccount(user));
         verify(states,never()).save(any());assertFalse(user.isEmailVerified());
     }
+    @Test void developmentOtpRemainsVerifiableWhenInitialEmailDeliveryFails() {
+        when(mail.sendVerificationHtml(anyString(),anyString(),anyString(),any(),anyString()))
+                .thenAnswer(i->{html.set(i.getArgument(2));return false;});
+        service=new EmailVerificationTransactions(mock(EntityManager.class),users,states,security,mail,
+                new EmailVerificationEmailTemplate(),requests,new DevelopmentOtpLogger());
+
+        var challenge=service.startForNewAccount(user);
+        String raw=code();
+
+        assertEquals(challenge.challengeId(),state.get().getChallengeId());
+        assertNotEquals(raw,state.get().getCodeHash());
+        service.verify(request(challenge.challengeId(),user.getEmail(),raw));
+        assertTrue(user.isEmailVerified());
+    }
     @Test void unknownAndVerifiedAddressesHaveSameResponseAndNoDispatch() {
         var unknown=service.request("unknown@example.invalid",UUID.randomUUID());user.setEmailVerified(true);
         var verified=service.request(user.getEmail(),UUID.randomUUID());

@@ -67,7 +67,7 @@ public class EmailVerificationTransactions {
         this.developmentOtpLogger = developmentOtpLogger;
     }
 
-    /** Called inside registration/provisioning transaction; no account survives failed initial dispatch. */
+    /** Development OTP logging lets local registrations proceed when the mail provider is unavailable. */
     @Transactional
     public EmailOtpChallengeResponse startForNewAccount(User user) {
         UUID id=UUID.randomUUID();
@@ -133,8 +133,9 @@ public class EmailVerificationTransactions {
         if(developmentOtpLogger!=null)
             developmentOtpLogger.log(user.getEmail(),EmailOtpSecurity.PURPOSE,expiresAt,code);
         String hash=security.hash(user,id,code);
-        if(!mail.sendVerificationHtml(user.getEmail(),template.subject(user.getRole()),
-                template.render(user.getRole(),code),id,EmailOtpSecurity.PURPOSE)) return false;
+        boolean delivered=mail.sendVerificationHtml(user.getEmail(),template.subject(user.getRole()),
+                template.render(user.getRole(),code),id,EmailOtpSecurity.PURPOSE);
+        if(!delivered && developmentOtpLogger==null) return false;
         state.setUserId(user.getId());state.setChallengeId(id);state.setEmail(EmailOtpSecurity.normalize(user.getEmail()));
         state.setRole(user.getRole());state.setPurpose(EmailOtpSecurity.PURPOSE);state.setCodeHash(hash);
         state.setExpiresAt(expiresAt);state.setUsedAt(null);
