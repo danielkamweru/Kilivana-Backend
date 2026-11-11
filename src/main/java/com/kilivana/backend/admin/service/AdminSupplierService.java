@@ -107,7 +107,7 @@ public class AdminSupplierService {
                 .contractEndDate(request.getContractEndDate())
                 .build());
 
-        return toResponse(user, profile);
+        return toResponse(user, profile, List.of());
     }
 
     @Transactional(readOnly = true)
