@@ -132,6 +132,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `SENDGRID_API_KEY` | *(empty)* | SendGrid key, read from the environment only. |
 | `SENDGRID_FROM_EMAIL` | `no-reply@kilivana.com` | Must match a verified SendGrid sender identity. |
 | `SENDGRID_FROM_NAME` | `Kilivana` | Display name on outgoing mail. |
+| `SENDGRID_EVENT_WEBHOOK_PUBLIC_KEY` | *(empty)* | SendGrid signed Event Webhook public key; required to receive verified SMTP delivery outcomes. |
 | `RESET_PASSWORD_URL` | *(empty)* | Reset page for web/staff accounts; accepts a `token` query parameter. |
 | `RESET_PASSWORD_MOBILE_URL` | *(empty)* | Driver public HTTPS reset page/App Link; falls back to `RESET_PASSWORD_URL`. |
 | `RESET_PASSWORD_ECOMMERCE_URL` | *(empty)* | Buyer/storefront reset page; falls back to `RESET_PASSWORD_URL`. |
@@ -390,6 +391,7 @@ so a missing API key can never turn an unrelated business failure into a 500.
 SENDGRID_ENABLED=true \
 SENDGRID_API_KEY=your_key \
 SENDGRID_FROM_EMAIL=no-reply@kilivana.com \
+SENDGRID_FROM_NAME=Kilivana \
 ./start.sh
 ```
 
@@ -423,6 +425,27 @@ unreachable mail provider cannot fail the operation that triggered the email.
 
 The sender address must match a **verified sender identity** in SendGrid, otherwise the API
 call succeeds and delivery is silently dropped or quarantined.
+
+SendGrid's Mail Send API acceptance is not proof of delivery. Configure the signed Event
+Webhook in SendGrid to `POST https://<your-api>/api/v1/webhooks/sendgrid/events`, enable
+delivery, deferred, bounce and dropped events, and set its signing public key as
+`SENDGRID_EVENT_WEBHOOK_PUBLIC_KEY`. The backend verifies the signature and logs the actual
+outcome, SMTP status and response. Deferred mail remains eligible for delivery retries;
+an existing OTP remains valid until its normal ten-minute expiry. Resend remains limited to
+one request per 60 seconds and five requests per email per hour.
+
+For local OTP troubleshooting, run with `SPRING_PROFILES_ACTIVE=dev`. The OTP is logged
+before hashing with recipient, purpose and expiry, and is never returned by the API or stored
+in plaintext. The development logger is disabled when `prod` or `production` is active;
+never activate `dev` on a shared or production deployment.
+
+Gmail's `421 4.7.32` requires the From domain to align with an authenticated SPF or DKIM
+organizational domain. In SendGrid, authenticate the domain used by `SENDGRID_FROM_EMAIL`
+under **Settings → Sender Authentication → Domain Authentication**, publish the exact
+CNAME/DNS records SendGrid provides at the DNS host, and verify them in SendGrid. Ensure the
+From address uses that domain and SPF/DKIM alignment passes. Avoid publishing multiple SPF
+records. A `550 5.1.1` is a permanent invalid-recipient response; correct the address rather
+than retrying it.
 
 > Rotate `SENDGRID_API_KEY` immediately if it is ever pasted into a chat, a log or a commit.
 > It is read from the environment only and is never stored in the repository; `.gitignore`

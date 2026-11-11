@@ -206,8 +206,16 @@ SENDGRID_ENABLED=true
 SENDGRID_API_KEY=<secret with required mail-send permissions>
 SENDGRID_FROM_EMAIL=<verified sender identity>
 SENDGRID_FROM_NAME=Kilivana
+SENDGRID_EVENT_WEBHOOK_PUBLIC_KEY=<SendGrid signed Event Webhook public key>
 SPRING_JPA_HIBERNATE_DDL_AUTO=validate
 ```
+
+SendGrid API acceptance is not mailbox delivery. Configure its signed Event Webhook to
+`POST /api/v1/webhooks/sendgrid/events` with delivery, deferred, bounce and dropped events
+enabled. The backend verifies the webhook signature and logs the actual outcome, SMTP status
+and response. Deferred mail does not invalidate the current challenge; it remains valid for
+its regular ten-minute expiry. For local-only OTP recovery, run the `dev` profile; never
+activate that profile on production.
 
 The HMAC secret has no fallback, no default development key and no JWT/SendGrid-key reuse. Missing/short configuration fails application startup. Share the same secret across instances and restarts; store it outside Git. Generate it using an approved secrets manager or a cryptographic generator. Rotation invalidates outstanding challenges and changes rate digest keys; coordinate deployment and let users request fresh codes.
 

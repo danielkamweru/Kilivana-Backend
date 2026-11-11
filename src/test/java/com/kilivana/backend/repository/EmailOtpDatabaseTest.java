@@ -92,7 +92,7 @@ class EmailOtpDatabaseTest {
         when(references.nextCode(any())).thenAnswer(i->((UserRole)i.getArgument(0)).referenceCode(sequence.incrementAndGet()));
         when(jwt.generateAccessToken(any())).thenReturn("test-access-token");
         when(jwt.generateRefreshToken(any())).thenReturn("test-refresh-token");
-        when(mail.sendHtml(anyString(),anyString(),anyString())).thenAnswer(i->{
+        when(mail.sendVerificationHtml(anyString(),anyString(),anyString(),any(),anyString())).thenAnswer(i->{
             if(!delivery.get())return false;
             var m=Pattern.compile(">([0-9]{6})</p>").matcher((String)i.getArgument(2));
             if(!m.find())throw new AssertionError("Verification template must contain a six-digit code");

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -78,6 +79,36 @@ class SendGridMailServiceTest {
         assertThat(sent).isTrue();
         assertThat(receivedKey.get()).isEqualTo("SG.test");
         assertThat(receivedEndpoint.get()).isEqualTo("mail/send");
+    }
+
+    @Test
+    void verificationRequestIncludesOpaqueEventCorrelationAndAcceptanceIsNotDelivery() {
+        SendGridProperties properties = new SendGridProperties();
+        properties.setEnabled(true);
+        properties.setApiKey("SG.test");
+        UUID challengeId = UUID.randomUUID();
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        SendGrid stub = new SendGrid("SG.test") {
+            @Override
+            public Response api(Request request) {
+                requestBody.set(request.getBody());
+                return new Response(202, "", null);
+            }
+        };
+        var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(SendGridMailService.class);
+        var appender=new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();logger.addAppender(appender);
+        try {
+            boolean accepted = new SendGridMailService(properties, key -> stub)
+                    .sendVerificationHtml("buyer@example.com", "Verify", "<p>123456</p>",
+                            challengeId, "EMAIL_VERIFICATION");
+            assertThat(accepted).isTrue();
+            assertThat(requestBody.get()).contains(challengeId.toString(), "kilivana_purpose", "EMAIL_VERIFICATION");
+            assertThat(appender.list).anySatisfy(event ->
+                    assertThat(event.getFormattedMessage()).contains("delivery is pending"));
+            assertThat(appender.list).noneMatch(event ->
+                    event.getFormattedMessage().contains("DELIVERED"));
+        } finally {logger.detachAppender(appender);appender.stop();}
     }
 
 

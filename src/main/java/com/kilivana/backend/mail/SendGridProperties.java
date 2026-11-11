@@ -26,6 +26,9 @@ public class SendGridProperties {
 
     private String fromName = "Kilivana";
 
+    /** Base64-encoded public key configured for SendGrid's signed Event Webhook. */
+    private String eventWebhookPublicKey = "";
+
     /** Mail can be sent only when the integration is switched on and a key is present. */
     public boolean isConfigured() {
         return enabled && apiKey != null && !apiKey.isBlank();

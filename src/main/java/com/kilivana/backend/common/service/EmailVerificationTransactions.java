@@ -8,13 +8,14 @@ import com.kilivana.backend.common.exception.*;
 import com.kilivana.backend.common.repository.EmailVerificationChallengeRepository;
 import com.kilivana.backend.mail.*;
 import com.kilivana.backend.security.EmailOtpSecurity;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.UUID;
 
-@Service @RequiredArgsConstructor
+@Service
 public class EmailVerificationTransactions {
     private final jakarta.persistence.EntityManager entityManager;
     private final UserRepository users;
@@ -23,6 +24,48 @@ public class EmailVerificationTransactions {
     private final SendGridMailService mail;
     private final EmailVerificationEmailTemplate template;
     private final com.kilivana.backend.common.repository.EmailOtpRateLimitRepository requests;
+    private final DevelopmentOtpLogger developmentOtpLogger;
+
+    @Autowired
+    public EmailVerificationTransactions(jakarta.persistence.EntityManager entityManager,
+                                         UserRepository users,
+                                         EmailVerificationChallengeRepository challenges,
+                                         EmailOtpSecurity security,
+                                         SendGridMailService mail,
+                                         EmailVerificationEmailTemplate template,
+                                         com.kilivana.backend.common.repository.EmailOtpRateLimitRepository requests,
+                                         ObjectProvider<DevelopmentOtpLogger> developmentOtpLogger) {
+        this(entityManager, users, challenges, security, mail, template, requests,
+                developmentOtpLogger.getIfAvailable());
+    }
+
+    EmailVerificationTransactions(jakarta.persistence.EntityManager entityManager,
+                                  UserRepository users,
+                                  EmailVerificationChallengeRepository challenges,
+                                  EmailOtpSecurity security,
+                                  SendGridMailService mail,
+                                  EmailVerificationEmailTemplate template,
+                                  com.kilivana.backend.common.repository.EmailOtpRateLimitRepository requests) {
+        this(entityManager, users, challenges, security, mail, template, requests, (DevelopmentOtpLogger) null);
+    }
+
+    EmailVerificationTransactions(jakarta.persistence.EntityManager entityManager,
+                                  UserRepository users,
+                                  EmailVerificationChallengeRepository challenges,
+                                  EmailOtpSecurity security,
+                                  SendGridMailService mail,
+                                  EmailVerificationEmailTemplate template,
+                                  com.kilivana.backend.common.repository.EmailOtpRateLimitRepository requests,
+                                  DevelopmentOtpLogger developmentOtpLogger) {
+        this.entityManager = entityManager;
+        this.users = users;
+        this.challenges = challenges;
+        this.security = security;
+        this.mail = mail;
+        this.template = template;
+        this.requests = requests;
+        this.developmentOtpLogger = developmentOtpLogger;
+    }
 
     /** Called inside registration/provisioning transaction; no account survives failed initial dispatch. */
     @Transactional
@@ -85,11 +128,16 @@ public class EmailVerificationTransactions {
         var state=challenges.findById(user.getId()).orElseGet(EmailVerificationChallenge::new);
         // Preserve attempt limits across resends and delivery failures.
         if(state.getAttemptsResetAt()!=null && state.getAttemptsResetAt().isAfter(now) && state.getFailedAttempts()>=5) return false;
-        String code=security.newCode();String hash=security.hash(user,id,code);
-        if(!mail.sendHtml(user.getEmail(),template.subject(user.getRole()),template.render(user.getRole(),code))) return false;
+        String code=security.newCode();
+        var expiresAt=now.plusSeconds(600);
+        if(developmentOtpLogger!=null)
+            developmentOtpLogger.log(user.getEmail(),EmailOtpSecurity.PURPOSE,expiresAt,code);
+        String hash=security.hash(user,id,code);
+        if(!mail.sendVerificationHtml(user.getEmail(),template.subject(user.getRole()),
+                template.render(user.getRole(),code),id,EmailOtpSecurity.PURPOSE)) return false;
         state.setUserId(user.getId());state.setChallengeId(id);state.setEmail(EmailOtpSecurity.normalize(user.getEmail()));
         state.setRole(user.getRole());state.setPurpose(EmailOtpSecurity.PURPOSE);state.setCodeHash(hash);
-        state.setExpiresAt(now.plusSeconds(600));state.setUsedAt(null);
+        state.setExpiresAt(expiresAt);state.setUsedAt(null);
         if(state.getAttemptsResetAt()==null || !state.getAttemptsResetAt().isAfter(now)) {
             state.setFailedAttempts(0);state.setAttemptsResetAt(now.plusSeconds(3600));
         }

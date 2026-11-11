@@ -51,6 +51,7 @@ public class SecurityConfig {
         "/api/auth/email-verification/request", "/api/auth/email-verification/resend", "/api/auth/email-verification/verify",
         "/api/auth/register", "/api/auth/login", "/api/auth/refresh",
         "/api/auth/forgot-password", "/api/auth/reset-password", "/api/v1/users", "/api/users",
+        "/api/v1/webhooks/sendgrid/events",
         // Safaricom posts the STK Push result here and cannot present a token, so the
         // endpoint is public. It is defended in the callback service instead: the
         // callback must match a payment that was really initiated (checkout request

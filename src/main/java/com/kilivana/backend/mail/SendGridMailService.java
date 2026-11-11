@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -53,7 +54,12 @@ public class SendGridMailService {
 
     /** Sends an HTML message. */
     public boolean sendHtml(String to, String subject, String htmlBody) {
-        return dispatch(to, subject, "text/html", htmlBody);
+        return dispatch(to, subject, "text/html", htmlBody, null, null);
+    }
+
+    /** Sends an HTML email carrying opaque verification metadata for signed delivery events. */
+    public boolean sendVerificationHtml(String to, String subject, String htmlBody, UUID challengeId, String purpose) {
+        return dispatch(to, subject, "text/html", htmlBody, challengeId, purpose);
     }
 
     /**
@@ -65,8 +71,16 @@ public class SendGridMailService {
      * code rather than in an exception: a sender that is not a verified identity, for
      * instance, comes back as 403. Treating that as a success would log a delivery that
      * never happened and leave the caller believing the mail was sent.
+     *
+     * <p>A successful API response means only that SendGrid accepted the message. Actual
+     * delivery outcomes arrive later through the signed Event Webhook.
      */
     private boolean dispatch(String to, String subject, String contentType, String content) {
+        return dispatch(to, subject, contentType, content, null, null);
+    }
+
+    private boolean dispatch(String to, String subject, String contentType, String content,
+                             UUID challengeId, String purpose) {
         if (!properties.isConfigured()) {
             log.warn("SendGrid is not configured; skipping transactional email");
             return false;
@@ -77,6 +91,10 @@ public class SendGridMailService {
                 subject,
                 new Email(to),
                 new Content(contentType, content));
+        if (challengeId != null && purpose != null) {
+            mail.addCustomArg("kilivana_challenge_id", challengeId.toString());
+            mail.addCustomArg("kilivana_purpose", purpose);
+        }
 
         try {
             // Built per send: keeps the service stateless and always uses the current key.
@@ -89,7 +107,8 @@ public class SendGridMailService {
             Response response = sendGrid.api(request);
             int status = response == null ? 0 : response.getStatusCode();
             if (status >= 200 && status < 300) {
-                log.info("Queued SendGrid {} message to {} with subject '{}'", contentType, to, subject);
+                log.info("SendGrid accepted {} message for {} with subject '{}' (status {}); delivery is pending",
+                        contentType, to, subject, status);
                 return true;
             }
             log.error("SendGrid refused the {} message to {} with subject '{}' (status {}): {}",
@@ -97,8 +116,8 @@ public class SendGridMailService {
                     summarise(response == null ? null : response.getBody()));
             return false;
         } catch (IOException | RuntimeException e) {
-            log.error("Failed to send SendGrid {} message to {} with subject '{}'",
-                    contentType, to, subject);
+            log.error("SendGrid submission failed for {} message to {} with subject '{}' ({})",
+                    contentType, to, subject, e.getClass().getSimpleName());
             return false;
         }
     }
