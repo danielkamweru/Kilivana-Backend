@@ -1,10 +1,8 @@
 # Registers the DATABASE_URL translator before the datasource is configured,
 # so a Render PostgreSQL service needs no committed credentials.
+# Both processors must share one comma-separated registration. Repeating the
+# same property key makes Java Properties keep only the last declaration,
+# which previously prevented DATABASE_URL from being applied on Render.
 org.springframework.boot.env.EnvironmentPostProcessor=\
-com.kilivana.backend.config.DatabaseUrlEnvironmentPostProcessor
-
-# Loads a project-local .env file as a low-precedence fallback, so local
-# development does not require exporting every secret by hand and a reset
-# working tree cannot silently empty the local credentials.
-org.springframework.boot.env.EnvironmentPostProcessor=\
+com.kilivana.backend.config.DatabaseUrlEnvironmentPostProcessor,\
 com.kilivana.backend.config.DotenvEnvironmentPostProcessor
