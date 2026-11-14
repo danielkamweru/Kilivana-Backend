@@ -117,9 +117,10 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `DATABASE_URL` | *(empty)* | Full `postgres://user:password@host:port/database` URL, set by Render's attached PostgreSQL service. Takes precedence over `DB_URL`/`DB_USERNAME`/`DB_PASSWORD`. |
 | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | local defaults | Datasource settings for local development. |
 | `JWT_SECRET` | *(empty)* | HS512 signing key. **Set this in any shared environment** — if unset, every restart invalidates all issued tokens. |
-| `JWT_EXPIRATION` | `1800000` | Access-token lifetime in ms (default: 30 minutes). `0` means no expiry. |
-| `JWT_REFRESH_EXPIRATION` | `0` | Refresh-token lifetime in ms. |
-| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated browser origins; wildcard patterns allowed, so `*` permits every origin (the default). Restrict to the KilivanaAdmin2 origin for a locked deployment. |
+| `JWT_EXPIRATION_HOURS` | `24` | Access-token lifetime in hours. Set a positive value in shared environments. |
+| `JWT_REFRESH_EXPIRATION_HOURS` | `168` | Refresh-token lifetime in hours. |
+| `EMAIL_OTP_HMAC_SECRET` | *(required)* | Stable secret of at least 32 bytes for email-verification OTP hashing. Render generates it from the Blueprint. |
+| `CORS_ALLOWED_ORIGINS` | local origins only | Comma-separated browser origins. Set this to the exact HTTPS frontend origins on Render; do not use `*` in a shared deployment. |
 | `PUBLIC_BACKEND_URL` | *(empty)* | Public HTTPS API origin used for image URLs, the OpenAPI server entry, and the default Daraja callback. `PUBLIC_BASE_URL` is a legacy fallback. |
 | `SEED_DATA` | `false` | Populates a fresh database with Kenyan demo data on startup. Idempotent: a restart never duplicates or overwrites records. |
 | `SEED_ADMIN_EMAIL` | `admin@kilivana.com` | Email of the seeded initial administrator. |
@@ -560,20 +561,15 @@ CORS is configured from `CORS_ALLOWED_ORIGINS`; the local default is:
 
 ## Render Deployment
 
-The repository ships a [`render.yaml`](render.yaml) blueprint: it builds the JAR with Maven, runs it on the port Render assigns, and attaches the PostgreSQL service's `DATABASE_URL` automatically.
+The repository ships a [`render.yaml`](render.yaml) Blueprint. It builds the Docker image, provisions a same-region PostgreSQL database, wires its private connection string as `DATABASE_URL`, and checks `GET /api/v1/health` before marking the service live.
 
-1. Push the repository to GitHub.
-2. In the Render dashboard, create a **Web Service** from this repository (or import `render.yaml` as a blueprint).
-3. Attach a **PostgreSQL** database to the service; Render injects `DATABASE_URL`.
-4. Set the remaining values in the service dashboard:
-   - `JWT_SECRET` — a long random string (Render can generate it)
-   - `SEED_ADMIN_PASSWORD` — the initial administrator's password (a secret)
-   - `SEED_DEMO_PASSWORD` — change the shared demo-account password
-   - `CORS_ALLOWED_ORIGINS` — the KilivanaAdmin2 origin
-   - `PUBLIC_BACKEND_URL` — the service's own URL
-5. The health check is `GET /api/v1/health`; Render polls it to mark the service live.
+1. Push this repository, including `render.yaml`, to GitHub.
+2. In Render, select **New → Blueprint**, connect the repository, and review the service and database Render will create.
+3. At the Blueprint prompt, set `CORS_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of the deployed frontend, comma-separated. Do not use `*` for a shared environment.
+4. Create the Blueprint and wait for the first deploy. Render generates and persists `JWT_SECRET` and `EMAIL_OTP_HMAC_SECRET`; `PUBLIC_BACKEND_URL` follows Render's assigned public URL automatically.
+5. Add the optional integration settings in the service's Environment page before enabling them: `SENDGRID_*`, `DARAJA_*`, and the relevant `RESET_PASSWORD_*` URLs.
 
-With `SEED_DATA=true` a fresh database is populated with Kenyan demo data on first boot. The seed is idempotent, so a restart or redeploy never duplicates or overwrites records; set `SEED_DATA=false` once the data you want is in place. Uploaded images default to `STORAGE_PROVIDER=database` because the Render filesystem is ephemeral.
+The first deployment intentionally has `SEED_DATA=false`, so it starts with no known accounts or demo records. For a disposable demo only, set `SEED_DATA=true`, set strong secret values for `SEED_ADMIN_PASSWORD` and `SEED_DEMO_PASSWORD`, and leave `SEED_ENFORCE_PASSWORDS=false`. Uploaded images use `STORAGE_PROVIDER=database`, because Render's service filesystem is ephemeral.
 
 ## Development Notes
 
@@ -635,9 +631,10 @@ This project is currently configured for internal development use. Add a license
 | `DB_URL` | `jdbc:postgresql://localhost:5432/kilivana` | PostgreSQL connection URL |
 | `DB_USERNAME` | (empty) | Database username |
 | `DB_PASSWORD` | (empty) | Database password |
-| `JWT_SECRET` | (generated) | JWT signing secret (min 32 bytes) |
-| `JWT_EXPIRATION` | `1800000` | Access token expiry in ms (default: 30 minutes; `0` = no expiry) |
-| `JWT_REFRESH_EXPIRATION` | `604800000` | Refresh token expiry (7 days) |
+| `JWT_SECRET` | (generated on Render) | JWT signing secret (min 32 bytes) |
+| `JWT_EXPIRATION_HOURS` | `24` | Access-token lifetime in hours |
+| `JWT_REFRESH_EXPIRATION_HOURS` | `168` | Refresh-token lifetime in hours |
+| `EMAIL_OTP_HMAC_SECRET` | (required) | Stable secret (min 32 bytes) for email-verification OTP hashing |
 | `SEED_DATA` | `false` | Seed database with demo data on startup |
 | `SEED_ADMIN_EMAIL` | (none) | Initial admin user email |
 | `SEED_ADMIN_PASSWORD` | (none) | Initial admin user password |

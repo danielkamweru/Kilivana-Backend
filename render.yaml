@@ -1,76 +1,52 @@
-# Render deployment for the Kilivana backend.
-#
-# The service is a plain Java/Spring Boot application: Render builds the
-# JAR with Maven and runs it. PostgreSQL is a separate Render service;
-# Render injects its connection string as DATABASE_URL, which the
-# application translates into the datasource settings at startup.
-#
-# See README.md for the full deployment walkthrough and every
-# environment variable.
+# Render Blueprint for the Kilivana Spring Boot API and its PostgreSQL database.
+# Import this file from Render's Blueprint page after pushing it to your Git repo.
 services:
   - type: web
     name: kilivana-backend
-    # Built from the Dockerfile in the repository root.
-    env: docker
+    runtime: docker
     region: oregon
-    healthCheckPath: /api/v1/health
     plan: free
+    healthCheckPath: /api/v1/health
     envVars:
-      # The attached PostgreSQL service owns this value; it is a full
-      # postgres:// URL that the app translates at startup.
+      # Render Postgres exposes an internal connection string. The application
+      # converts it to Spring datasource properties at startup.
       - key: DATABASE_URL
         fromDatabase:
           name: kilivana-postgres
-          property: databaseUrl
-      # Stable signing key so issued JWTs survive a restart. Render
-      # generates and stores the value.
+          property: connectionString
+
+      # Render creates these once and retains them across subsequent syncs.
       - key: JWT_SECRET
         generateValue: true
-      # Token lifetime: one year, so clients are not
-      # logged out by expiry. A leaked token lives that
-      # long; rotate JWT_SECRET to invalidate all of them.
-      - key: JWT_EXPIRATION
-        value: "31536000000"
-      # Browser clients may call the API from any origin. Safe
-      # here because the app uses allowed origin patterns, which
-      # support "*" together with credentials. Restrict to a
-      # comma-separated list of frontend hostnames for a locked
-      # deployment. Native clients (Android/iOS) ignore CORS.
-      - key: CORS_ALLOWED_ORIGINS
-        value: "*"
-      # Absolute URL the API advertises in Swagger and image links.
-      # This is the service's live hostname on Render.
+      - key: EMAIL_OTP_HMAC_SECRET
+        generateValue: true
+
+      # Keeps OpenAPI, image URLs, and the default Daraja callback aligned with
+      # the Render URL (or a replacement custom domain) without hard-coding it.
       - key: PUBLIC_BACKEND_URL
-        value: https://kilivana-backend-a44w.onrender.com
-      # Populate the database with the Kenyan demo data on first boot.
-      # Set to false once the data you want is in place.
+        fromService:
+          name: kilivana-backend
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+      # Restrict this to the HTTPS origins of the deployed web clients when
+      # creating the Blueprint. It is intentionally not committed as '*'.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+      # The defaults below avoid demo data and local-file uploads on Render's
+      # ephemeral filesystem. Add integration credentials in the Render UI.
       - key: SEED_DATA
-        value: "true"
-      - key: SEED_ADMIN_EMAIL
-        value: admin@kilivana.com
-      # Initial administrator's password, committed so a fresh
-      # deploy from this file alone creates the admin account.
-      # For a locked deployment, remove this value and set it
-      # as a Render dashboard secret (SEED_ADMIN_PASSWORD) instead.
-      - key: SEED_ADMIN_PASSWORD
-        value: "Admin@123"
-      # Demo (non-admin) accounts share this password; change it before
-      # anyone but you uses the deployment.
-      - key: SEED_DEMO_PASSWORD
-        value: "Kilivana#2026"
-      # Keep the seeded accounts' passwords equal to the values
-      # above, so a redeploy always leaves the documented logins
-      # working. Intended for the demo deployment; leave false in
-      # production.
-      - key: SEED_ENFORCE_PASSWORDS
-        value: "true"
-      # The Render filesystem is ephemeral, so uploaded images live in
-      # PostgreSQL.
+        value: "false"
       - key: STORAGE_PROVIDER
         value: database
-      # Swagger stays on so the deployment documents itself; turn it off
-      # with a false value when it is no longer wanted.
       - key: SWAGGER_ENABLED
         value: "true"
       - key: API_DOCS_ENABLED
         value: "true"
+
+databases:
+  - name: kilivana-postgres
+    region: oregon
+    databaseName: kilivana
+    user: kilivana_user
