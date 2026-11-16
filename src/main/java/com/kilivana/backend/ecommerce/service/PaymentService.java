@@ -55,6 +55,7 @@ public class PaymentService {
     private DarajaCallbackService darajaCallbackService;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private PaymentService self;
 
     public PaymentService(PaymentRepository paymentRepository,
