@@ -257,6 +257,60 @@ public class DarajaService {
         return pendingRequests.remove(checkoutRequestID);
     }
 
+    /**
+     * Queries Safaricom for the status of an STK Push transaction.
+     *
+     * <p>Used by the reconciliation job when a callback is lost or delayed.
+     * Returns null if Safaricom cannot be reached or returns an empty response.
+     *
+     * @param checkoutRequestID the Daraja CheckoutRequestID to query
+     * @return parsed query response, or null on failure
+     */
+    public Map<String, Object> queryStkPush(String checkoutRequestID) {
+        String accessToken = getValidAccessToken();
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String password = generateStkPassword(timestamp);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("BusinessShortCode", properties.getShortcode());
+        requestBody.put("Password", password);
+        requestBody.put("Timestamp", timestamp);
+        requestBody.put("CheckoutRequestID", checkoutRequestID);
+
+        log.info("Querying STK Push status for CheckoutRequestID={}", checkoutRequestID);
+
+        try {
+            Map<String, Object> response = webClient.post()
+                    .uri(properties.getStkPushQueryUrl())
+                    .header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block(Duration.ofSeconds(properties.getTimeoutSeconds()));
+
+            if (response == null) {
+                log.warn("Daraja STK Push Query returned empty response for CheckoutRequestID={}",
+                        checkoutRequestID);
+                return null;
+            }
+
+            log.info("STK Push Query response for CheckoutRequestID={}: ResultCode={}",
+                    checkoutRequestID, response.get("ResultCode"));
+            return response;
+
+        } catch (WebClientResponseException e) {
+            log.error("Daraja STK Push Query failed with status {}: {}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
+        } catch (Exception e) {
+            log.error("Daraja STK Push Query failed unexpectedly for CheckoutRequestID={}",
+                    checkoutRequestID, e);
+            return null;
+        }
+    }
+
     /** Simple holder for a cached token and its expiry. */
     private record TokenHolder(String token, LocalDateTime expiresAt) {
         boolean isExpired() {

@@ -13,8 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 /**
  * Processes Safaricom Daraja (M-PESA STK Push) callbacks.
@@ -121,6 +123,23 @@ public class DarajaCallbackService {
 
             if (resultCode == 0) {
                 // SUCCESS: Payment confirmed by M-PESA
+                Long callbackAmount = stk.getAmount();
+                if (callbackAmount != null) {
+                    BigDecimal callbackAmountDecimal = BigDecimal.valueOf(callbackAmount);
+                    if (callbackAmountDecimal.compareTo(payment.getAmount()) != 0) {
+                        log.warn("M-PESA amount mismatch: expected={}, callback={}, orderId={}",
+                                payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
+                        payment.setStatus(PaymentStatus.FAILED);
+                        payment.setCallbackStatus("PROCESSED");
+                        paymentRepository.save(payment);
+                        orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                            order.setPaymentStatus(PaymentStatus.FAILED);
+                            orderRepository.save(order);
+                        });
+                        return new DarajaCallbackResponse();
+                    }
+                }
+
                 log.info("M-PESA payment confirmed: orderId={}, amount={}, receipt={}",
                         payment.getOrderId(), payment.getAmount(), payment.getMpesaReceiptNumber());
 
@@ -174,5 +193,115 @@ public class DarajaCallbackService {
             log.warn("Failed to parse Daraja transaction date: {}", dateStr);
             return null;
         }
+    }
+
+    /**
+     * Reconciles a payment using a Safaricom STK Push Query result.
+     * Used when the callback was lost or delayed. Idempotent: already-processed
+     * payments are skipped.
+     *
+     * @param checkoutRequestID the Daraja CheckoutRequestID to reconcile
+     * @param queryResult       the raw query response map from Daraja
+     */
+    @Transactional
+    public void reconcileFromQuery(String checkoutRequestID, Map<String, Object> queryResult) {
+        if (queryResult == null) {
+            log.warn("Cannot reconcile CheckoutRequestID={}: null query result", checkoutRequestID);
+            return;
+        }
+
+        Integer resultCodeObj = (Integer) queryResult.get("ResultCode");
+        int resultCode = resultCodeObj == null ? -1 : resultCodeObj;
+        String merchantRequestId = (String) queryResult.get("MerchantRequestID");
+        String resultDesc = (String) queryResult.get("ResultDesc");
+
+        log.info("Reconciling CheckoutRequestID={} from query: resultCode={}, merchantRequestId={}",
+                checkoutRequestID, resultCode, merchantRequestId);
+
+        Payment payment = paymentRepository.findByCheckoutRequestId(checkoutRequestID)
+                .orElse(null);
+        if (payment == null) {
+            log.warn("No payment record found for CheckoutRequestID={}", checkoutRequestID);
+            return;
+        }
+
+        // Idempotency: skip if already processed
+        if ("PROCESSED".equals(payment.getCallbackStatus()) || "RECEIVED".equals(payment.getCallbackStatus())) {
+            log.info("CheckoutRequestID={} already processed (status={}), skipping reconciliation",
+                    checkoutRequestID, payment.getCallbackStatus());
+            return;
+        }
+
+        payment.setCallbackStatus("RECEIVED");
+        payment.setMerchantRequestId(merchantRequestId);
+        payment.setCheckoutRequestId(checkoutRequestID);
+
+        // Extract metadata from query result (Safaricom returns top-level fields on success)
+        Object amountObj = queryResult.get("Amount");
+        if (amountObj != null) {
+            Long amount = ((Number) amountObj).longValue();
+            payment.setMpesaReceiptNumber((String) queryResult.get("MpesaReceiptNumber"));
+            String txDate = (String) queryResult.get("TransactionDate");
+            if (txDate != null) {
+                payment.setTransactionDate(parseTransactionDate(txDate));
+            }
+            payment.setPhoneNumber((String) queryResult.get("PhoneNumber"));
+
+            if (resultCode == 0) {
+                BigDecimal callbackAmountDecimal = BigDecimal.valueOf(amount);
+                if (callbackAmountDecimal.compareTo(payment.getAmount()) != 0) {
+                    log.warn("M-PESA amount mismatch (reconciliation): expected={}, query={}, orderId={}",
+                            payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
+                    payment.setStatus(PaymentStatus.FAILED);
+                    payment.setCallbackStatus("PROCESSED");
+                    paymentRepository.save(payment);
+                    orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                        order.setPaymentStatus(PaymentStatus.FAILED);
+                        orderRepository.save(order);
+                    });
+                    return;
+                }
+
+                log.info("M-PESA payment confirmed via reconciliation: orderId={}, amount={}, receipt={}",
+                        payment.getOrderId(), payment.getAmount(), payment.getMpesaReceiptNumber());
+
+                payment.setStatus(PaymentStatus.PAID);
+                payment.setReference(payment.getMpesaReceiptNumber());
+                if (payment.getPaidAt() == null) {
+                    payment.setPaidAt(LocalDateTime.now());
+                }
+                payment.setCallbackStatus("PROCESSED");
+
+                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                    order.setPaymentStatus(PaymentStatus.PAID);
+                    orderRepository.save(order);
+                });
+            } else {
+                log.warn("M-PESA payment failed via reconciliation: orderId={}, resultCode={}, resultDesc={}",
+                        payment.getOrderId(), resultCode, resultDesc);
+
+                payment.setStatus(PaymentStatus.FAILED);
+                payment.setCallbackStatus("PROCESSED");
+
+                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                    order.setPaymentStatus(PaymentStatus.FAILED);
+                    orderRepository.save(order);
+                });
+            }
+        } else {
+            // No Amount in result — treat as failure
+            log.warn("STK Push Query result for CheckoutRequestID={} has no Amount field; treating as failed",
+                    checkoutRequestID);
+            payment.setStatus(PaymentStatus.FAILED);
+            payment.setCallbackStatus("PROCESSED");
+            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                order.setPaymentStatus(PaymentStatus.FAILED);
+                orderRepository.save(order);
+            });
+        }
+
+        paymentRepository.save(payment);
+        log.info("Reconciliation complete for orderId={}, paymentId={}, status={}",
+                payment.getOrderId(), payment.getId(), payment.getStatus());
     }
 }

@@ -1,5 +1,8 @@
 package com.kilivana.backend.config;
 
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -13,6 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "app.daraja")
 public class DarajaProperties {
+
+    private static final Logger log = LoggerFactory.getLogger(DarajaProperties.class);
 
     /**
      * Consumer key from the Daraja portal application "Kilivana-Backend".
@@ -99,6 +104,27 @@ public class DarajaProperties {
         return publicBaseUrl.replaceAll("\\/+$", "") + callbackPath;
     }
 
+    /**
+     * Validates the callback URL configuration on startup. Logs a warning when
+     * the callback falls back to a relative path, which Safaricom cannot reach.
+     * Deployments must set {@code DARAJA_CALLBACK_URL} or
+     * {@code PUBLIC_BACKEND_URL} to a public HTTPS endpoint.
+     */
+    @PostConstruct
+    public void validateCallbackUrl() {
+        String resolved = getCallbackUrl();
+        if (resolved.equals(callbackPath)) {
+            log.warn("""
+                Daraja callback URL is not configured as a public HTTPS endpoint.
+                Safaricom cannot reach a relative path ({}). Set DARAJA_CALLBACK_URL
+                or PUBLIC_BACKEND_URL to a publicly accessible HTTPS URL (use ngrok
+                for local development). Otherwise STK Push callbacks will fail and
+                payments will remain PENDING.""", resolved);
+        } else {
+            log.info("Daraja callback URL configured: {}", resolved);
+        }
+    }
+
     public void setCallbackUrl(String callbackUrl) {
         this.callbackUrl = callbackUrl;
     }
@@ -137,5 +163,13 @@ public class DarajaProperties {
             return "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest";
         }
         return "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest";
+    }
+
+    /** Returns the STK Push Query endpoint for the configured environment. */
+    public String getStkPushQueryUrl() {
+        if ("production".equalsIgnoreCase(environment)) {
+            return "https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query";
+        }
+        return "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query";
     }
 }
