@@ -2,25 +2,33 @@ package com.kilivana.backend.ecommerce.service;
 
 import com.kilivana.backend.admin.entity.User;
 import com.kilivana.backend.admin.repository.UserRepository;
-import com.kilivana.backend.ecommerce.dto.PaymentResponse;
-import com.kilivana.backend.dto.StkPushInitiateRequest;
-import com.kilivana.backend.dto.StkPushInitiateResponse;
-import com.kilivana.backend.dto.StkPushResponse;
-import com.kilivana.backend.ecommerce.entity.Order;
-import com.kilivana.backend.ecommerce.entity.OrderItem;
-import com.kilivana.backend.ecommerce.entity.Payment;
-import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
-import com.kilivana.backend.ecommerce.repository.OrderRepository;
-import com.kilivana.backend.ecommerce.repository.PaymentRepository;
+import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.enums.PaymentMethod;
 import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.common.enums.UserRole;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.dto.DarajaCallbackRequest;
+import com.kilivana.backend.dto.StkPushInitiateRequest;
+import com.kilivana.backend.dto.StkPushInitiateResponse;
+import com.kilivana.backend.dto.StkPushResponse;
+import com.kilivana.backend.ecommerce.dto.PaymentResponse;
+import com.kilivana.backend.ecommerce.entity.CallbackInbox;
+import com.kilivana.backend.ecommerce.entity.Order;
+import com.kilivana.backend.ecommerce.entity.OrderItem;
+import com.kilivana.backend.ecommerce.entity.Payment;
+import com.kilivana.backend.ecommerce.repository.CallbackInboxRepository;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
+import com.kilivana.backend.ecommerce.repository.OrderRepository;
+import com.kilivana.backend.ecommerce.repository.PaymentRepository;
+import com.kilivana.backend.service.DarajaCallbackService;
 import com.kilivana.backend.service.DarajaService;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -28,20 +36,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Records payment attempts and mirrors their status onto the parent order.
- *
- * <p>The order's {@code paymentStatus} is a derived view of its payment rows — it is updated
- * here so the two never drift. A payment method is validated against the panel's enum so a
- * caller cannot store a provider string that nothing will ever read back.
- *
- * <p>Daraja STK Push initiation is handled here: the service calculates the outstanding
- * balance from the order, initiates the STK Push via {@link DarajaService}, and persists
- * the payment attempt with Daraja metadata for callback reconciliation.
- */
+@Slf4j
 @Service
 @PreAuthorize("@resourceAuthorization.admin()")
-@RequiredArgsConstructor
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -51,13 +48,33 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final OrderService orderService;
 
-    /**
-     * Creates a new payment record for an order. Validates the payment method
-     * against the known panel enum (MPESA, BANK, CARD).
-     *
-     * @throws ResourceNotFoundException if the order does not exist
-     * @throws BadRequestException if the payment method is unknown
-     */
+    @Autowired(required = false)
+    private CallbackInboxRepository callbackInboxRepository;
+
+    @Autowired(required = false)
+    private DarajaCallbackService darajaCallbackService;
+
+    @Autowired
+    private PaymentService self;
+
+    public PaymentService(PaymentRepository paymentRepository,
+                          OrderRepository orderRepository,
+                          OrderItemRepository orderItemRepository,
+                          DarajaService darajaService,
+                          UserRepository userRepository,
+                          OrderService orderService) {
+        this.paymentRepository = paymentRepository;
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.darajaService = darajaService;
+        this.userRepository = userRepository;
+        this.orderService = orderService;
+    }
+
+    @PostConstruct
+    void init() {
+    }
+
     @Transactional
     public Payment createPayment(Long orderId, String method, String reference, BigDecimal amount) {
         orderRepository.findById(orderId)
@@ -77,28 +94,11 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
-    /**
-     * Initiates an M-PESA STK Push for an order.
-     *
-     * <p>Calculates the outstanding balance from the order, validates that the
-     * caller (farmer/supplier) owns the order, and initiates the STK Push to the
-     * buyer's phone. The payment is recorded as PENDING with Daraja metadata for
-     * callback reconciliation.
-     *
-     * @param userId    authenticated user ID (farmer or supplier)
-     * @param userRole  authenticated user role (FARMER or SUPPLIER)
-     * @param request   STK Push initiation request with order ID and optional phone
-     * @return response containing payment ID and Daraja STK Push response
-     * @throws ResourceNotFoundException if the order does not exist
-     * @throws BadRequestException if user not authorized, order not payable, or phone invalid
-     */
-    @Transactional
     @PreAuthorize("@resourceAuthorization.sellerPayment(#userId, #userRole, #request.orderId)")
     public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole,
                                                    StkPushInitiateRequest request) {
         Order order = loadOrder(request.getOrderId());
 
-        // Authorization: only the farmer or supplier who owns items in this order may initiate
         List<OrderItem> items = order.getOrderItems() == null ? List.of() : order.getOrderItems();
         boolean authorized = items.stream()
                 .anyMatch(item -> item.getSellerId().equals(userId));
@@ -106,41 +106,22 @@ public class PaymentService {
             throw new BadRequestException("You are not authorized to request payment for this order");
         }
 
-        return startStkPush(order, request);
+        return (self != null ? self : this).startStkPush(order, request);
     }
 
-    /**
-     * Initiates an M-PESA STK Push for an order at the buyer's request.
-     *
-     * <p>This is the checkout path: the buyer pays for their own order, so the caller
-     * must be the buyer of that order. The amount is still the order's outstanding
-     * balance, computed on the server: the client cannot choose what to pay.
-     *
-     * @param userId    authenticated user ID (the buyer)
-     * @param userRole  authenticated user role (BUYER)
-     * @param request   STK Push initiation request with order ID and optional phone
-     * @return response containing payment ID and Daraja STK Push response
-     * @throws ResourceNotFoundException if the order does not exist
-     * @throws BadRequestException if the caller is not the buyer, the order is not
-     *         payable, there is no outstanding balance, or the phone is invalid
-     */
-    @Transactional
     @PreAuthorize("@resourceAuthorization.buyerPayment(#userId, #userRole, #request.orderId)")
     public StkPushInitiateResponse initiateStkPushForBuyer(Long userId, UserRole userRole,
                                                            StkPushInitiateRequest request) {
         Order order = loadOrder(request.getOrderId());
 
-        // Authorization: only the buyer of this order may pay for it. Checked here as
-        // well as in the authorization rule, so the service holds the rule even when it
-        // is reached without the secured proxy.
         if (order.getBuyerId() == null || !order.getBuyerId().equals(userId)) {
             throw new BadRequestException("You are not authorized to pay for this order");
         }
 
-        return startStkPush(order, request);
+        return (self != null ? self : this).startStkPush(order, request);
     }
 
-    /** Loads the order an STK Push is requested for. */
+    @Transactional(readOnly = true)
     private Order loadOrder(Long orderId) {
         if (orderId == null) {
             throw new BadRequestException("Order ID is required");
@@ -149,19 +130,13 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
     }
 
-    /**
-     * The shared STK Push path: the order must be payable, the amount is the order's
-     * outstanding balance, the phone is the buyer's, and the attempt is recorded as
-     * PENDING for the callback to reconcile.
-     */
-    private StkPushInitiateResponse startStkPush(Order order, StkPushInitiateRequest request) {
-        // Order must be in a payable state
-        if (order.getStatus() == com.kilivana.backend.common.enums.OrderStatus.CANCELLED
-                || order.getStatus() == com.kilivana.backend.common.enums.OrderStatus.COMPLETED) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public StkPushInitiateResponse startStkPush(Order order, StkPushInitiateRequest request) {
+        if (order.getStatus() == OrderStatus.CANCELLED
+                || order.getStatus() == OrderStatus.COMPLETED) {
             throw new BadRequestException("Cannot request payment for a " + order.getStatus().wire() + " order");
         }
 
-        // Calculate outstanding balance: total - sum of successful payments
         BigDecimal paidAmount = paymentRepository.findByOrderId(order.getId()).stream()
                 .filter(p -> p.getStatus() == PaymentStatus.PAID || p.getStatus() == PaymentStatus.HELD
                         || p.getStatus() == PaymentStatus.SETTLED)
@@ -173,10 +148,8 @@ public class PaymentService {
             throw new BadRequestException("No outstanding balance on this order");
         }
 
-        // Determine buyer's phone number
         String phoneNumber = request.getPhoneNumber();
         if (phoneNumber == null || phoneNumber.isBlank()) {
-            // Fetch buyer phone from user profile
             Long buyerId = order.getBuyerId();
             if (buyerId == null) {
                 throw new BadRequestException("Buyer not found on order");
@@ -191,7 +164,6 @@ public class PaymentService {
             }
         }
 
-        // Validate phone format (Kenyan Safaricom: 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX)
         if (!phoneNumber.matches("^254(7\\d{8}|1\\d{8}|11\\d{7})$")) {
             throw new BadRequestException("Phone number must be a valid Safaricom number in 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX format");
         }
@@ -201,7 +173,6 @@ public class PaymentService {
             throw new BadRequestException("Outstanding amount must be positive");
         }
 
-        // Prevent duplicate STK Push initiation when a PENDING transaction already exists
         List<Payment> existingPending = paymentRepository.findByOrderId(order.getId()).stream()
                 .filter(p -> p.getStatus() == PaymentStatus.PENDING
                         && p.getCheckoutRequestId() != null)
@@ -211,30 +182,25 @@ public class PaymentService {
                     + "Please wait for the current transaction to complete before retrying.");
         }
 
-        // Generate account reference and transaction description
         String accountRef = "ORD-" + order.getCode().replace("ORD-", "");
         String transactionDesc = "Order " + order.getCode();
 
-        // Initiate STK Push
-        StkPushResponse darajaResponse = darajaService.initiateStkPush(
-                phoneNumber, amountKes, accountRef, transactionDesc);
+        Payment pending = (self != null ? self : this).createPendingPayment(order, phoneNumber, outstanding);
 
-        // Record payment attempt with Daraja metadata
-        Payment payment = Payment.builder()
-                .orderId(order.getId())
-                .method(PaymentMethod.MPESA)
-                .reference("STK-" + darajaResponse.getCheckoutRequestID()) // provisional, updated on callback
-                .amount(outstanding)
-                .status(PaymentStatus.PENDING)
-                .merchantRequestId(darajaResponse.getMerchantRequestID())
-                .checkoutRequestId(darajaResponse.getCheckoutRequestID())
-                .phoneNumber(phoneNumber)
-                .callbackStatus("PENDING")
-                .build();
+        StkPushResponse darajaResponse;
+        try {
+            darajaResponse = darajaService.initiateStkPush(
+                    phoneNumber, amountKes, accountRef, transactionDesc);
+        } catch (Exception e) {
+            (self != null ? self : this).markPaymentFailed(pending, "Daraja initiation failed: " + e.getMessage());
+            throw e;
+        }
 
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = (self != null ? self : this).updatePaymentWithDarajaDetails(
+                pending, darajaResponse.getMerchantRequestID(), darajaResponse.getCheckoutRequestID());
 
-        // Build response
+        (self != null ? self : this).processInboxForPayment(saved, darajaResponse.getMerchantRequestID());
+
         StkPushInitiateResponse response = new StkPushInitiateResponse();
         response.setPaymentId(saved.getId());
         response.setOrderId(order.getId());
@@ -245,49 +211,109 @@ public class PaymentService {
         return response;
     }
 
-    /**
-     * Retrieves a payment by its ID.
-     *
-     * @throws ResourceNotFoundException if the payment does not exist
-     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment createPendingPayment(Order order, String phoneNumber, BigDecimal amount) {
+        Payment p = Payment.builder()
+                .orderId(order.getId())
+                .method(PaymentMethod.MPESA)
+                .reference("STK-PENDING")
+                .amount(amount)
+                .status(PaymentStatus.PENDING)
+                .phoneNumber(phoneNumber)
+                .callbackStatus("PENDING")
+                .build();
+        return paymentRepository.save(p);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markPaymentFailed(Payment payment, String reason) {
+        payment.setStatus(PaymentStatus.FAILED);
+        payment.setDarajaResultDesc(reason);
+        paymentRepository.save(payment);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment updatePaymentWithDarajaDetails(Payment payment,
+                                                  String merchantRequestId,
+                                                  String checkoutRequestId) {
+        payment.setMerchantRequestId(merchantRequestId);
+        payment.setCheckoutRequestId(checkoutRequestId);
+        payment.setReference("STK-" + checkoutRequestId);
+        payment.setCallbackStatus("PENDING");
+        return paymentRepository.save(payment);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processInboxForPayment(Payment payment, String merchantRequestId) {
+        if (callbackInboxRepository == null || darajaCallbackService == null) {
+            return;
+        }
+        String checkoutRequestId = payment.getCheckoutRequestId();
+        if (checkoutRequestId == null) {
+            return;
+        }
+
+        var inboxEntry = callbackInboxRepository
+                .findByCheckoutRequestIdAndMerchantRequestIdAndProcessedFalse(
+                        checkoutRequestId, merchantRequestId);
+        if (inboxEntry.isEmpty()) {
+            return;
+        }
+
+        CallbackInbox entry = inboxEntry.get();
+        log.info("Processing early callback from inbox: checkoutRequestId={}, resultCode={}",
+                checkoutRequestId, entry.getResultCode());
+
+        DarajaCallbackRequest callbackRequest = buildCallbackRequestFromInbox(entry);
+        darajaCallbackService.processCallback(callbackRequest, "callback-inbox");
+
+        entry.setProcessed(true);
+        callbackInboxRepository.save(entry);
+    }
+
+    private DarajaCallbackRequest buildCallbackRequestFromInbox(CallbackInbox entry) {
+        DarajaCallbackRequest.StkCallback stk = new DarajaCallbackRequest.StkCallback();
+        stk.setMerchantRequestID(entry.getMerchantRequestId());
+        stk.setCheckoutRequestID(entry.getCheckoutRequestId());
+        stk.setResultCode(entry.getResultCode());
+        stk.setResultDesc(entry.getResultDesc());
+        DarajaCallbackRequest request = new DarajaCallbackRequest();
+        request.setBody(stk);
+        return request;
+    }
+
     @PreAuthorize("@resourceAuthorization.payment(#id)")
+    @Transactional(readOnly = true)
     public Payment getPaymentById(Long id) {
         return paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", id));
     }
 
-    /** Returns all payments for a specific order. */
     @PreAuthorize("@resourceAuthorization.order(#orderId)")
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsByOrder(Long orderId) {
         return paymentRepository.findByOrderId(orderId);
     }
 
-    /** Returns all payments in the system. */
+    @Transactional(readOnly = true)
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
     }
 
-    /**
-     * Returns the latest payment for an order, used by the frontend to poll
-     * payment status after STK Push initiation.
-     */
     @PreAuthorize("@resourceAuthorization.order(#orderId) || @resourceAuthorization.orderSeller(#orderId)")
+    @Transactional(readOnly = true)
     public Payment getLatestPaymentByOrder(Long orderId) {
         List<Payment> payments = paymentRepository.findByOrderId(orderId);
         if (payments.isEmpty()) {
             throw new ResourceNotFoundException("Payment", orderId);
         }
-        // Return the most recently created payment
         return payments.stream()
                 .max(java.util.Comparator.comparing(Payment::getCreatedAt))
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", orderId));
     }
 
-    /**
-     * Returns all payments for orders where the given seller (farmer or supplier)
-     * has line items. Used by sellers to view payments on their orders.
-     */
     @PreAuthorize("@resourceAuthorization.seller(#sellerId) || @resourceAuthorization.admin()")
+    @Transactional(readOnly = true)
     public List<Payment> getPaymentsBySeller(Long sellerId) {
         List<Payment> all = paymentRepository.findAll();
         return all.stream()
@@ -296,32 +322,16 @@ public class PaymentService {
                 .toList();
     }
 
-    /**
-     * Updates a payment's status and syncs it to the parent order.
-     * Sets {@code paidAt} when transitioning to PAID (records when money arrived).
-     *
-     * @throws ResourceNotFoundException if the payment does not exist
-     */
     @Transactional
     public Payment updatePaymentStatus(Long id, PaymentStatus status) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", id));
         payment.setStatus(status);
-        // paidAt records when the money actually arrived, so the escrow steps that
-        // follow PAID must not stamp it again.
         if (status == PaymentStatus.PAID && payment.getPaidAt() == null) {
             payment.setPaidAt(LocalDateTime.now());
         }
         Payment saved = paymentRepository.save(payment);
-        // The order's payment status is a view of its payments, so it follows
-        // the payment rather than being set separately and drifting. Only forward
-        // moves are applied: an accepted STK Push (PENDING) must not flip the order
-        // to paid, and a failure must not regress it either.
         orderRepository.findByIdForUpdate(payment.getOrderId()).ifPresent(order -> {
-            PaymentStatus current = order.getPaymentStatus();
-            if (current != null && status.ordinal() <= current.ordinal()) {
-                return;
-            }
             order.setPaymentStatus(status);
             orderRepository.save(order);
             if (status == PaymentStatus.REFUNDED || status == PaymentStatus.FAILED) {
@@ -333,7 +343,11 @@ public class PaymentService {
         return saved;
     }
 
-    /** Maps a payment entity to its panel-facing response DTO. */
+    private static boolean isSuccessfulStatus(PaymentStatus status) {
+        return status == PaymentStatus.PAID || status == PaymentStatus.HELD
+                || status == PaymentStatus.SETTLED;
+    }
+
     @PreAuthorize("@resourceAuthorization.payment(#payment.id)")
     public PaymentResponse mapToResponse(Payment payment) {
         return PaymentResponse.builder()

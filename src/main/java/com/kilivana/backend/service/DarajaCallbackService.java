@@ -4,7 +4,9 @@ import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.dto.DarajaCallbackRequest;
 import com.kilivana.backend.dto.DarajaCallbackResponse;
+import com.kilivana.backend.ecommerce.entity.CallbackInbox;
 import com.kilivana.backend.ecommerce.entity.Payment;
+import com.kilivana.backend.ecommerce.repository.CallbackInboxRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
@@ -48,6 +50,7 @@ public class DarajaCallbackService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final DarajaService darajaService;
+    private final CallbackInboxRepository callbackInboxRepository;
 
     /**
      * Processes the Daraja callback and updates the payment.
@@ -85,15 +88,27 @@ public class DarajaCallbackService {
         if (payment == null) {
             log.warn("No payment record found for checkoutRequestId={} or merchantRequestId={} from IP {}",
                     checkoutRequestId, merchantRequestId, clientIp);
-            // Still acknowledge to Safaricom to stop retries — we log for manual reconciliation
+            // Durable inbox: store the callback so it can be matched when the payment
+            // record is persisted (e.g., callback arrived before request IDs were saved).
+            storeInInbox(checkoutRequestId, merchantRequestId, resultCode, resultDesc, null);
+            // Still acknowledge to Safaricom to stop retries — the inbox entry will be
+            // processed when the payment record catches up.
             return new DarajaCallbackResponse();
         }
 
-        // Idempotency: if callback already processed, acknowledge without re-processing.
+        // Idempotency: if callback already fully processed, acknowledge without re-processing.
         // A PAID payment must never be overwritten by a later FAILED/CANCELLED callback.
-        if ("PROCESSED".equals(payment.getCallbackStatus()) || "RECEIVED".equals(payment.getCallbackStatus())) {
-            log.info("Callback for checkoutRequestId={} already processed (status={}), acknowledging",
-                    checkoutRequestId, payment.getCallbackStatus());
+        if ("PROCESSED".equals(payment.getCallbackStatus())) {
+            log.info("Callback for checkoutRequestId={} already processed (paymentStatus={}), acknowledging",
+                    checkoutRequestId, payment.getStatus());
+            return new DarajaCallbackResponse();
+        }
+
+        // Guard against concurrent processing: if another thread is already handling this
+        // callback (RECEIVED), acknowledge without duplicating work.
+        if ("RECEIVED".equals(payment.getCallbackStatus())) {
+            log.info("Callback for checkoutRequestId={} already being processed (RECEIVED), acknowledging",
+                    checkoutRequestId);
             return new DarajaCallbackResponse();
         }
 
@@ -176,10 +191,12 @@ public class DarajaCallbackService {
                 payment.setStatus(PaymentStatus.CANCELLED);
                 payment.setCallbackStatus("PROCESSED");
 
-                // Sync order payment status to CANCELLED
+                // Only update order payment status if no successful payment already exists
                 orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.CANCELLED);
-                    orderRepository.save(order);
+                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                        order.setPaymentStatus(PaymentStatus.CANCELLED);
+                        orderRepository.save(order);
+                    }
                 });
 
             } else {
@@ -190,10 +207,12 @@ public class DarajaCallbackService {
                 payment.setStatus(PaymentStatus.FAILED);
                 payment.setCallbackStatus("PROCESSED");
 
-                // Sync order payment status to FAILED
+                // Only update order payment status if no successful payment already exists
                 orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.FAILED);
-                    orderRepository.save(order);
+                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                        order.setPaymentStatus(PaymentStatus.FAILED);
+                        orderRepository.save(order);
+                    }
                 });
             }
 
@@ -206,9 +225,21 @@ public class DarajaCallbackService {
                     checkoutRequestId, e.getMessage(), e);
             payment.setCallbackStatus("FAILED");
             paymentRepository.save(payment);
+            // Re-throw so the @Transactional rolls back — do not silently swallow DB errors
+            // that would leave the payment in an inconsistent state. Safaricom will retry.
+            throw new RuntimeException("Callback processing failed for checkoutRequestId=" + checkoutRequestId, e);
         }
 
         return new DarajaCallbackResponse();
+    }
+
+    /**
+     * Returns true when the order already has a successful payment that must not
+     * be overwritten by a failure or cancellation callback.
+     */
+    private boolean isSuccessfulOrderPaymentStatus(PaymentStatus status) {
+        return status == PaymentStatus.PAID || status == PaymentStatus.HELD
+                || status == PaymentStatus.SETTLED;
     }
 
     /**
@@ -331,8 +362,10 @@ public class DarajaCallbackService {
                 payment.setCallbackStatus("PROCESSED");
 
                 orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.CANCELLED);
-                    orderRepository.save(order);
+                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                        order.setPaymentStatus(PaymentStatus.CANCELLED);
+                        orderRepository.save(order);
+                    }
                 });
             } else {
                 log.warn("M-PESA payment failed via reconciliation: orderId={}, resultCode={}, resultDesc={}",
@@ -342,8 +375,10 @@ public class DarajaCallbackService {
                 payment.setCallbackStatus("PROCESSED");
 
                 orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.FAILED);
-                    orderRepository.save(order);
+                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                        order.setPaymentStatus(PaymentStatus.FAILED);
+                        orderRepository.save(order);
+                    }
                 });
             }
         } else {
@@ -361,5 +396,35 @@ public class DarajaCallbackService {
         paymentRepository.save(payment);
         log.info("Reconciliation complete for orderId={}, paymentId={}, status={}",
                 payment.getOrderId(), payment.getId(), payment.getStatus());
+    }
+
+    /**
+     * Durably stores a callback in the inbox when no payment record can be matched.
+     * The entry is processed later when the payment record is persisted with matching
+     * CheckoutRequestID and MerchantRequestID.
+     */
+    private void storeInInbox(String checkoutRequestId, String merchantRequestId,
+                              int resultCode, String resultDesc, String rawPayload) {
+        if (checkoutRequestId == null) {
+            log.warn("Cannot store callback in inbox: null checkoutRequestId");
+            return;
+        }
+        CallbackInbox entry = CallbackInbox.builder()
+                .checkoutRequestId(checkoutRequestId)
+                .merchantRequestId(merchantRequestId != null ? merchantRequestId : "")
+                .resultCode(resultCode)
+                .resultDesc(resultDesc)
+                .rawPayload(rawPayload)
+                .processed(false)
+                .build();
+        try {
+            callbackInboxRepository.save(entry);
+            log.info("Stored unmatched callback in inbox: checkoutRequestId={}, resultCode={}",
+                    checkoutRequestId, resultCode);
+        } catch (Exception e) {
+            // Unique constraint violation means a duplicate inbox entry — safe to ignore.
+            log.warn("Failed to store callback in inbox (may be duplicate): checkoutRequestId={}",
+                    checkoutRequestId);
+        }
     }
 }

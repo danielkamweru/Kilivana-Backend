@@ -589,8 +589,16 @@ public class OrderService {
         SellerMapping sellerMapping = mapOrderItems(orderItemRepository.findByOrderId(order.getId()));
         SellerResponse singleSeller = sellerMapping.sellers().size() == 1
                 ? sellerMapping.sellers().get(0) : null;
-        Payment payment = paymentRepository.findByOrderId(order.getId()).stream()
-                .findFirst().orElse(null);
+        // Use the most recent successful payment for display; fall back to the latest attempt.
+        List<Payment> allPayments = paymentRepository.findByOrderId(order.getId());
+        Payment payment = allPayments.stream()
+                .filter(p -> p.getStatus() == PaymentStatus.PAID
+                        || p.getStatus() == PaymentStatus.HELD
+                        || p.getStatus() == PaymentStatus.SETTLED)
+                .max(java.util.Comparator.comparing(Payment::getCreatedAt))
+                .orElseGet(() -> allPayments.stream()
+                        .max(java.util.Comparator.comparing(Payment::getCreatedAt))
+                        .orElse(null));
         return OrderResponse.builder()
                 .id(order.getId())
                 .code(order.getCode())
@@ -790,9 +798,22 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
-    /** Moves every payment row of the order to the given status. */
+    /**
+     * Moves payment rows of the order to the given status.
+     * Never overwrites a successful payment (PAID/HELD/SETTLED) with a failure/cancellation.
+     * Only moves rows that are in a non-terminal state, or that are being promoted forward.
+     */
     private void setPaymentStatusForOrder(Long orderId, PaymentStatus status) {
+        boolean targetIsSuccess = status == PaymentStatus.PAID || status == PaymentStatus.HELD
+                || status == PaymentStatus.SETTLED;
         paymentRepository.findByOrderId(orderId).forEach(payment -> {
+            PaymentStatus current = payment.getStatus();
+            boolean currentIsSuccess = current == PaymentStatus.PAID || current == PaymentStatus.HELD
+                    || current == PaymentStatus.SETTLED;
+            // Never regress a successful payment to a failure/cancellation.
+            if (currentIsSuccess && !targetIsSuccess) {
+                return;
+            }
             payment.setStatus(status);
             if (status == PaymentStatus.PAID && payment.getPaidAt() == null) {
                 payment.setPaidAt(java.time.LocalDateTime.now());

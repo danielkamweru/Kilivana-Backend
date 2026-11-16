@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -148,13 +149,14 @@ class BuyerStkPushTest {
         paymentService.initiateStkPushForBuyer(BUYER_ID, UserRole.BUYER, request("254712345678"));
 
         var saved = org.mockito.ArgumentCaptor.forClass(Payment.class);
-        verify(paymentRepository).save(saved.capture());
-        assertThat(saved.getValue().getStatus()).isEqualTo(PaymentStatus.PENDING);
-        assertThat(saved.getValue().getMethod()).isEqualTo(PaymentMethod.MPESA);
-        assertThat(saved.getValue().getReference()).isEqualTo("STK-ws_CO_1");
-        assertThat(saved.getValue().getCheckoutRequestId()).isEqualTo("ws_CO_1");
-        assertThat(saved.getValue().getPhoneNumber()).isEqualTo("254712345678");
-        assertThat(saved.getValue().getCallbackStatus()).isEqualTo("PENDING");
+        verify(paymentRepository, times(2)).save(saved.capture());
+        Payment lastSaved = saved.getAllValues().get(1);
+        assertThat(lastSaved.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(lastSaved.getMethod()).isEqualTo(PaymentMethod.MPESA);
+        assertThat(lastSaved.getReference()).isEqualTo("STK-ws_CO_1");
+        assertThat(lastSaved.getCheckoutRequestId()).isEqualTo("ws_CO_1");
+        assertThat(lastSaved.getPhoneNumber()).isEqualTo("254712345678");
+        assertThat(lastSaved.getCallbackStatus()).isEqualTo("PENDING");
     }
 
     @Test
