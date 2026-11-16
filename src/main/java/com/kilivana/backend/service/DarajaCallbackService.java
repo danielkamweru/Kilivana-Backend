@@ -32,6 +32,9 @@ import java.util.Map;
  *       previously initiated STK Push (recorded by {@link DarajaService}).</li>
  *   <li><b>Updates payment and order atomically</b> — payment status, order
  *       paymentStatus, and Daraja metadata are all updated in one transaction.</li>
+ *   <li><b>Distinguishes cancellation from failure</b> — a customer-cancelled
+ *       STK Push becomes {@code CANCELLED}; other non-zero results become
+ *       {@code FAILED}.</li>
  * </ul>
  *
  * <p>Does NOT automatically release escrow or mark an order delivered —
@@ -64,9 +67,10 @@ public class DarajaCallbackService {
         String checkoutRequestId = stk.getCheckoutRequestID();
         String merchantRequestId = stk.getMerchantRequestID();
         int resultCode = stk.getResultCode();
+        String resultDesc = stk.getResultDesc();
 
-        log.info("Processing Daraja callback: checkoutRequestId={}, merchantRequestId={}, resultCode={}",
-                checkoutRequestId, merchantRequestId, resultCode);
+        log.info("Processing Daraja callback: checkoutRequestId={}, merchantRequestId={}, resultCode={}, resultDesc={}",
+                checkoutRequestId, merchantRequestId, resultCode, resultDesc);
 
         // Find the payment by checkout request ID (primary key for reconciliation)
         Payment payment = paymentRepository.findByCheckoutRequestId(checkoutRequestId)
@@ -85,7 +89,8 @@ public class DarajaCallbackService {
             return new DarajaCallbackResponse();
         }
 
-        // Idempotency: if callback already processed, acknowledge without re-processing
+        // Idempotency: if callback already processed, acknowledge without re-processing.
+        // A PAID payment must never be overwritten by a later FAILED/CANCELLED callback.
         if ("PROCESSED".equals(payment.getCallbackStatus()) || "RECEIVED".equals(payment.getCallbackStatus())) {
             log.info("Callback for checkoutRequestId={} already processed (status={}), acknowledging",
                     checkoutRequestId, payment.getCallbackStatus());
@@ -103,6 +108,8 @@ public class DarajaCallbackService {
                 log.warn("MerchantRequestID mismatch: stored={}, callback={}",
                         payment.getMerchantRequestId(), merchantRequestId);
                 payment.setCallbackStatus("FAILED");
+                payment.setDarajaResultCode(resultCode);
+                payment.setDarajaResultDesc(resultDesc);
                 paymentRepository.save(payment);
                 return new DarajaCallbackResponse();
             }
@@ -110,6 +117,8 @@ public class DarajaCallbackService {
             // Update Daraja metadata from callback
             payment.setMerchantRequestId(merchantRequestId);
             payment.setCheckoutRequestId(checkoutRequestId);
+            payment.setDarajaResultCode(resultCode);
+            payment.setDarajaResultDesc(resultDesc);
 
             if (stk.getCallbackMetadata() != null) {
                 payment.setMpesaReceiptNumber(stk.getMpesaReceiptNumber());
@@ -131,6 +140,9 @@ public class DarajaCallbackService {
                                 payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
                         payment.setStatus(PaymentStatus.FAILED);
                         payment.setCallbackStatus("PROCESSED");
+                        payment.setDarajaResultCode(resultCode);
+                        payment.setDarajaResultDesc("Amount mismatch: expected " + payment.getAmount()
+                                + ", received " + callbackAmountDecimal);
                         paymentRepository.save(payment);
                         orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
                             order.setPaymentStatus(PaymentStatus.FAILED);
@@ -156,10 +168,24 @@ public class DarajaCallbackService {
                     orderRepository.save(order);
                 });
 
+            } else if (isCustomerCancellation(resultCode, resultDesc)) {
+                // CUSTOMER CANCELLED: The buyer cancelled the STK Push on their phone
+                log.warn("M-PESA payment cancelled by customer: orderId={}, resultCode={}, resultDesc={}",
+                        payment.getOrderId(), resultCode, resultDesc);
+
+                payment.setStatus(PaymentStatus.CANCELLED);
+                payment.setCallbackStatus("PROCESSED");
+
+                // Sync order payment status to CANCELLED
+                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                    order.setPaymentStatus(PaymentStatus.CANCELLED);
+                    orderRepository.save(order);
+                });
+
             } else {
-                // FAILURE/CANCEL/TIMEOUT: Do not mark order as paid
-                log.warn("M-PESA payment failed or cancelled: orderId={}, resultCode={}, resultDesc={}",
-                        payment.getOrderId(), resultCode, stk.getResultDesc());
+                // OTHER FAILURE: Insufficient funds, invalid phone, timeout, etc.
+                log.warn("M-PESA payment failed: orderId={}, resultCode={}, resultDesc={}",
+                        payment.getOrderId(), resultCode, resultDesc);
 
                 payment.setStatus(PaymentStatus.FAILED);
                 payment.setCallbackStatus("PROCESSED");
@@ -183,6 +209,22 @@ public class DarajaCallbackService {
         }
 
         return new DarajaCallbackResponse();
+    }
+
+    /**
+     * Determines whether a Daraja result indicates the customer cancelled
+     * the STK Push on their phone, as opposed to a system failure.
+     *
+     * <p>Safaricom returns various result codes for cancellations depending
+     * on the environment. The result description typically contains
+     * cancellation language (e.g. "cancelled by user", "user cancelled").
+     */
+    private boolean isCustomerCancellation(int resultCode, String resultDesc) {
+        if (resultDesc != null && resultDesc.toLowerCase(java.util.Locale.ROOT).contains("cancel")) {
+            return true;
+        }
+        // Safaricom sandbox commonly uses 1032 for customer cancellation
+        return resultCode == 1032;
     }
 
     /** Parses Daraja transaction date (yyyyMMddHHmmss) to LocalDateTime. */
@@ -225,7 +267,8 @@ public class DarajaCallbackService {
             return;
         }
 
-        // Idempotency: skip if already processed
+        // Idempotency: skip if already processed. A PAID payment must not be
+        // overwritten by a later FAILED/CANCELLED reconciliation.
         if ("PROCESSED".equals(payment.getCallbackStatus()) || "RECEIVED".equals(payment.getCallbackStatus())) {
             log.info("CheckoutRequestID={} already processed (status={}), skipping reconciliation",
                     checkoutRequestID, payment.getCallbackStatus());
@@ -235,6 +278,8 @@ public class DarajaCallbackService {
         payment.setCallbackStatus("RECEIVED");
         payment.setMerchantRequestId(merchantRequestId);
         payment.setCheckoutRequestId(checkoutRequestID);
+        payment.setDarajaResultCode(resultCode);
+        payment.setDarajaResultDesc(resultDesc);
 
         // Extract metadata from query result (Safaricom returns top-level fields on success)
         Object amountObj = queryResult.get("Amount");
@@ -254,6 +299,8 @@ public class DarajaCallbackService {
                             payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
                     payment.setStatus(PaymentStatus.FAILED);
                     payment.setCallbackStatus("PROCESSED");
+                    payment.setDarajaResultDesc("Amount mismatch: expected " + payment.getAmount()
+                            + ", received " + callbackAmountDecimal);
                     paymentRepository.save(payment);
                     orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
                         order.setPaymentStatus(PaymentStatus.FAILED);
@@ -274,6 +321,17 @@ public class DarajaCallbackService {
 
                 orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
                     order.setPaymentStatus(PaymentStatus.PAID);
+                    orderRepository.save(order);
+                });
+            } else if (isCustomerCancellation(resultCode, resultDesc)) {
+                log.warn("M-PESA payment cancelled by customer via reconciliation: orderId={}, resultCode={}, resultDesc={}",
+                        payment.getOrderId(), resultCode, resultDesc);
+
+                payment.setStatus(PaymentStatus.CANCELLED);
+                payment.setCallbackStatus("PROCESSED");
+
+                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                    order.setPaymentStatus(PaymentStatus.CANCELLED);
                     orderRepository.save(order);
                 });
             } else {

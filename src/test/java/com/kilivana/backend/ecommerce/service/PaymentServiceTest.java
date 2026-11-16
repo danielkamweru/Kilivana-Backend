@@ -6,6 +6,7 @@ import com.kilivana.backend.common.enums.OrderStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Payment;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ class PaymentServiceTest {
 
     @Mock private PaymentRepository paymentRepository;
     @Mock private OrderRepository orderRepository;
+    @Mock private OrderItemRepository orderItemRepository;
     @Mock private com.kilivana.backend.service.DarajaService darajaService;
     @Mock private com.kilivana.backend.admin.repository.UserRepository userRepository;
     @Mock private OrderService orderService;
@@ -43,7 +45,8 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
-        paymentService = new PaymentService(paymentRepository, orderRepository, darajaService, userRepository, orderService);
+        paymentService = new PaymentService(paymentRepository, orderRepository, orderItemRepository,
+                darajaService, userRepository, orderService);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 

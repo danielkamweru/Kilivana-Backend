@@ -13,6 +13,7 @@ import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.dto.StkPushResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Payment;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.service.DarajaService;
@@ -55,6 +56,7 @@ class BuyerStkPushTest {
 
     @Mock private PaymentRepository paymentRepository;
     @Mock private OrderRepository orderRepository;
+    @Mock private OrderItemRepository orderItemRepository;
     @Mock private DarajaService darajaService;
     @Mock private UserRepository userRepository;
     @Mock private OrderService orderService;
@@ -63,7 +65,8 @@ class BuyerStkPushTest {
 
     @BeforeEach
     void setUp() {
-        paymentService = new PaymentService(paymentRepository, orderRepository, darajaService, userRepository, orderService);
+        paymentService = new PaymentService(paymentRepository, orderRepository, orderItemRepository,
+                darajaService, userRepository, orderService);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(99L);

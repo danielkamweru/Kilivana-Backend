@@ -64,6 +64,8 @@ public class Payment {
     private String mpesaReceiptNumber;
     private LocalDateTime transactionDate;
     private String callbackStatus; // PENDING, RECEIVED, PROCESSED, FAILED
+    private Integer darajaResultCode;
+    private String darajaResultDesc;
 
     public Long getId() {
         return id;
@@ -185,6 +187,22 @@ public class Payment {
         this.callbackStatus = callbackStatus;
     }
 
+    public Integer getDarajaResultCode() {
+        return darajaResultCode;
+    }
+
+    public void setDarajaResultCode(Integer darajaResultCode) {
+        this.darajaResultCode = darajaResultCode;
+    }
+
+    public String getDarajaResultDesc() {
+        return darajaResultDesc;
+    }
+
+    public void setDarajaResultDesc(String darajaResultDesc) {
+        this.darajaResultDesc = darajaResultDesc;
+    }
+
     public static PaymentBuilder builder() {
         return new PaymentBuilder();
     }
@@ -205,6 +223,8 @@ public class Payment {
         private String mpesaReceiptNumber;
         private LocalDateTime transactionDate;
         private String callbackStatus;
+        private Integer darajaResultCode;
+        private String darajaResultDesc;
 
         public PaymentBuilder id(Long id) {
             this.id = id;
@@ -281,6 +301,16 @@ public class Payment {
             return this;
         }
 
+        public PaymentBuilder darajaResultCode(Integer darajaResultCode) {
+            this.darajaResultCode = darajaResultCode;
+            return this;
+        }
+
+        public PaymentBuilder darajaResultDesc(String darajaResultDesc) {
+            this.darajaResultDesc = darajaResultDesc;
+            return this;
+        }
+
         public Payment build() {
             Payment payment = new Payment();
             payment.id = this.id;
@@ -298,6 +328,8 @@ public class Payment {
             payment.mpesaReceiptNumber = this.mpesaReceiptNumber;
             payment.transactionDate = this.transactionDate;
             payment.callbackStatus = this.callbackStatus;
+            payment.darajaResultCode = this.darajaResultCode;
+            payment.darajaResultDesc = this.darajaResultDesc;
             return payment;
         }
     }

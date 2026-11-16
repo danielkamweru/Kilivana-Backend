@@ -66,13 +66,14 @@ class PaymentMethodTest {
 
         assertFalse(PaymentStatus.PENDING.isRefundable());
         assertFalse(PaymentStatus.REFUNDED.isRefundable());
+        assertFalse(PaymentStatus.CANCELLED.isRefundable());
     }
 
     @Test
     @DisplayName("the status set includes Daraja failure handling")
     void statusSetMatchesThePanel() {
         assertEquals(
-                java.util.Set.of("PENDING", "PAID", "HELD", "SETTLED", "REFUNDED", "FAILED"),
+                java.util.Set.of("PENDING", "PAID", "HELD", "SETTLED", "REFUNDED", "FAILED", "CANCELLED"),
                 java.util.Arrays.stream(PaymentStatus.values()).map(Enum::name)
                         .collect(java.util.stream.Collectors.toSet()));
     }

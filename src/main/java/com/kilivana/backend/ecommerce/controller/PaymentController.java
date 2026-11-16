@@ -275,4 +275,41 @@ public class PaymentController {
         Payment payment = paymentService.getPaymentById(id);
         return ResponseEntity.ok(ApiResponse.success(paymentService.mapToResponse(payment)));
     }
+
+    /**
+     * Returns the latest payment for an order. Used by the frontend to poll
+     * payment status after STK Push initiation.
+     */
+    @Operation(summary = "Get latest payment for an order",
+            description = "Returns the most recent payment record for the given order. " +
+                    "Used by clients to poll payment status after initiating STK Push.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payment returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No payment found for this order")
+    })
+    @GetMapping("/order/{orderId}/latest")
+    public ResponseEntity<ApiResponse<PaymentResponse>> getLatestPaymentByOrder(
+            @Parameter(description = "Order identifier") @PathVariable Long orderId) {
+        Payment payment = paymentService.getLatestPaymentByOrder(orderId);
+        return ResponseEntity.ok(ApiResponse.success(paymentService.mapToResponse(payment)));
+    }
+
+    /**
+     * Returns all payments for orders where the given seller (farmer or supplier)
+     * has line items. Used by sellers to view payments on their orders.
+     */
+    @Operation(summary = "Get payments by seller",
+            description = "Returns all payments for orders where the authenticated seller " +
+                    "(farmer or supplier) has line items.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Payments returned"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Not authorized for this seller")
+    })
+    @GetMapping("/seller/{sellerId}")
+    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentsBySeller(
+            @Parameter(description = "Seller user ID (farmer or supplier)") @PathVariable Long sellerId) {
+        List<Payment> payments = paymentService.getPaymentsBySeller(sellerId);
+        return ResponseEntity.ok(ApiResponse.success(
+                payments.stream().map(paymentService::mapToResponse).toList()));
+    }
 }

@@ -9,6 +9,7 @@ import com.kilivana.backend.dto.StkPushResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.entity.Payment;
+import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.common.enums.PaymentMethod;
@@ -45,6 +46,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final DarajaService darajaService;
     private final UserRepository userRepository;
     private final OrderService orderService;
@@ -199,6 +201,16 @@ public class PaymentService {
             throw new BadRequestException("Outstanding amount must be positive");
         }
 
+        // Prevent duplicate STK Push initiation when a PENDING transaction already exists
+        List<Payment> existingPending = paymentRepository.findByOrderId(order.getId()).stream()
+                .filter(p -> p.getStatus() == PaymentStatus.PENDING
+                        && p.getCheckoutRequestId() != null)
+                .toList();
+        if (!existingPending.isEmpty()) {
+            throw new BadRequestException("A payment is already being processed for this order. "
+                    + "Please wait for the current transaction to complete before retrying.");
+        }
+
         // Generate account reference and transaction description
         String accountRef = "ORD-" + order.getCode().replace("ORD-", "");
         String transactionDesc = "Order " + order.getCode();
@@ -256,6 +268,35 @@ public class PaymentService {
     }
 
     /**
+     * Returns the latest payment for an order, used by the frontend to poll
+     * payment status after STK Push initiation.
+     */
+    @PreAuthorize("@resourceAuthorization.order(#orderId) || @resourceAuthorization.orderSeller(#orderId)")
+    public Payment getLatestPaymentByOrder(Long orderId) {
+        List<Payment> payments = paymentRepository.findByOrderId(orderId);
+        if (payments.isEmpty()) {
+            throw new ResourceNotFoundException("Payment", orderId);
+        }
+        // Return the most recently created payment
+        return payments.stream()
+                .max(java.util.Comparator.comparing(Payment::getCreatedAt))
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", orderId));
+    }
+
+    /**
+     * Returns all payments for orders where the given seller (farmer or supplier)
+     * has line items. Used by sellers to view payments on their orders.
+     */
+    @PreAuthorize("@resourceAuthorization.seller(#sellerId) || @resourceAuthorization.admin()")
+    public List<Payment> getPaymentsBySeller(Long sellerId) {
+        List<Payment> all = paymentRepository.findAll();
+        return all.stream()
+                .filter(payment -> orderItemRepository.findByOrderId(payment.getOrderId()).stream()
+                        .anyMatch(item -> item.getSellerId().equals(sellerId)))
+                .toList();
+    }
+
+    /**
      * Updates a payment's status and syncs it to the parent order.
      * Sets {@code paidAt} when transitioning to PAID (records when money arrived).
      *
@@ -305,6 +346,14 @@ public class PaymentService {
                 .paidAt(payment.getPaidAt())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
+                .merchantRequestId(payment.getMerchantRequestId())
+                .checkoutRequestId(payment.getCheckoutRequestId())
+                .phoneNumber(payment.getPhoneNumber())
+                .mpesaReceiptNumber(payment.getMpesaReceiptNumber())
+                .transactionDate(payment.getTransactionDate())
+                .callbackStatus(payment.getCallbackStatus())
+                .darajaResultCode(payment.getDarajaResultCode())
+                .darajaResultDesc(payment.getDarajaResultDesc())
                 .build();
     }
 }

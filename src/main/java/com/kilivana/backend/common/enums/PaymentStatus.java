@@ -25,8 +25,10 @@ public enum PaymentStatus {
     HELD,
     /** Released to the seller after delivery. */
     SETTLED,
-    /** Payment failed or was declined. */
+    /** Payment failed or was declined by the provider. */
     FAILED,
+    /** The customer cancelled the STK Push on their phone. */
+    CANCELLED,
     REFUNDED;
 
     @JsonCreator
