@@ -38,6 +38,8 @@ services:
       # ephemeral filesystem. Add integration credentials in the Render UI.
       - key: SEED_DATA
         value: "false"
+      - key: SEED_ADMIN_ENABLED
+        value: "false"
       - key: STORAGE_PROVIDER
         value: database
       - key: SWAGGER_ENABLED

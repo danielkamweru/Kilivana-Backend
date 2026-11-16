@@ -123,6 +123,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `CORS_ALLOWED_ORIGINS` | local origins only | Comma-separated browser origins. Set this to the exact HTTPS frontend origins on Render; do not use `*` in a shared deployment. |
 | `PUBLIC_BACKEND_URL` | *(empty)* | Public HTTPS API origin used for image URLs, the OpenAPI server entry, and the default Daraja callback. `PUBLIC_BASE_URL` is a legacy fallback. |
 | `SEED_DATA` | `false` | Populates a fresh database with Kenyan demo data on startup. Idempotent: a restart never duplicates or overwrites records. |
+| `SEED_ADMIN_ENABLED` | `false` | Creates only the initial administrator; it does not create demo users, products, orders, or logistics records. |
 | `SEED_ADMIN_EMAIL` | `admin@kilivana.com` | Email of the seeded initial administrator. |
 | `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it here, in the environment, or as a Render secret. |
 | `SEED_DEMO_PASSWORD` | `Kilivana#2026` | Shared password of the seeded demo accounts. Change it before anyone else uses the deployment. |
