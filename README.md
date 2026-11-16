@@ -128,6 +128,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `SEED_ADMIN_PASSWORD` | *(empty)* | Password for the seeded administrator. When blank the administrator account is not created — set it here, in the environment, or as a Render secret. |
 | `SEED_DEMO_PASSWORD` | `Kilivana#2026` | Shared password of the seeded demo accounts. Change it before anyone else uses the deployment. |
 | `SEED_ENFORCE_PASSWORDS` | `false` | Reset a seeded account's password to the configured value when it no longer matches. Use for a demo environment whose seeded accounts are the intended logins; leave `false` in production. |
+| `SEED_DEFAULT_CATEGORIES` | `true` | Inserts missing standard active `FARMER` and `SUPPLIER` categories on startup. Existing administrator-managed categories are never changed. |
 | `STORAGE_PROVIDER` | `database` | Image storage: `local` or `database`. The Render filesystem is ephemeral, so `database` (the default) is the right choice there. |
 | `STORAGE_LOCAL_DIRECTORY` | `./uploads` | Disk directory for the `local` provider. |
 | `SENDGRID_ENABLED` | `false` | Master switch for transactional email. |
