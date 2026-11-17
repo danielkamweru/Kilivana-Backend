@@ -41,7 +41,18 @@ public class DarajaCallbackRequest {
 
     @JsonProperty("Body")
     @Schema(description = "Wrapper object containing the STK callback details")
-    private StkCallback body;
+    private BodyWrapper body;
+
+    public StkCallback getBody() {
+        return body != null ? body.getStkCallback() : null;
+    }
+
+    @Schema(description = "Wrapper containing stkCallback")
+    @Data
+    public static class BodyWrapper {
+        @JsonProperty("stkCallback")
+        private StkCallback stkCallback;
+    }
 
     @Schema(description = "The actual STK callback details")
     @Data
