@@ -29,7 +29,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentReconciliationService {
 
-    private static final long RECONCILIATION_MIN_AGE_MINUTES = 10;
+    private static final long RECONCILIATION_MIN_AGE_MINUTES = 2;
 
     private final PaymentRepository paymentRepository;
     private final DarajaService darajaService;
@@ -40,7 +40,7 @@ public class PaymentReconciliationService {
      * have a Daraja CheckoutRequestID. Queries Safaricom for each one and
      * updates the payment status based on the confirmed result.
      */
-    @Scheduled(fixedDelay = 600_000, initialDelay = 600_000)
+    @Scheduled(fixedDelay = 120_000, initialDelay = 120_000)
     @Transactional
     public void reconcilePendingPayments() {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(RECONCILIATION_MIN_AGE_MINUTES);
