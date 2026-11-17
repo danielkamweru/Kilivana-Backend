@@ -1,5 +1,6 @@
 package com.kilivana.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -35,6 +36,7 @@ import java.util.List;
  * <p>Only the fields used for reconciliation are mapped; the full JSON is
  * logged (without sensitive data) for audit purposes.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Callback payload from Safaricom Daraja after STK Push completion")
 @Data
 public class DarajaCallbackRequest {
@@ -47,6 +49,7 @@ public class DarajaCallbackRequest {
         return body != null ? body.getStkCallback() : null;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Schema(description = "Wrapper containing stkCallback")
     @Data
     public static class BodyWrapper {
@@ -54,6 +57,7 @@ public class DarajaCallbackRequest {
         private StkCallback stkCallback;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Schema(description = "The actual STK callback details")
     @Data
     public static class StkCallback {
@@ -68,7 +72,7 @@ public class DarajaCallbackRequest {
 
         @JsonProperty("ResultCode")
         @Schema(description = "Result code: 0 = success, non-zero = failure/cancel/timeout", example = "0")
-        private int resultCode;
+        private Integer resultCode;
 
         @JsonProperty("ResultDesc")
         @Schema(description = "Description of the result", example = "The service request is processed successfully.")

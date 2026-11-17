@@ -69,7 +69,12 @@ public class DarajaCallbackService {
 
         String checkoutRequestId = stk.getCheckoutRequestID();
         String merchantRequestId = stk.getMerchantRequestID();
-        int resultCode = stk.getResultCode();
+        Integer resultCodeObj = stk.getResultCode();
+        if (resultCodeObj == null) {
+            log.warn("Callback missing ResultCode for checkoutRequestId={}; acknowledging without changes", checkoutRequestId);
+            return new DarajaCallbackResponse();
+        }
+        int resultCode = resultCodeObj;
         String resultDesc = stk.getResultDesc();
 
         log.info("Processing Daraja callback: checkoutRequestId={}, merchantRequestId={}, resultCode={}, resultDesc={}",
@@ -221,8 +226,8 @@ public class DarajaCallbackService {
                     payment.getOrderId(), payment.getId(), payment.getStatus());
 
         } catch (Exception e) {
-            log.error("Error processing Daraja callback for checkoutRequestId={}: {}",
-                    checkoutRequestId, e.getMessage(), e);
+            log.error("Error processing Daraja callback for checkoutRequestId={}: {}: {}",
+                    checkoutRequestId, e.getClass().getName(), e.getMessage(), e);
             payment.setCallbackStatus("FAILED");
             paymentRepository.save(payment);
             // Re-throw so the @Transactional rolls back — do not silently swallow DB errors
@@ -283,8 +288,21 @@ public class DarajaCallbackService {
             return;
         }
 
-        Integer resultCodeObj = (Integer) queryResult.get("ResultCode");
-        int resultCode = resultCodeObj == null ? -1 : resultCodeObj;
+        Object resultCodeRaw = queryResult.get("ResultCode");
+        Integer resultCodeObj = null;
+        if (resultCodeRaw != null) {
+            try {
+                resultCodeObj = Integer.parseInt(String.valueOf(resultCodeRaw).trim());
+            } catch (NumberFormatException e) {
+                log.warn("Unparseable ResultCode {} for checkoutRequestId={}", resultCodeRaw, checkoutRequestID);
+                return;
+            }
+        }
+        if (resultCodeObj == null) {
+            log.warn("Missing ResultCode for checkoutRequestId={}; skipping reconciliation", checkoutRequestID);
+            return;
+        }
+        int resultCode = resultCodeObj;
         String merchantRequestId = (String) queryResult.get("MerchantRequestID");
         String resultDesc = (String) queryResult.get("ResultDesc");
 
@@ -312,18 +330,12 @@ public class DarajaCallbackService {
         payment.setDarajaResultCode(resultCode);
         payment.setDarajaResultDesc(resultDesc);
 
-        // Extract metadata from query result (Safaricom returns top-level fields on success)
+        // Extract optional metadata from query result (Safaricom may omit these)
         Object amountObj = queryResult.get("Amount");
         if (amountObj != null) {
-            Long amount = ((Number) amountObj).longValue();
-            payment.setMpesaReceiptNumber((String) queryResult.get("MpesaReceiptNumber"));
-            String txDate = (String) queryResult.get("TransactionDate");
-            if (txDate != null) {
-                payment.setTransactionDate(parseTransactionDate(txDate));
-            }
-            payment.setPhoneNumber((String) queryResult.get("PhoneNumber"));
-
-            if (resultCode == 0) {
+            try {
+                Long amount = (amountObj instanceof Number) ? ((Number) amountObj).longValue()
+                        : new java.math.BigDecimal(String.valueOf(amountObj)).longValue();
                 BigDecimal callbackAmountDecimal = BigDecimal.valueOf(amount);
                 if (callbackAmountDecimal.compareTo(payment.getAmount()) != 0) {
                     log.warn("M-PESA amount mismatch (reconciliation): expected={}, query={}, orderId={}",
@@ -339,57 +351,70 @@ public class DarajaCallbackService {
                     });
                     return;
                 }
-
-                log.info("M-PESA payment confirmed via reconciliation: orderId={}, amount={}, receipt={}",
-                        payment.getOrderId(), payment.getAmount(), payment.getMpesaReceiptNumber());
-
-                payment.setStatus(PaymentStatus.PAID);
-                payment.setReference(payment.getMpesaReceiptNumber());
-                if (payment.getPaidAt() == null) {
-                    payment.setPaidAt(LocalDateTime.now());
-                }
-                payment.setCallbackStatus("PROCESSED");
-
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.PAID);
-                    orderRepository.save(order);
-                });
-            } else if (isCustomerCancellation(resultCode, resultDesc)) {
-                log.warn("M-PESA payment cancelled by customer via reconciliation: orderId={}, resultCode={}, resultDesc={}",
-                        payment.getOrderId(), resultCode, resultDesc);
-
-                payment.setStatus(PaymentStatus.CANCELLED);
-                payment.setCallbackStatus("PROCESSED");
-
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                        order.setPaymentStatus(PaymentStatus.CANCELLED);
-                        orderRepository.save(order);
-                    }
-                });
-            } else {
-                log.warn("M-PESA payment failed via reconciliation: orderId={}, resultCode={}, resultDesc={}",
-                        payment.getOrderId(), resultCode, resultDesc);
-
-                payment.setStatus(PaymentStatus.FAILED);
-                payment.setCallbackStatus("PROCESSED");
-
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                        order.setPaymentStatus(PaymentStatus.FAILED);
-                        orderRepository.save(order);
-                    }
-                });
+            } catch (Exception e) {
+                log.warn("Could not parse Amount from query result for {}: {}", checkoutRequestID, e.getMessage());
             }
+        }
+        Object receiptObj = queryResult.get("MpesaReceiptNumber");
+        if (receiptObj != null) {
+            payment.setMpesaReceiptNumber(String.valueOf(receiptObj));
+        }
+        Object txDateObj = queryResult.get("TransactionDate");
+        if (txDateObj != null) {
+            String txDate = String.valueOf(txDateObj);
+            if (payment.getTransactionDate() == null) {
+                payment.setTransactionDate(parseTransactionDate(txDate));
+            }
+        }
+        Object phoneObj = queryResult.get("PhoneNumber");
+        if (phoneObj != null) {
+            payment.setPhoneNumber(String.valueOf(phoneObj));
+        }
+
+        if (resultCode == 0) {
+            log.info("M-PESA payment confirmed via reconciliation: orderId={}, amount={}, receipt={}",
+                    payment.getOrderId(), payment.getAmount(), payment.getMpesaReceiptNumber());
+
+            payment.setStatus(PaymentStatus.PAID);
+            if (payment.getMpesaReceiptNumber() != null) {
+                payment.setReference(payment.getMpesaReceiptNumber());
+            } else if (payment.getReference() == null) {
+                payment.setReference("STK-" + checkoutRequestID);
+            }
+            if (payment.getPaidAt() == null) {
+                payment.setPaidAt(LocalDateTime.now());
+            }
+            payment.setCallbackStatus("PROCESSED");
+
+            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                order.setPaymentStatus(PaymentStatus.PAID);
+                orderRepository.save(order);
+            });
+        } else if (isCustomerCancellation(resultCode, resultDesc)) {
+            log.warn("M-PESA payment cancelled by customer via reconciliation: orderId={}, resultCode={}, resultDesc={}",
+                    payment.getOrderId(), resultCode, resultDesc);
+
+            payment.setStatus(PaymentStatus.CANCELLED);
+            payment.setCallbackStatus("PROCESSED");
+
+            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                    order.setPaymentStatus(PaymentStatus.CANCELLED);
+                    orderRepository.save(order);
+                }
+            });
         } else {
-            // No Amount in result — treat as failure
-            log.warn("STK Push Query result for CheckoutRequestID={} has no Amount field; treating as failed",
-                    checkoutRequestID);
+            log.warn("M-PESA payment failed via reconciliation: orderId={}, resultCode={}, resultDesc={}",
+                    payment.getOrderId(), resultCode, resultDesc);
+
             payment.setStatus(PaymentStatus.FAILED);
             payment.setCallbackStatus("PROCESSED");
+
             orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                order.setPaymentStatus(PaymentStatus.FAILED);
-                orderRepository.save(order);
+                if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                    order.setPaymentStatus(PaymentStatus.FAILED);
+                    orderRepository.save(order);
+                }
             });
         }
 

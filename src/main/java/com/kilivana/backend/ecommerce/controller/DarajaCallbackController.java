@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.*;
         description = "Public callback endpoint for Safaricom M-PESA STK Push results")
 @RestController
 @RequestMapping("/api/v1/payments/daraja")
+@Slf4j
 @RequiredArgsConstructor
 public class DarajaCallbackController {
 
@@ -70,7 +72,13 @@ public class DarajaCallbackController {
                 callback.getBody() != null ? callback.getBody().getCheckoutRequestID() : "null",
                 callback.getBody() != null ? callback.getBody().getResultCode() : "null");
 
-        DarajaCallbackResponse response = callbackService.processCallback(callback, clientIp);
+        DarajaCallbackResponse response;
+        try {
+            response = callbackService.processCallback(callback, clientIp);
+        } catch (Exception e) {
+            log.error("Daraja callback processing failed: {} - {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            response = new DarajaCallbackResponse();
+        }
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

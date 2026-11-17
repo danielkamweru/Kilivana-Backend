@@ -113,7 +113,13 @@ public class DarajaProperties {
     @PostConstruct
     public void validateCallbackUrl() {
         String resolved = getCallbackUrl();
-        if (resolved.equals(callbackPath)) {
+        boolean isAbsoluteHttps = resolved.startsWith("https://") && !resolved.equals(callbackPath);
+        if (!isAbsoluteHttps) {
+            if ("production".equalsIgnoreCase(environment)) {
+                throw new IllegalStateException(
+                        "Daraja callback URL is not an absolute HTTPS URL in production: " + resolved +
+                        ". Set DARAJA_CALLBACK_URL or PUBLIC_BACKEND_URL.");
+            }
             log.warn("""
                 Daraja callback URL is not configured as a public HTTPS endpoint.
                 Safaricom cannot reach a relative path ({}). Set DARAJA_CALLBACK_URL
