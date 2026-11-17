@@ -75,6 +75,7 @@ public class PaymentService {
     void init() {
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     @Transactional
     public Payment createPayment(Long orderId, String method, String reference, BigDecimal amount) {
         orderRepository.findById(orderId)
@@ -293,6 +294,7 @@ public class PaymentService {
         return paymentRepository.findByOrderId(orderId);
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     @Transactional(readOnly = true)
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
@@ -320,6 +322,7 @@ public class PaymentService {
                 .toList();
     }
 
+    @PreAuthorize("@resourceAuthorization.admin()")
     @Transactional
     public Payment updatePaymentStatus(Long id, PaymentStatus status) {
         Payment payment = paymentRepository.findById(id)

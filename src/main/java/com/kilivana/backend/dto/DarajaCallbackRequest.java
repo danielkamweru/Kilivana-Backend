@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Incoming callback payload from Safaricom Daraja after the buyer completes
@@ -110,7 +111,10 @@ public class DarajaCallbackRequest {
             }
             return callbackMetadata.getItem().stream()
                     .filter(i -> "Amount".equalsIgnoreCase(i.getName()))
-                    .map(i -> ((Number) i.getValue()).longValue())
+                    .map(CallbackMetadata.Item::getValue)
+                    .filter(Objects::nonNull)
+                    .map(v -> v instanceof Number n ? n.longValue()
+                            : new java.math.BigDecimal(v.toString().trim()).longValue())
                     .findFirst()
                     .orElse(null);
         }
@@ -124,7 +128,9 @@ public class DarajaCallbackRequest {
             }
             return callbackMetadata.getItem().stream()
                     .filter(i -> "MpesaReceiptNumber".equalsIgnoreCase(i.getName()))
-                    .map(i -> (String) i.getValue())
+                    .map(CallbackMetadata.Item::getValue)
+                    .filter(Objects::nonNull)
+                    .map(String::valueOf)
                     .findFirst()
                     .orElse(null);
         }
@@ -139,7 +145,9 @@ public class DarajaCallbackRequest {
             }
             return callbackMetadata.getItem().stream()
                     .filter(i -> "TransactionDate".equalsIgnoreCase(i.getName()))
-                    .map(i -> (String) i.getValue())
+                    .map(CallbackMetadata.Item::getValue)
+                    .filter(Objects::nonNull)
+                    .map(String::valueOf)
                     .findFirst()
                     .orElse(null);
         }
@@ -153,7 +161,9 @@ public class DarajaCallbackRequest {
             }
             return callbackMetadata.getItem().stream()
                     .filter(i -> "PhoneNumber".equalsIgnoreCase(i.getName()))
-                    .map(i -> (String) i.getValue())
+                    .map(CallbackMetadata.Item::getValue)
+                    .filter(Objects::nonNull)
+                    .map(String::valueOf)
                     .findFirst()
                     .orElse(null);
         }
