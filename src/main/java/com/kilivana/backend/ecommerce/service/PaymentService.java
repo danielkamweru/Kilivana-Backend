@@ -38,7 +38,6 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-@PreAuthorize("@resourceAuthorization.admin()")
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -95,9 +94,7 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
-    @PreAuthorize("@resourceAuthorization.sellerPayment(#userId, #userRole, #request.orderId)")
-    public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole,
-                                                   StkPushInitiateRequest request) {
+    @PreAuthorize("@resourceAuthorization.sellerPayment(#userId, #userRole, #request.orderId)") public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole, StkPushInitiateRequest request) {
         Order order = loadOrder(request.getOrderId());
 
         List<OrderItem> items = order.getOrderItems() == null ? List.of() : order.getOrderItems();
@@ -110,9 +107,7 @@ public class PaymentService {
         return (self != null ? self : this).startStkPush(order, request);
     }
 
-    @PreAuthorize("@resourceAuthorization.buyerPayment(#userId, #userRole, #request.orderId)")
-    public StkPushInitiateResponse initiateStkPushForBuyer(Long userId, UserRole userRole,
-                                                           StkPushInitiateRequest request) {
+    @PreAuthorize("@resourceAuthorization.buyerPayment(#userId, #userRole, #request.orderId)") public StkPushInitiateResponse initiateStkPushForBuyer(Long userId, UserRole userRole, StkPushInitiateRequest request) {
         Order order = loadOrder(request.getOrderId());
 
         if (order.getBuyerId() == null || !order.getBuyerId().equals(userId)) {

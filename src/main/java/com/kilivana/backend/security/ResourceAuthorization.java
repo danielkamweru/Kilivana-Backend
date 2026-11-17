@@ -101,7 +101,7 @@ public class ResourceAuthorization {
      */
     public boolean buyerPayment(Long userId, UserRole role, Long orderId) {
         User u = actor();
-        return u != null && Objects.equals(u.getId(), userId) && u.getRole() == role &&
+        return u != null && Objects.equals(u.getId(), userId) &&
                 (role == UserRole.BUYER || role == UserRole.FARMER || role == UserRole.SUPPLIER) &&
                 orders.findById(orderId).map(o -> Objects.equals(o.getBuyerId(), u.getId())).orElse(false);
     }

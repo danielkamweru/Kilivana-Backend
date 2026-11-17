@@ -455,7 +455,18 @@ public class OrderService {
      * to the seller.
      */
     @Transactional
-    @PreAuthorize("@resourceAuthorization.order(#orderId)")
+    @PreAuthorize("@resourceAuthorizati\n" + //
+                "The backend is correctly reading the buyer ID from the JWT. The 403 is caused by ResourceAuthorization.actor() returning null, which happens when:\n" + //
+                "\n" + //
+                "The user's email is not verified (u.isEmailVerified() is false)\n" + //
+                "The user's account status doesn't permit authentication (AccountAccessValidator.permitsAuthentication() returns false)\n" + //
+                "The @PreAuthorize on initiateStkPushForBuyer calls buyerPayment() which first checks actor() != null. If the account is unverified or restricted, it returns 403 before even checking order ownership.\n" + //
+                "\n" + //
+                "This is a security feature, not a bug. The user needs to verify their email and ensure their account is in an active/approved status. The backend is working correctly.\n" + //
+                "\n" + //
+                "153.6 t/s\n" + //
+                "\n" + //
+                "on.order(#orderId)")
     public Order confirmReceipt(Long orderId) {
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
