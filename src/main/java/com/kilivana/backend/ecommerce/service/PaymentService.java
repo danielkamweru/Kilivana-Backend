@@ -94,7 +94,7 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
-    @PreAuthorize("@resourceAuthorization.sellerPayment(#userId, #userRole, #request.orderId)") public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole, StkPushInitiateRequest request) {
+    @PreAuthorize("@resourceAuthorization.buyerPayment(#userId, #userRole, #request.orderId)") public StkPushInitiateResponse initiateStkPush(Long userId, UserRole userRole, StkPushInitiateRequest request) {
         Order order = loadOrder(request.getOrderId());
 
         List<OrderItem> items = order.getOrderItems() == null ? List.of() : order.getOrderItems();
