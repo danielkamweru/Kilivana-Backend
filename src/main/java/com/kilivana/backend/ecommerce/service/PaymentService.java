@@ -274,7 +274,9 @@ public class PaymentService {
         stk.setResultCode(entry.getResultCode());
         stk.setResultDesc(entry.getResultDesc());
         DarajaCallbackRequest request = new DarajaCallbackRequest();
-        request.setBody(stk);
+        DarajaCallbackRequest.BodyWrapper wrapper = new DarajaCallbackRequest.BodyWrapper();
+        wrapper.setStkCallback(stk);
+        request.setBody(wrapper);
         return request;
     }
 
