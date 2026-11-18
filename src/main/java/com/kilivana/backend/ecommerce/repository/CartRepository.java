@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,9 +21,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findByBuyerIdAndStatus(Long buyerId, Cart.CartStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT c FROM Cart c WHERE c.buyerId = :buyerId AND c.status = :status")
-    Optional<Cart> findByBuyerIdAndStatusForUpdate(@Param("buyerId") Long buyerId,
-                                                    @Param("status") Cart.CartStatus status);
+    @Query("SELECT c FROM Cart c WHERE c.buyerId = :buyerId AND c.status = :status ORDER BY c.id DESC")
+    List<Cart> findByBuyerIdAndStatusForUpdate(@Param("buyerId") Long buyerId,
+                                                @Param("status") Cart.CartStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Cart c WHERE c.id = :id")

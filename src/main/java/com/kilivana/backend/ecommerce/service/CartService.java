@@ -39,7 +39,7 @@ public class CartService {
     @Transactional
     @PreAuthorize("@resourceAuthorization.buyer(#buyerId)")
     public Cart getCartByBuyer(Long buyerId) {
-        Optional<Cart> cart = cartRepository.findByBuyerIdAndStatus(buyerId, Cart.CartStatus.ACTIVE);
+        Optional<Cart> cart = cartRepository.findFirstByBuyerIdAndStatus(buyerId, Cart.CartStatus.ACTIVE);
         if (cart.isEmpty()) {
             Cart newCart = Cart.builder()
                     .buyerId(buyerId)
@@ -206,11 +206,14 @@ public class CartService {
     }
 
     private Cart getActiveCartForUpdate(Long buyerId) {
-        return cartRepository.findByBuyerIdAndStatusForUpdate(buyerId, Cart.CartStatus.ACTIVE)
-                .orElseGet(() -> cartRepository.save(Cart.builder()
-                        .buyerId(buyerId)
-                        .status(Cart.CartStatus.ACTIVE)
-                        .build()));
+        List<Cart> carts = cartRepository.findByBuyerIdAndStatusForUpdate(buyerId, Cart.CartStatus.ACTIVE);
+        if (carts.isEmpty()) {
+            return cartRepository.save(Cart.builder()
+                    .buyerId(buyerId)
+                    .status(Cart.CartStatus.ACTIVE)
+                    .build());
+        }
+        return carts.get(0);
     }
 
     private Cart requireActiveCartForUpdate(Long cartId) {
