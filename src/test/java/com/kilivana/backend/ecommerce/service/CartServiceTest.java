@@ -34,7 +34,7 @@ class CartServiceTest {
         product = Product.builder().id(20L).status(ProductStatus.ACTIVE)
                 .stockQty(50).reservedQty(0).price(BigDecimal.TEN).build();
         when(carts.findByBuyerIdAndStatus(7L, Cart.CartStatus.ACTIVE)).thenReturn(Optional.of(cart));
-        when(carts.findByBuyerIdAndStatusForUpdate(7L, Cart.CartStatus.ACTIVE)).thenReturn(Optional.of(cart));
+        when(carts.findByBuyerIdAndStatusForUpdate(7L, Cart.CartStatus.ACTIVE)).thenReturn(java.util.List.of(cart));
         when(carts.findById(10L)).thenReturn(Optional.of(cart));
         when(carts.findByIdForUpdate(10L)).thenReturn(Optional.of(cart));
         when(carts.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
