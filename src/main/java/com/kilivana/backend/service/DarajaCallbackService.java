@@ -1,18 +1,21 @@
 package com.kilivana.backend.service;
 
+import com.kilivana.backend.config.DarajaProperties;
 import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.dto.DarajaCallbackRequest;
 import com.kilivana.backend.dto.DarajaCallbackResponse;
 import com.kilivana.backend.ecommerce.entity.CallbackInbox;
+import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Payment;
 import com.kilivana.backend.ecommerce.repository.CallbackInboxRepository;
-import com.kilivana.backend.ecommerce.repository.PaymentRepository;
-import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
+import com.kilivana.backend.ecommerce.repository.PaymentRepository;
+import com.kilivana.backend.ecommerce.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -49,8 +52,10 @@ public class DarajaCallbackService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
     private final DarajaService darajaService;
     private final CallbackInboxRepository callbackInboxRepository;
+    private final DarajaProperties darajaProperties;
 
     /**
      * Processes the Daraja callback and updates the payment.
@@ -182,11 +187,18 @@ public class DarajaCallbackService {
                 }
                 payment.setCallbackStatus("PROCESSED");
 
-                // Sync order payment status to PAID (escrow step)
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.PAID);
-                    orderRepository.save(order);
-                });
+                if (payment.getOrderId() == null && payment.getQuoteId() != null) {
+                    // Payment-first checkout: the order does not exist yet. Create it now
+                    // from the checkout quote and link the payment. If payment had failed
+                    // or been cancelled, this branch is never reached and no order is made.
+                    orderService.createOrderFromCheckoutQuote(payment.getQuoteId(), payment.getId());
+                } else {
+                    // Sync order payment status to PAID (escrow step)
+                    orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                        order.setPaymentStatus(PaymentStatus.PAID);
+                        orderRepository.save(order);
+                    });
+                }
 
             } else if (isCustomerCancellation(resultCode, resultDesc)) {
                 // CUSTOMER CANCELLED: The buyer cancelled the STK Push on their phone
@@ -386,10 +398,14 @@ public class DarajaCallbackService {
             }
             payment.setCallbackStatus("PROCESSED");
 
-            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                order.setPaymentStatus(PaymentStatus.PAID);
-                orderRepository.save(order);
-            });
+            if (payment.getOrderId() == null && payment.getQuoteId() != null) {
+                orderService.createOrderFromCheckoutQuote(payment.getQuoteId(), payment.getId());
+            } else {
+                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                    order.setPaymentStatus(PaymentStatus.PAID);
+                    orderRepository.save(order);
+                });
+            }
         } else if (isCustomerCancellation(resultCode, resultDesc)) {
             log.warn("M-PESA payment cancelled by customer via reconciliation: orderId={}, resultCode={}, resultDesc={}",
                     payment.getOrderId(), resultCode, resultDesc);
@@ -421,6 +437,42 @@ public class DarajaCallbackService {
         paymentRepository.save(payment);
         log.info("Reconciliation complete for orderId={}, paymentId={}, status={}",
                 payment.getOrderId(), payment.getId(), payment.getStatus());
+    }
+
+    /**
+     * Marks a PENDING STK Push payment as FAILED when it has exceeded the local
+     * timeout deadline without a callback and Safaricom cannot be reconciled.
+     * For pre-order payments (no order yet) this guarantees no order is ever
+     * created; for payments linked to an order, the order's payment status is
+     * synced to FAILED unless it is already successful.
+     *
+     * @param paymentId the id of the pending payment to fail
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void timeoutPayment(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
+
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            // Already resolved by an intervening callback/reconciliation; nothing to do.
+            return;
+        }
+
+        payment.setStatus(PaymentStatus.FAILED);
+        payment.setCallbackStatus("PROCESSED");
+        payment.setDarajaResultDesc("STK Push timed out: no callback received before deadline");
+        paymentRepository.save(payment);
+
+        if (payment.getOrderId() != null) {
+            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+                if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                    order.setPaymentStatus(PaymentStatus.FAILED);
+                    orderRepository.save(order);
+                }
+            });
+        }
+
+        log.info("Timed out payment {} (orderId={}) marked FAILED", payment.getId(), payment.getOrderId());
     }
 
     /**

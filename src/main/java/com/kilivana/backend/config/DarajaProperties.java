@@ -66,6 +66,14 @@ public class DarajaProperties {
      */
     private int timeoutSeconds = 30;
 
+    /**
+     * Minutes after which a PENDING STK Push payment that has received no
+     * callback and cannot be reconciled with Safaricom is marked FAILED
+     * locally. After this deadline, no order is created for pre-order
+     * payments, and any linked order is marked payment-failed.
+     */
+    private int pendingTimeoutMinutes = 30;
+
     public String getConsumerKey() {
         return consumerKey;
     }
@@ -153,6 +161,14 @@ public class DarajaProperties {
 
     public void setTimeoutSeconds(int timeoutSeconds) {
         this.timeoutSeconds = timeoutSeconds;
+    }
+
+    public int getPendingTimeoutMinutes() {
+        return pendingTimeoutMinutes;
+    }
+
+    public void setPendingTimeoutMinutes(int pendingTimeoutMinutes) {
+        this.pendingTimeoutMinutes = pendingTimeoutMinutes;
     }
 
     /** Returns the OAuth token endpoint for the configured environment. */
