@@ -63,6 +63,7 @@ class ServiceAuthorizationTest {
         @Bean CategoryRepository categories() { return mock(CategoryRepository.class); }
         @Bean CartRepository carts() { return mock(CartRepository.class); }
         @Bean CartItemRepository cartItems() { return mock(CartItemRepository.class); }
+        @Bean CheckoutQuoteRepository checkoutQuotes() { return mock(CheckoutQuoteRepository.class); }
         @Bean AddressRepository addresses() { return mock(AddressRepository.class); }
         @Bean FarmerProfileRepository farmers() { return mock(FarmerProfileRepository.class); }
         @Bean SupplierProfileRepository suppliers() { return mock(SupplierProfileRepository.class); }
