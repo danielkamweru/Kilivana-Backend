@@ -31,4 +31,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     /** Returns any one cart for the buyer in the given state (useful when duplicates exist). */
     Optional<Cart> findFirstByBuyerIdAndStatus(Long buyerId, Cart.CartStatus status);
+
+    /** Returns the most recent cart for the buyer in the given state. */
+    @Query("SELECT c FROM Cart c WHERE c.buyerId = :buyerId AND c.status = :status ORDER BY c.id DESC")
+    Optional<Cart> findTopByBuyerIdAndStatusOrderByIdDesc(@Param("buyerId") Long buyerId,
+                                                          @Param("status") Cart.CartStatus status);
 }

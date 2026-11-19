@@ -102,7 +102,7 @@ public class CheckoutService {
             throw new BadRequestException("Invalid delivery method. Must be DOOR_DELIVERY or PICKUP_STATION");
         }
 
-        Cart cart = cartRepository.findFirstByBuyerIdAndStatus(userId, Cart.CartStatus.CHECKOUT_PROCESSING)
+        Cart cart = cartRepository.findTopByBuyerIdAndStatusOrderByIdDesc(userId, Cart.CartStatus.CHECKOUT_PROCESSING)
                 .orElseThrow(() -> new BadRequestException("No checkout in progress; call POST /api/v1/checkout first"));
         java.util.List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
         if (cartItems.isEmpty()) {

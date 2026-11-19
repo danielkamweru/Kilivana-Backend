@@ -104,7 +104,7 @@ class CheckoutServiceTest {
         CartItem item = CartItem.builder().id(1L).cartId(CART_ID)
                 .productId(PRODUCT_ID).quantity(2).build();
 
-        lenient().when(cartRepository.findFirstByBuyerIdAndStatus(BUYER_ID, Cart.CartStatus.CHECKOUT_PROCESSING))
+        lenient().when(cartRepository.findTopByBuyerIdAndStatusOrderByIdDesc(BUYER_ID, Cart.CartStatus.CHECKOUT_PROCESSING))
                 .thenReturn(Optional.of(cart));
         lenient().when(cartItemRepository.findByCartId(CART_ID)).thenReturn(List.of(item));
         lenient().when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
@@ -242,5 +242,40 @@ class CheckoutServiceTest {
         assertNull(response.getOrderId());
         assertEquals("PENDING", response.getStatus());
         verify(orderService, never()).createOrder(any(), any(), any(), anyList(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deliveryQuote_includesAllCartProductsInSubtotalAndTotal() {
+        // Three distinct products: 30 + 40 + 30 = 100 subtotal, + 1 delivery = 101 total
+        long product1Id = 101L;
+        long product2Id = 102L;
+        long product3Id = 103L;
+
+        Product p1 = Product.builder().id(product1Id).sellerId(9L).name("Maize").unit("kg")
+                .price(new BigDecimal("30.00")).status(ProductStatus.ACTIVE).build();
+        Product p2 = Product.builder().id(product2Id).sellerId(9L).name("Beans").unit("kg")
+                .price(new BigDecimal("40.00")).status(ProductStatus.ACTIVE).build();
+        Product p3 = Product.builder().id(product3Id).sellerId(9L).name("Rice").unit("kg")
+                .price(new BigDecimal("30.00")).status(ProductStatus.ACTIVE).build();
+
+        CartItem i1 = CartItem.builder().id(1L).cartId(CART_ID).productId(product1Id).quantity(1).build();
+        CartItem i2 = CartItem.builder().id(2L).cartId(CART_ID).productId(product2Id).quantity(1).build();
+        CartItem i3 = CartItem.builder().id(3L).cartId(CART_ID).productId(product3Id).quantity(1).build();
+
+        lenient().when(cartItemRepository.findByCartId(CART_ID)).thenReturn(List.of(i1, i2, i3));
+        lenient().when(productRepository.findById(product1Id)).thenReturn(Optional.of(p1));
+        lenient().when(productRepository.findById(product2Id)).thenReturn(Optional.of(p2));
+        lenient().when(productRepository.findById(product3Id)).thenReturn(Optional.of(p3));
+
+        DeliveryQuoteResponse response = checkoutService.createDeliveryQuote(DeliveryQuoteRequest.builder()
+                .deliveryMethod("PICKUP_STATION")
+                .pickupLocation("Outside Westlands Mall, near the main entrance")
+                .build());
+
+        assertNotNull(response.getQuoteId());
+        assertEquals(new BigDecimal("100.00"), response.getSubtotal());
+        assertEquals(new BigDecimal("1.00"), response.getDeliveryFee());
+        assertEquals(new BigDecimal("101.00"), response.getTotal());
+        assertEquals("KES", response.getCurrency());
     }
 }
