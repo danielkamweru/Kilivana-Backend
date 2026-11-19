@@ -28,6 +28,7 @@ import com.kilivana.backend.service.DarajaService;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -219,8 +220,12 @@ public class PaymentService {
      * The payment row is created with {@code orderId = null} and linked to the
      * quote; the order is only created once the Daraja callback reports success.
      * If payment is cancelled or fails, no order is ever created.
+     *
+     * <p>Requires migration {@code V34__make_payment_order_id_nullable.sql} to have
+     * been applied so {@code payments.order_id} allows {@code NULL}.
      */
     @PreAuthorize("@resourceAuthorization.buyer(#userId)")
+    @Transactional
     public StkPushInitiateResponse initiateStkPushForQuote(Long userId, String quoteId,
                                                            String phoneNumber) {
         CheckoutQuote quote = checkoutQuoteRepository.findByQuoteIdForUpdate(quoteId)
@@ -269,19 +274,39 @@ public class PaymentService {
         String accountRef = "QT-" + quoteId.substring(0, Math.min(8, quoteId.length()));
         String transactionDesc = "Checkout " + quoteId.substring(0, Math.min(12, quoteId.length()));
 
-        Payment pending = (self != null ? self : this).createPendingPreOrderPayment(quoteId, phoneNumber, amount);
+        Payment pending;
+        try {
+            pending = (self != null ? self : this).createPendingPreOrderPayment(quoteId, phoneNumber, amount);
+        } catch (DataIntegrityViolationException e) {
+            throw new BadRequestException("Database schema is not ready for payment-first checkout. "
+                    + "Apply migration V34__make_payment_order_id_nullable.sql "
+                    + "(ALTER TABLE payments ALTER COLUMN order_id DROP NOT NULL) and redeploy.");
+        }
 
         StkPushResponse darajaResponse;
         try {
             darajaResponse = darajaService.initiateStkPush(
                     phoneNumber, amountKes, accountRef, transactionDesc);
         } catch (Exception e) {
-            (self != null ? self : this).markPaymentFailed(pending, "Daraja initiation failed: " + e.getMessage());
+            try {
+                (self != null ? self : this).markPaymentFailed(pending, "Daraja initiation failed: " + e.getMessage());
+            } catch (DataIntegrityViolationException ex) {
+                throw new BadRequestException("Database schema is not ready for payment-first checkout. "
+                        + "Apply migration V34__make_payment_order_id_nullable.sql "
+                        + "(ALTER TABLE payments ALTER COLUMN order_id DROP NOT NULL) and redeploy.");
+            }
             throw e;
         }
 
-        Payment saved = (self != null ? self : this).updatePaymentWithDarajaDetails(
-                pending, darajaResponse.getMerchantRequestID(), darajaResponse.getCheckoutRequestID());
+        Payment saved;
+        try {
+            saved = (self != null ? self : this).updatePaymentWithDarajaDetails(
+                    pending, darajaResponse.getMerchantRequestID(), darajaResponse.getCheckoutRequestID());
+        } catch (DataIntegrityViolationException e) {
+            throw new BadRequestException("Database schema is not ready for payment-first checkout. "
+                    + "Apply migration V34__make_payment_order_id_nullable.sql "
+                    + "(ALTER TABLE payments ALTER COLUMN order_id DROP NOT NULL) and redeploy.");
+        }
 
         (self != null ? self : this).processInboxForQuote(saved, darajaResponse.getMerchantRequestID());
 
