@@ -33,7 +33,7 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findFirstByBuyerIdAndStatus(Long buyerId, Cart.CartStatus status);
 
     /** Returns the most recent cart for the buyer in the given state. */
-    @Query("SELECT c FROM Cart c WHERE c.buyerId = :buyerId AND c.status = :status ORDER BY c.id DESC")
+    @Query("SELECT c FROM Cart c WHERE c.buyerId = :buyerId AND c.status = :status ORDER BY c.id DESC LIMIT 1")
     Optional<Cart> findTopByBuyerIdAndStatusOrderByIdDesc(@Param("buyerId") Long buyerId,
                                                           @Param("status") Cart.CartStatus status);
 }
