@@ -1,13 +1,12 @@
 package com.kilivana.backend.ecommerce.controller;
 
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.security.CurrentUser;
 import com.kilivana.backend.ecommerce.dto.CheckoutOrderRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteResponse;
-import com.kilivana.backend.ecommerce.dto.OrderResponse;
 import com.kilivana.backend.ecommerce.service.CheckoutService;
-import com.kilivana.backend.ecommerce.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
-    private final OrderService orderService;
 
     @Operation(summary = "Create delivery quote", description = "Calculates a delivery fee quote from the authenticated user's CHECKOUT_PROCESSING cart.")
     @PostMapping("/delivery-quote")
@@ -29,10 +27,10 @@ public class CheckoutController {
         return ResponseEntity.ok(ApiResponse.success(checkoutService.createDeliveryQuote(request)));
     }
 
-    @Operation(summary = "Create order from quote", description = "Creates an order from the authenticated user's processing cart using a valid quote.")
+    @Operation(summary = "Initiate payment from quote", description = "Initiates an M-PESA STK Push for the authenticated user's checkout quote. No order is created until the payment callback reports success; if payment is cancelled or fails, no order exists.")
     @PostMapping("/order")
-    public ResponseEntity<ApiResponse<Long>> createOrder(@RequestBody @jakarta.validation.Valid CheckoutOrderRequest request) {
-        Long orderId = checkoutService.createOrderFromQuote(request);
-        return ResponseEntity.ok(ApiResponse.success(orderId));
+    public ResponseEntity<ApiResponse<StkPushInitiateResponse>> createOrder(@RequestBody @jakarta.validation.Valid CheckoutOrderRequest request) {
+        StkPushInitiateResponse response = checkoutService.createOrderFromQuote(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

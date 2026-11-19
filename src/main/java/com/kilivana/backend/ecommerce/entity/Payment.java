@@ -29,8 +29,11 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column
     private Long orderId;
+
+    @Column(name = "quote_id")
+    private String quoteId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false)
@@ -81,6 +84,14 @@ public class Payment {
 
     public void setOrderId(Long orderId) {
         this.orderId = orderId;
+    }
+
+    public String getQuoteId() {
+        return quoteId;
+    }
+
+    public void setQuoteId(String quoteId) {
+        this.quoteId = quoteId;
     }
 
     public PaymentMethod getMethod() {
@@ -210,6 +221,7 @@ public class Payment {
     public static class PaymentBuilder {
         private Long id;
         private Long orderId;
+        private String quoteId;
         private PaymentMethod method;
         private String reference;
         private BigDecimal amount;
@@ -233,6 +245,11 @@ public class Payment {
 
         public PaymentBuilder orderId(Long orderId) {
             this.orderId = orderId;
+            return this;
+        }
+
+        public PaymentBuilder quoteId(String quoteId) {
+            this.quoteId = quoteId;
             return this;
         }
 
@@ -315,6 +332,7 @@ public class Payment {
             Payment payment = new Payment();
             payment.id = this.id;
             payment.orderId = this.orderId;
+            payment.quoteId = this.quoteId;
             payment.method = this.method;
             payment.reference = this.reference;
             payment.amount = this.amount;

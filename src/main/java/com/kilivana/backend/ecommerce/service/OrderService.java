@@ -27,11 +27,17 @@ import com.kilivana.backend.ecommerce.dto.OrderItemResponse;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
 import com.kilivana.backend.ecommerce.dto.OrderStatsResponse;
 import com.kilivana.backend.ecommerce.dto.SellerResponse;
+import com.kilivana.backend.ecommerce.entity.Cart;
+import com.kilivana.backend.ecommerce.entity.CartItem;
+import com.kilivana.backend.ecommerce.entity.CheckoutQuote;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderEvent;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.entity.Payment;
 import com.kilivana.backend.ecommerce.entity.Product;
+import com.kilivana.backend.ecommerce.repository.CartItemRepository;
+import com.kilivana.backend.ecommerce.repository.CartRepository;
+import com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository;
 import com.kilivana.backend.ecommerce.repository.OrderEventRepository;
 import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
@@ -51,6 +57,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +88,9 @@ public class OrderService {
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final PickupStationRepository pickupStationRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
+    private final CheckoutQuoteRepository checkoutQuoteRepository;
     private final FarmerProfileRepository farmerProfileRepository;
     private final SupplierProfileRepository supplierProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
@@ -348,6 +358,73 @@ public class OrderService {
         orderEventRepository.save(OrderEvent.builder()
                 .orderId(saved.getId()).status(saved.getStatus()).build());
         return saved;
+    }
+
+    /**
+     * Creates an order from a previously issued checkout quote, after the buyer's
+     * payment has been confirmed. This is the payment-first path: no order row
+     * exists until the STK Push callback reports success. Links the pre-existing
+     * payment to the new order and marks the quote used.
+     *
+     * @param quoteId the checkout quote issued by {@code createDeliveryQuote}
+     * @param paymentId the pending payment created when STK Push was initiated
+     * @return the newly created order, with {@code paymentStatus = PAID}
+     */
+    @Transactional
+    public Order createOrderFromCheckoutQuote(String quoteId, Long paymentId) {
+        CheckoutQuote quote = checkoutQuoteRepository.findByQuoteIdForUpdate(quoteId)
+                .orElseThrow(() -> new BadRequestException("Quote not found"));
+        if (quote.isUsed()) {
+            if (quote.getOrderId() != null) {
+                return orderRepository.findById(quote.getOrderId())
+                        .orElseThrow(() -> new BadRequestException("Quote already used"));
+            }
+            throw new BadRequestException("Quote already used");
+        }
+        if (Instant.now().isAfter(quote.getExpiresAt())) {
+            throw new BadRequestException("Quote expired");
+        }
+
+        java.util.List<CartItem> cartItems = cartItemRepository.findByCartId(quote.getCartId());
+        if (cartItems.isEmpty()) {
+            throw new BadRequestException("Cart is empty");
+        }
+
+        java.util.List<OrderItemRequest> items = new java.util.ArrayList<>();
+        for (CartItem ci : cartItems) {
+            Product p = productRepository.findById(ci.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", ci.getProductId()));
+            items.add(OrderItemRequest.builder()
+                    .productId(p.getId())
+                    .quantity(ci.getQuantity())
+                    .unitPrice(p.getPrice())
+                    .build());
+        }
+
+        Order order = createOrder(quote.getUserId(), quote.getAddressId(), quote.getDeliveryFee(),
+                items, quote.getSubtotal(), quote.getTotal(),
+                quote.getDeliveryMethod(), quote.getPickupLocation(), quote.getPickupStationId());
+
+        // Link the pre-existing payment to the order and mark the order paid.
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
+        payment.setOrderId(order.getId());
+        paymentRepository.save(payment);
+
+        order.setPaymentStatus(PaymentStatus.PAID);
+        orderRepository.save(order);
+
+        quote.setUsed(true);
+        quote.setOrderId(order.getId());
+        checkoutQuoteRepository.save(quote);
+
+        // Transition the cart out of checkout processing.
+        Cart cart = cartRepository.findById(quote.getCartId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", quote.getCartId()));
+        cart.setStatus(Cart.CartStatus.ABANDONED);
+        cartRepository.save(cart);
+
+        return order;
     }
 
     private DispatchOriginSnapshot dispatchOrigin(Product product) {

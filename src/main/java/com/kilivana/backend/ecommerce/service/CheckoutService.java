@@ -4,6 +4,7 @@ import com.kilivana.backend.admin.entity.Address;
 import com.kilivana.backend.admin.repository.AddressRepository;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.security.CurrentUser;
 import com.kilivana.backend.ecommerce.dto.CheckoutOrderRequest;
 import com.kilivana.backend.ecommerce.dto.DeliveryQuoteRequest;
@@ -17,6 +18,8 @@ import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
 import com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.ecommerce.service.OrderService;
+import com.kilivana.backend.ecommerce.service.PaymentService;
 import com.kilivana.backend.logistics.dto.PickupStationResponse;
 import com.kilivana.backend.logistics.entity.PickupStation;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
@@ -42,6 +45,7 @@ public class CheckoutService {
     private final AddressRepository addressRepository;
     private final ProductRepository productRepository;
     private final OrderService orderService;
+    private final PaymentService paymentService;
     private final PickupStationRepository pickupStationRepository;
     private final CheckoutQuoteRepository checkoutQuoteRepository;
 
@@ -155,7 +159,7 @@ public class CheckoutService {
     }
 
     @Transactional
-    public Long createOrderFromQuote(CheckoutOrderRequest request) {
+    public StkPushInitiateResponse createOrderFromQuote(CheckoutOrderRequest request) {
         Long userId = CurrentUser.id();
         if (userId == null) throw new BadRequestException("Authentication required");
 
@@ -166,12 +170,20 @@ public class CheckoutService {
         }
         if (quote.isUsed()) {
             if (quote.getOrderId() == null) throw new BadRequestException("Quote already used");
-            return quote.getOrderId();
+            // Order already created from a previous successful payment; return it.
+            Order order = orderService.getOrderById(quote.getOrderId());
+            StkPushInitiateResponse response = new StkPushInitiateResponse();
+            response.setPaymentId(null);
+            response.setOrderId(order.getId());
+            response.setAmount(order.getTotal());
+            response.setStatus("PAID");
+            return response;
         }
-        return createOrderFromQuoteLocked(userId, quote);
+        return createOrderFromQuoteLocked(userId, quote, request.getPhoneNumber());
     }
 
-    private Long createOrderFromQuoteLocked(Long userId, CheckoutQuote quote) {
+    private StkPushInitiateResponse createOrderFromQuoteLocked(Long userId, CheckoutQuote quote,
+                                                               String phoneNumber) {
         if (Instant.now().isAfter(quote.getExpiresAt())) throw new BadRequestException("Quote expired");
 
         Cart cart = cartRepository.findByIdForUpdate(quote.getCartId())
@@ -184,36 +196,9 @@ public class CheckoutService {
             throw new BadRequestException("Cart is empty");
         }
 
-        // Recalculate server-side
-        BigDecimal subtotal = BigDecimal.ZERO;
-        // build items list for OrderService using product prices
-        java.util.List<com.kilivana.backend.ecommerce.dto.OrderItemRequest> items = new java.util.ArrayList<>();
-        for (CartItem ci : cartItems) {
-            Product p = productRepository.findById(ci.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", ci.getProductId()));
-            items.add(com.kilivana.backend.ecommerce.dto.OrderItemRequest.builder()
-                    .productId(p.getId())
-                    .quantity(ci.getQuantity())
-                    .unitPrice(p.getPrice())
-                    .build());
-            subtotal = subtotal.add(p.getPrice().multiply(BigDecimal.valueOf(ci.getQuantity())));
-        }
-        BigDecimal total = subtotal.add(quote.getDeliveryFee());
-
-        // A manual pickup has no address or station ID; only the typed location is retained.
-        Long deliveryAddressId = quote.getAddressId();
-
-        Order order = orderService.createOrder(userId, deliveryAddressId, quote.getDeliveryFee(), items,
-                subtotal, total, quote.getDeliveryMethod(), quote.getPickupLocation(), quote.getPickupStationId());
-
-        // transition cart out of checkout processing
-        cart.setStatus(Cart.CartStatus.ABANDONED);
-        cartRepository.save(cart);
-
-        quote.setUsed(true);
-        quote.setOrderId(order.getId());
-        checkoutQuoteRepository.save(quote);
-
-        return order.getId();
+        // Payment-first: initiate the STK Push against the quote. No order row is
+        // created yet; the order is only created once the Daraja callback reports
+        // success. If payment is cancelled or fails, no order exists.
+        return paymentService.initiateStkPushForQuote(userId, quote.getQuoteId(), phoneNumber);
     }
 }

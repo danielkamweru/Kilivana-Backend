@@ -14,10 +14,12 @@ import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.dto.StkPushResponse;
 import com.kilivana.backend.ecommerce.dto.PaymentResponse;
 import com.kilivana.backend.ecommerce.entity.CallbackInbox;
+import com.kilivana.backend.ecommerce.entity.CheckoutQuote;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.entity.Payment;
 import com.kilivana.backend.ecommerce.repository.CallbackInboxRepository;
+import com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository;
 import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +49,7 @@ public class PaymentService {
     private final DarajaService darajaService;
     private final UserRepository userRepository;
     private final OrderService orderService;
+    private final CheckoutQuoteRepository checkoutQuoteRepository;
 
     @Autowired(required = false)
     private CallbackInboxRepository callbackInboxRepository;
@@ -62,13 +66,15 @@ public class PaymentService {
                           OrderItemRepository orderItemRepository,
                           DarajaService darajaService,
                           UserRepository userRepository,
-                          OrderService orderService) {
+                          OrderService orderService,
+                          CheckoutQuoteRepository checkoutQuoteRepository) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.darajaService = darajaService;
         this.userRepository = userRepository;
         this.orderService = orderService;
+        this.checkoutQuoteRepository = checkoutQuoteRepository;
     }
 
     @PostConstruct
@@ -206,6 +212,129 @@ public class PaymentService {
         response.setDarajaResponse(darajaResponse);
         response.setCreatedAt(saved.getCreatedAt());
         return response;
+    }
+
+    /**
+     * Initiates an M-PESA STK Push for a checkout quote before any order exists.
+     * The payment row is created with {@code orderId = null} and linked to the
+     * quote; the order is only created once the Daraja callback reports success.
+     * If payment is cancelled or fails, no order is ever created.
+     */
+    @PreAuthorize("@resourceAuthorization.buyer(#userId)")
+    public StkPushInitiateResponse initiateStkPushForQuote(Long userId, String quoteId,
+                                                           String phoneNumber) {
+        CheckoutQuote quote = checkoutQuoteRepository.findByQuoteIdForUpdate(quoteId)
+                .orElseThrow(() -> new BadRequestException("Quote not found"));
+        if (!quote.getUserId().equals(userId)) {
+            throw new BadRequestException("Quote does not belong to this user");
+        }
+        if (quote.isUsed()) {
+            throw new BadRequestException("Quote already used");
+        }
+        if (Instant.now().isAfter(quote.getExpiresAt())) {
+            throw new BadRequestException("Quote expired");
+        }
+
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            Optional<User> buyerOptional = userRepository.findById(userId);
+            if (!buyerOptional.isPresent()) {
+                throw new BadRequestException("Buyer user not found");
+            }
+            phoneNumber = buyerOptional.get().getPhone();
+            if (phoneNumber == null || phoneNumber.isBlank()) {
+                throw new BadRequestException("Buyer phone number is not set");
+            }
+        }
+
+        if (!phoneNumber.matches("^254(7\\d{8}|1\\d{8}|11\\d{7})$")) {
+            throw new BadRequestException("Phone number must be a valid Safaricom number in 2547XXXXXXXX, 2541XXXXXXXX, or 25411XXXXXXX format");
+        }
+
+        BigDecimal amount = quote.getTotal();
+        int amountKes = amount.setScale(0, java.math.RoundingMode.HALF_UP).intValue();
+        if (amountKes <= 0) {
+            throw new BadRequestException("Checkout amount must be positive");
+        }
+
+        List<Payment> existingPending = paymentRepository.findAll().stream()
+                .filter(p -> p.getQuoteId() != null && p.getQuoteId().equals(quoteId)
+                        && p.getStatus() == PaymentStatus.PENDING
+                        && p.getCheckoutRequestId() != null)
+                .toList();
+        if (!existingPending.isEmpty()) {
+            throw new BadRequestException("A payment is already being processed for this checkout. "
+                    + "Please wait for the current transaction to complete before retrying.");
+        }
+
+        String accountRef = "QT-" + quoteId.substring(0, Math.min(8, quoteId.length()));
+        String transactionDesc = "Checkout " + quoteId.substring(0, Math.min(12, quoteId.length()));
+
+        Payment pending = (self != null ? self : this).createPendingPreOrderPayment(quoteId, phoneNumber, amount);
+
+        StkPushResponse darajaResponse;
+        try {
+            darajaResponse = darajaService.initiateStkPush(
+                    phoneNumber, amountKes, accountRef, transactionDesc);
+        } catch (Exception e) {
+            (self != null ? self : this).markPaymentFailed(pending, "Daraja initiation failed: " + e.getMessage());
+            throw e;
+        }
+
+        Payment saved = (self != null ? self : this).updatePaymentWithDarajaDetails(
+                pending, darajaResponse.getMerchantRequestID(), darajaResponse.getCheckoutRequestID());
+
+        (self != null ? self : this).processInboxForQuote(saved, darajaResponse.getMerchantRequestID());
+
+        StkPushInitiateResponse response = new StkPushInitiateResponse();
+        response.setPaymentId(saved.getId());
+        response.setOrderId(null);
+        response.setAmount(amount);
+        response.setStatus(saved.getStatus().wire());
+        response.setDarajaResponse(darajaResponse);
+        response.setCreatedAt(saved.getCreatedAt());
+        return response;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment createPendingPreOrderPayment(String quoteId, String phoneNumber, BigDecimal amount) {
+        Payment p = Payment.builder()
+                .quoteId(quoteId)
+                .method(PaymentMethod.MPESA)
+                .reference("STK-PENDING")
+                .amount(amount)
+                .status(PaymentStatus.PENDING)
+                .phoneNumber(phoneNumber)
+                .callbackStatus("PENDING")
+                .build();
+        return paymentRepository.save(p);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processInboxForQuote(Payment payment, String merchantRequestId) {
+        if (callbackInboxRepository == null || darajaCallbackService == null) {
+            return;
+        }
+        String checkoutRequestId = payment.getCheckoutRequestId();
+        if (checkoutRequestId == null) {
+            return;
+        }
+
+        var inboxEntry = callbackInboxRepository
+                .findByCheckoutRequestIdAndMerchantRequestIdAndProcessedFalse(
+                        checkoutRequestId, merchantRequestId);
+        if (inboxEntry.isEmpty()) {
+            return;
+        }
+
+        CallbackInbox entry = inboxEntry.get();
+        log.info("Processing early callback from inbox: checkoutRequestId={}, resultCode={}",
+                checkoutRequestId, entry.getResultCode());
+
+        DarajaCallbackRequest callbackRequest = buildCallbackRequestFromInbox(entry);
+        darajaCallbackService.processCallback(callbackRequest, "callback-inbox");
+
+        entry.setProcessed(true);
+        callbackInboxRepository.save(entry);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
