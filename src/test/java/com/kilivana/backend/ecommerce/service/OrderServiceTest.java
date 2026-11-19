@@ -73,6 +73,9 @@ class OrderServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private AddressRepository addressRepository;
     @Mock private PickupStationRepository pickupStationRepository;
+    @Mock private com.kilivana.backend.ecommerce.repository.CartRepository cartRepository;
+    @Mock private com.kilivana.backend.ecommerce.repository.CartItemRepository cartItemRepository;
+    @Mock private com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository checkoutQuoteRepository;
     @Mock private FarmerProfileRepository farmerProfileRepository;
     @Mock private SupplierProfileRepository supplierProfileRepository;
     @Mock private DriverProfileRepository driverProfileRepository;
@@ -93,6 +96,7 @@ class OrderServiceTest {
         orderService = new OrderService(orderRepository, orderItemRepository,
                 orderEventRepository, paymentRepository, productRepository,
                 userRepository, addressRepository, pickupStationRepository,
+                cartRepository, cartItemRepository, checkoutQuoteRepository,
                 farmerProfileRepository, supplierProfileRepository, driverProfileRepository,
                 logisticsService, logisticsJobRepository,
                 farmRepository, warehouseRepository);

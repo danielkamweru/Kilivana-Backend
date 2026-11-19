@@ -12,10 +12,13 @@ import com.kilivana.backend.ecommerce.entity.CartItem;
 import com.kilivana.backend.ecommerce.entity.CheckoutQuote;
 import com.kilivana.backend.ecommerce.entity.Order;
 import com.kilivana.backend.ecommerce.entity.Product;
+import com.kilivana.backend.dto.StkPushInitiateResponse;
 import com.kilivana.backend.ecommerce.repository.CartItemRepository;
 import com.kilivana.backend.ecommerce.repository.CartRepository;
 import com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
+import com.kilivana.backend.ecommerce.service.OrderService;
+import com.kilivana.backend.ecommerce.service.PaymentService;
 import com.kilivana.backend.logistics.entity.PickupStation;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +34,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -38,9 +42,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 
 /**
  * Locks in the pickup-delivery behaviour: the buyer types a one-time location, and
@@ -58,6 +64,7 @@ class CheckoutServiceTest {
     private ProductRepository productRepository;
     private CheckoutQuoteRepository checkoutQuoteRepository;
     private OrderService orderService;
+    private PaymentService paymentService;
     private PickupStationRepository pickupStationRepository;
     private CheckoutService checkoutService;
     private final Map<String, CheckoutQuote> savedQuotes = new HashMap<>();
@@ -70,10 +77,11 @@ class CheckoutServiceTest {
         productRepository = mock(ProductRepository.class);
         checkoutQuoteRepository = mock(CheckoutQuoteRepository.class);
         orderService = mock(OrderService.class);
+        paymentService = mock(PaymentService.class);
         pickupStationRepository = mock(PickupStationRepository.class);
         savedQuotes.clear();
         checkoutService = new CheckoutService(cartRepository, cartItemRepository, addressRepository,
-                productRepository, orderService, pickupStationRepository, checkoutQuoteRepository);
+                productRepository, orderService, paymentService, pickupStationRepository, checkoutQuoteRepository);
         when(checkoutQuoteRepository.save(any(CheckoutQuote.class))).thenAnswer(invocation -> {
             CheckoutQuote quote = invocation.getArgument(0);
             savedQuotes.put(quote.getQuoteId(), quote);
@@ -182,7 +190,7 @@ class CheckoutServiceTest {
     }
 
     @Test
-    void repeatedOrderRequest_returnsTheOriginalOrderWithoutDeductingStockAgain() {
+    void repeatedOrderRequest_returnsTheOriginalOrderWithoutReinitiatingPayment() {
         String pickupLocation = "Outside Westlands Mall, near the main entrance";
         DeliveryQuoteResponse quote = checkoutService.createDeliveryQuote(DeliveryQuoteRequest.builder()
                 .deliveryMethod("PICKUP_STATION")
@@ -191,20 +199,48 @@ class CheckoutServiceTest {
         Cart cart = Cart.builder().id(CART_ID).buyerId(BUYER_ID)
                 .status(Cart.CartStatus.CHECKOUT_PROCESSING).build();
         when(cartRepository.findByIdForUpdate(CART_ID)).thenReturn(Optional.of(cart));
-        when(orderService.createOrder(eq(BUYER_ID), isNull(), any(BigDecimal.class), anyList(),
-                any(BigDecimal.class), any(BigDecimal.class), eq("PICKUP_STATION"), eq(pickupLocation),
-                isNull())).thenReturn(Order.builder().id(99L).build());
+
+        // Simulate a previous successful payment: the quote is now used and linked to order 99.
+        CheckoutQuote stored = savedQuotes.get(quote.getQuoteId());
+        stored.setUsed(true);
+        stored.setOrderId(99L);
+        when(orderService.getOrderById(99L))
+                .thenReturn(Order.builder().id(99L).total(new BigDecimal("101.00")).build());
 
         CheckoutOrderRequest request = CheckoutOrderRequest.builder().quoteId(quote.getQuoteId()).build();
-        Long firstOrderId = checkoutService.createOrderFromQuote(request);
-        CheckoutService restartedCheckoutService = new CheckoutService(cartRepository, cartItemRepository,
-                addressRepository, productRepository, orderService, pickupStationRepository, checkoutQuoteRepository);
-        Long replayedOrderId = restartedCheckoutService.createOrderFromQuote(request);
+        StkPushInitiateResponse response = checkoutService.createOrderFromQuote(request);
 
-        assertEquals(99L, firstOrderId);
-        assertEquals(firstOrderId, replayedOrderId);
-        verify(orderService, times(1)).createOrder(eq(BUYER_ID), isNull(), any(BigDecimal.class), anyList(),
-                any(BigDecimal.class), any(BigDecimal.class), eq("PICKUP_STATION"), eq(pickupLocation),
-                isNull());
+        assertEquals(99L, response.getOrderId());
+        assertEquals("PAID", response.getStatus());
+        assertEquals(new BigDecimal("101.00"), response.getAmount());
+        verify(paymentService, never()).initiateStkPushForQuote(any(Long.class), anyString(), anyString());
+    }
+
+    @Test
+    void createOrderFromQuote_initiatesPaymentInsteadOfCreatingOrder() {
+        String pickupLocation = "Outside Westlands Mall, near the main entrance";
+        DeliveryQuoteResponse quote = checkoutService.createDeliveryQuote(DeliveryQuoteRequest.builder()
+                .deliveryMethod("PICKUP_STATION")
+                .pickupLocation(pickupLocation)
+                .build());
+        Cart cart = Cart.builder().id(CART_ID).buyerId(BUYER_ID)
+                .status(Cart.CartStatus.CHECKOUT_PROCESSING).build();
+        when(cartRepository.findByIdForUpdate(CART_ID)).thenReturn(Optional.of(cart));
+
+        StkPushInitiateResponse stkResponse = new StkPushInitiateResponse();
+        stkResponse.setPaymentId(77L);
+        stkResponse.setOrderId(null);
+        stkResponse.setAmount(new BigDecimal("101.00"));
+        stkResponse.setStatus("PENDING");
+        when(paymentService.initiateStkPushForQuote(eq(BUYER_ID), eq(quote.getQuoteId()), isNull()))
+                .thenReturn(stkResponse);
+
+        CheckoutOrderRequest request = CheckoutOrderRequest.builder().quoteId(quote.getQuoteId()).build();
+        StkPushInitiateResponse response = checkoutService.createOrderFromQuote(request);
+
+        assertEquals(77L, response.getPaymentId());
+        assertNull(response.getOrderId());
+        assertEquals("PENDING", response.getStatus());
+        verify(orderService, never()).createOrder(any(), any(), any(), anyList(), any(), any(), any(), any(), any());
     }
 }

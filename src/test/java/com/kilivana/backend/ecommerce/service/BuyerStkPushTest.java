@@ -61,13 +61,14 @@ class BuyerStkPushTest {
     @Mock private DarajaService darajaService;
     @Mock private UserRepository userRepository;
     @Mock private OrderService orderService;
+    @Mock private com.kilivana.backend.ecommerce.repository.CheckoutQuoteRepository checkoutQuoteRepository;
 
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
         paymentService = new PaymentService(paymentRepository, orderRepository, orderItemRepository,
-                darajaService, userRepository, orderService);
+                darajaService, userRepository, orderService, checkoutQuoteRepository);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(99L);
