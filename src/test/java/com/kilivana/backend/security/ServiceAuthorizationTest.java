@@ -14,6 +14,7 @@ import com.kilivana.backend.ecommerce.dto.*;
 import com.kilivana.backend.ecommerce.entity.*;
 import com.kilivana.backend.ecommerce.repository.*;
 import com.kilivana.backend.ecommerce.service.*;
+import com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.service.LogisticsService;
@@ -79,6 +80,7 @@ class ServiceAuthorizationTest {
         @Bean ImageStorage storage() { return mock(ImageStorage.class); }
         @Bean org.springframework.security.crypto.password.PasswordEncoder encoder() { return mock(org.springframework.security.crypto.password.PasswordEncoder.class); }
         @Bean com.kilivana.backend.common.service.UserReferenceCodeGenerator references() { return mock(com.kilivana.backend.common.service.UserReferenceCodeGenerator.class); }
+        @Bean SellerFulfilmentService fulfilmentService() { return mock(SellerFulfilmentService.class); }
     }
     @Autowired UserRepository users;
     @Autowired InspectionRepository inspections;

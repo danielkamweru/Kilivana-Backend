@@ -47,6 +47,7 @@ import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -95,6 +96,7 @@ public class OrderService {
     private final SupplierProfileRepository supplierProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final LogisticsService logisticsService;
+    private final SellerFulfilmentService sellerFulfilmentService;
     private final LogisticsJobRepository logisticsJobRepository;
     private final FarmRepository farmRepository;
     private final SupplierWarehouseRepository supplierWarehouseRepository;
@@ -357,6 +359,8 @@ public class OrderService {
 
         orderEventRepository.save(OrderEvent.builder()
                 .orderId(saved.getId()).status(saved.getStatus()).build());
+        // Create seller fulfilment records for multi-farmer orders (idempotent).
+        sellerFulfilmentService.ensureFulfilmentsForOrder(saved.getId());
         return saved;
     }
 
@@ -423,6 +427,9 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", quote.getCartId()));
         cart.setStatus(Cart.CartStatus.ABANDONED);
         cartRepository.save(cart);
+
+        // Create seller fulfilment records for multi-farmer orders (idempotent).
+        sellerFulfilmentService.ensureFulfilmentsForOrder(order.getId());
 
         return order;
     }

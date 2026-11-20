@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,10 +26,10 @@ class CheckoutSchemaFixerTest {
     void appliesAllThreeSchemaStatements() {
         fixer.fix();
 
-        verify(jdbc, times(3)).execute(org.mockito.ArgumentMatchers.anyString());
+        verify(jdbc, atLeast(3)).execute(org.mockito.ArgumentMatchers.anyString());
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(jdbc, times(3)).execute(captor.capture());
+        verify(jdbc, atLeast(3)).execute(captor.capture());
         List<String> statements = captor.getAllValues();
 
         assertThat(statements).contains(
@@ -37,6 +37,10 @@ class CheckoutSchemaFixerTest {
                 "ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS quote_id VARCHAR(36)",
                 "CREATE INDEX IF NOT EXISTS idx_payments_quote_id ON public.payments (quote_id) WHERE quote_id IS NOT NULL"
         );
+        assertThat(statements).filteredOn(s -> s.contains("seller_fulfilments")).isNotEmpty();
+        assertThat(statements).filteredOn(s -> s.contains("CREATE TABLE IF NOT EXISTS public.shipments")).isNotEmpty();
+        assertThat(statements).filteredOn(s -> s.contains("CREATE TABLE IF NOT EXISTS public.shipment_items")).isNotEmpty();
+        assertThat(statements).filteredOn(s -> s.contains("CREATE TABLE IF NOT EXISTS public.shipment_stops")).isNotEmpty();
     }
 
     @Test
@@ -47,6 +51,6 @@ class CheckoutSchemaFixerTest {
         // Should not throw — each statement is try/catch wrapped.
         fixer.fix();
 
-        verify(jdbc, times(3)).execute(org.mockito.ArgumentMatchers.anyString());
+        verify(jdbc, atLeast(3)).execute(org.mockito.ArgumentMatchers.anyString());
     }
 }
