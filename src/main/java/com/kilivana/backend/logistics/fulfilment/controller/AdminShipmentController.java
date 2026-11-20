@@ -171,8 +171,6 @@ public class AdminShipmentController {
                 .orderId(s.getOrderId())
                 .status(s.getStatus())
                 .driverId(s.getDriverId())
-                .driverName(driverName)
-                .driverPhone(driverPhone)
                 .vehicleType(s.getVehicleType())
                 .vehicleNumber(s.getVehicleNumber())
                 .estimatedWeightKg(s.getEstimatedWeightKg())

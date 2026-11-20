@@ -262,7 +262,7 @@ public class ShipmentService {
         // Check driver is not already assigned to another non-terminal shipment.
         List<Shipment> activeShipments = shipmentRepository.findByDriverId(driverId);
         boolean hasActive = activeShipments.stream()
-                .anyMatch(s -> !s.getId().equals(shipmentId) && s.isOpen());
+                .anyMatch(s -> !s.getId().equals(shipmentId) && s.getStatus().isOpen());
         if (hasActive) {
             throw new BadRequestException("Driver is already assigned to an active shipment");
         }
@@ -287,7 +287,7 @@ public class ShipmentService {
         Shipment shipment = shipmentRepository.findByIdForUpdate(shipmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipment", shipmentId));
 
-        if (!shipment.isOpen()) {
+        if (!shipment.getStatus().isOpen()) {
             throw new BadRequestException("A " + shipment.getStatus().wire() + " shipment cannot be reassigned");
         }
 

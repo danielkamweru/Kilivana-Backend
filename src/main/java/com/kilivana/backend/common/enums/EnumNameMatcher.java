@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * <p>Separators are stripped rather than translated, so one rule covers hyphens, underscores and
  * spaces without each enum having to know which client used which.
  */
-final class EnumNameMatcher {
+public final class EnumNameMatcher {
 
     private EnumNameMatcher() {
     }

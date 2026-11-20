@@ -3,6 +3,7 @@ package com.kilivana.backend.logistics.fulfilment.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import com.kilivana.backend.common.enums.EnumNameMatcher;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
