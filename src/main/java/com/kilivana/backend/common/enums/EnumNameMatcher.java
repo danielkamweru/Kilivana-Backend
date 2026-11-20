@@ -21,7 +21,7 @@ public final class EnumNameMatcher {
     }
 
     /** Returns the constant matching {@code value}, or throws naming what was accepted. */
-    static <E extends Enum<E>> E match(Class<E> type, String value, String expected) {
+    public static <E extends Enum<E>> E match(Class<E> type, String value, String expected) {
         if (value == null) {
             return null;
         }
