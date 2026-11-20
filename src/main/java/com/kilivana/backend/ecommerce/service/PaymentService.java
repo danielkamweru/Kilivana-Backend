@@ -260,6 +260,7 @@ public class PaymentService {
         if (amountKes <= 0) {
             throw new BadRequestException("Checkout amount must be positive");
         }
+        BigDecimal paymentAmount = BigDecimal.valueOf(amountKes);
 
         List<Payment> existingPending = paymentRepository.findAll().stream()
                 .filter(p -> p.getQuoteId() != null && p.getQuoteId().equals(quoteId)
@@ -276,7 +277,7 @@ public class PaymentService {
 
         Payment pending;
         try {
-            pending = (self != null ? self : this).createPendingPreOrderPayment(quoteId, phoneNumber, amount);
+            pending = (self != null ? self : this).createPendingPreOrderPayment(quoteId, phoneNumber, paymentAmount);
         } catch (DataIntegrityViolationException e) {
             throw new BadRequestException("Database schema is not ready for payment-first checkout. "
                     + "Apply migration V34__make_payment_order_id_nullable.sql "
