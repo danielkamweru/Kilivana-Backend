@@ -154,6 +154,46 @@ public class ShipmentService {
     }
 
     /**
+     * Creates one unassigned shipment per seller fulfilment for a paid order.
+     * <p>
+     * This keeps checkout as one buyer order and one payment while allowing
+     * products collected from separate sellers to be assigned to different
+     * drivers. The operation is idempotent: a fulfilment that already has any
+     * allocated item is left for the existing shipment workflow.
+     */
+    @Transactional
+    public List<Shipment> createSeparateShipmentsForFulfilments(
+            Long orderId, List<SellerFulfilment> fulfilments) {
+        if (fulfilments == null || fulfilments.isEmpty()) {
+            return List.of();
+        }
+
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
+        Map<Long, Boolean> sellerAlreadyAllocated = new LinkedHashMap<>();
+        for (SellerFulfilment fulfilment : fulfilments) {
+            sellerAlreadyAllocated.put(fulfilment.getSellerId(), false);
+        }
+        for (OrderItem item : orderItems) {
+            if (!sellerAlreadyAllocated.containsKey(item.getSellerId())) {
+                continue;
+            }
+            if (!shipmentItemRepository.findByOrderItemId(item.getId()).isEmpty()) {
+                sellerAlreadyAllocated.put(item.getSellerId(), true);
+            }
+        }
+
+        List<Shipment> shipments = new ArrayList<>();
+        for (SellerFulfilment fulfilment : fulfilments) {
+            if (Boolean.TRUE.equals(sellerAlreadyAllocated.get(fulfilment.getSellerId()))) {
+                continue;
+            }
+            shipments.add(createShipment(orderId, List.of(fulfilment.getId()),
+                    null, null, null, null));
+        }
+        return shipments;
+    }
+
+    /**
      * Creates route stops for a shipment: one PICKUP stop per distinct seller
      * included in the shipment's items, then one DELIVERY stop for the buyer.
      */

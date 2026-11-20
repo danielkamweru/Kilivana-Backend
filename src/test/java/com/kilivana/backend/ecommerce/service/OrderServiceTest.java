@@ -84,6 +84,7 @@ class OrderServiceTest {
     @Mock private FarmRepository farmRepository;
     @Mock private com.kilivana.backend.admin.repository.SupplierWarehouseRepository warehouseRepository;
     @Mock private com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService fulfilmentService;
+    @Mock private com.kilivana.backend.logistics.fulfilment.service.ShipmentService shipmentService;
 
     private OrderService orderService;
     private Product product;
@@ -99,7 +100,7 @@ class OrderServiceTest {
                 userRepository, addressRepository, pickupStationRepository,
                 cartRepository, cartItemRepository, checkoutQuoteRepository,
                 farmerProfileRepository, supplierProfileRepository, driverProfileRepository,
-                logisticsService, fulfilmentService, logisticsJobRepository,
+                logisticsService, fulfilmentService, shipmentService, logisticsJobRepository,
                 farmRepository, warehouseRepository);
 
         when(userRepository.existsById(BUYER_ID)).thenReturn(true);

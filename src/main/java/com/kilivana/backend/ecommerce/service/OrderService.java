@@ -48,6 +48,7 @@ import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService;
+import com.kilivana.backend.logistics.fulfilment.service.ShipmentService;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -97,6 +98,7 @@ public class OrderService {
     private final DriverProfileRepository driverProfileRepository;
     private final LogisticsService logisticsService;
     private final SellerFulfilmentService sellerFulfilmentService;
+    private final ShipmentService shipmentService;
     private final LogisticsJobRepository logisticsJobRepository;
     private final FarmRepository farmRepository;
     private final SupplierWarehouseRepository supplierWarehouseRepository;
@@ -428,8 +430,10 @@ public class OrderService {
         cart.setStatus(Cart.CartStatus.ABANDONED);
         cartRepository.save(cart);
 
-        // Create seller fulfilment records for multi-farmer orders (idempotent).
-        sellerFulfilmentService.ensureFulfilmentsForOrder(order.getId());
+        // A single paid order can have one pending shipment per seller, allowing
+        // dispatch to different drivers without splitting the buyer's payment.
+        var fulfilments = sellerFulfilmentService.ensureFulfilmentsForOrder(order.getId());
+        shipmentService.createSeparateShipmentsForFulfilments(order.getId(), fulfilments);
 
         return order;
     }
