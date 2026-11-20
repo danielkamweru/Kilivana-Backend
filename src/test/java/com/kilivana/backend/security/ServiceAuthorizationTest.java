@@ -88,6 +88,7 @@ class ServiceAuthorizationTest {
     @Autowired OrderRepository orders;
     @Autowired OrderItemRepository orderItems;
     @Autowired PaymentRepository payments;
+    @Autowired CheckoutQuoteRepository checkoutQuotes;
     @Autowired DisputeRepository disputes;
     @Autowired CartRepository carts;
     @Autowired NotificationRepository notifications;
@@ -108,7 +109,7 @@ class ServiceAuthorizationTest {
     @Autowired LogisticsJobRepository jobs;
 
     @BeforeEach void fixture() {
-        reset(users, inspections, orders, orderItems, payments, disputes, carts, notifications, addresses, products, jobs, categories);
+        reset(users, inspections, orders, orderItems, payments, checkoutQuotes, disputes, carts, notifications, addresses, products, jobs, categories);
         actor(1L, UserRole.BUYER);
         when(inspections.findById(20L)).thenReturn(Optional.of(Inspection.builder().id(20L).inspectorId(3L).build()));
         when(orders.findById(10L)).thenReturn(Optional.of(Order.builder().id(10L).buyerId(1L).build()));
@@ -332,6 +333,41 @@ class ServiceAuthorizationTest {
         denied(() -> paymentService.createPayment(10L, "MPESA", "test", java.math.BigDecimal.ONE));
         denied(() -> paymentService.updatePaymentStatus(7L, PaymentStatus.REFUNDED));
         verify(payments, never()).save(any());
+    }
+
+    @Test void checkoutQuoteOwnerCanReadPendingPaymentBeforeAnOrderExists() {
+        Payment pendingPayment = Payment.builder().id(8L).quoteId("quote-owner-1")
+                .status(PaymentStatus.PENDING).build();
+        when(payments.findById(8L)).thenReturn(Optional.of(pendingPayment));
+        when(checkoutQuotes.findById("quote-owner-1")).thenReturn(Optional.of(
+                CheckoutQuote.builder().quoteId("quote-owner-1").userId(1L).build()));
+
+        assertEquals(8L, paymentService.getPaymentById(8L).getId());
+    }
+
+    @Test void anotherUserCannotReadPendingPaymentOwnedByAQuote() {
+        Payment pendingPayment = Payment.builder().id(8L).quoteId("quote-owner-1")
+                .status(PaymentStatus.PENDING).build();
+        when(payments.findById(8L)).thenReturn(Optional.of(pendingPayment));
+        when(checkoutQuotes.findById("quote-owner-1")).thenReturn(Optional.of(
+                CheckoutQuote.builder().quoteId("quote-owner-1").userId(1L).build()));
+        actor(2L, UserRole.BUYER);
+
+        denied(() -> paymentService.getPaymentById(8L));
+    }
+
+    @Test void linkedOrderPaymentKeepsBuyerAuthorization() {
+        actor(2L, UserRole.BUYER);
+
+        assertEquals(7L, paymentService.getPaymentById(7L).getId());
+    }
+
+    @Test void paymentWithoutOrderOrQuoteIsDeniedWithoutQueryingANullOrderId() {
+        when(payments.findById(8L)).thenReturn(Optional.of(Payment.builder().id(8L)
+                .status(PaymentStatus.PENDING).build()));
+
+        denied(() -> paymentService.getPaymentById(8L));
+        verify(orders, never()).findById(isNull());
     }
     @Test void disputeImpersonationAndResolutionDenied() {
         denied(() -> disputeService.getDisputeById(6L));
