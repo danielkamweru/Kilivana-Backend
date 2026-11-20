@@ -152,14 +152,6 @@ public class SellerFulfilment {
         this.updatedAt = updatedAt;
     }
 
-    public List<ShipmentItem> getShipmentItems() {
-        return shipmentItems;
-    }
-
-    public void setShipmentItems(List<ShipmentItem> shipmentItems) {
-        this.shipmentItems = shipmentItems;
-    }
-
     public static SellerFulfilmentBuilder builder() {
         return new SellerFulfilmentBuilder();
     }
