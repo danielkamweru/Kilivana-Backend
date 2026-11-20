@@ -3,7 +3,9 @@ package com.kilivana.backend.admin.controller;
 import com.kilivana.backend.admin.dto.DashboardStatsResponse;
 import com.kilivana.backend.admin.service.DashboardService;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.enums.DeliveryStatus;
 import com.kilivana.backend.common.enums.ProductStatus;
+import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.ecommerce.dto.OrderResponse;
 import com.kilivana.backend.ecommerce.dto.PaymentResponse;
 import com.kilivana.backend.ecommerce.entity.Order;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,15 +91,25 @@ public class AdminOperationsController {
             @RequestParam Long driverId,
             @RequestParam(required = false) String pickupAddress,
             @RequestParam(required = false) String destinationAddress) {
-        DispatchOrderResponse dispatch = deliveryDispatchService.dispatchSingleSeller(orderId);
-        LogisticsJob job = dispatch.getDeliveryJobs().get(0);
-        if (job.getStatus() == com.kilivana.backend.common.enums.DeliveryStatus.PENDING_ASSIGNMENT) {
-            job = logisticsService.assignDriver(job.getId(), driverId);
-        } else if (!driverId.equals(job.getDriverId())) {
-            throw new com.kilivana.backend.common.exception.BadRequestException(
-                    "The delivery job is already assigned to another driver");
+        DispatchOrderResponse dispatch = deliveryDispatchService.dispatchOrder(orderId);
+        List<LogisticsJob> jobs = dispatch.getDeliveryJobs();
+        if (jobs.isEmpty()) {
+            throw new BadRequestException("No delivery jobs were created for this order");
         }
-        return ResponseEntity.ok(ApiResponse.success(job));
+        List<LogisticsJob> assigned = new ArrayList<>();
+        for (LogisticsJob job : jobs) {
+            LogisticsJob assignedJob;
+            if (job.getStatus() == DeliveryStatus.PENDING_ASSIGNMENT) {
+                assignedJob = logisticsService.assignDriver(job.getId(), driverId);
+            } else if (!driverId.equals(job.getDriverId())) {
+                throw new BadRequestException(
+                        "The delivery job " + job.getId() + " is already assigned to another driver");
+            } else {
+                assignedJob = job;
+            }
+            assigned.add(assignedJob);
+        }
+        return ResponseEntity.ok(ApiResponse.success(assigned.get(0)));
     }
 
     @PostMapping("/orders/{orderId}/dispatch")
