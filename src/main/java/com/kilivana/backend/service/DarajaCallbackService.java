@@ -169,10 +169,7 @@ public class DarajaCallbackService {
                         payment.setDarajaResultDesc("Amount mismatch: expected " + payment.getAmount()
                                 + ", received " + callbackAmountDecimal);
                         paymentRepository.save(payment);
-                        orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                            order.setPaymentStatus(PaymentStatus.FAILED);
-                            orderRepository.save(order);
-                        });
+                        updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, false);
                         return new DarajaCallbackResponse();
                     }
                 }
@@ -194,10 +191,7 @@ public class DarajaCallbackService {
                     orderService.createOrderFromCheckoutQuote(payment.getQuoteId(), payment.getId());
                 } else {
                     // Sync order payment status to PAID (escrow step)
-                    orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                        order.setPaymentStatus(PaymentStatus.PAID);
-                        orderRepository.save(order);
-                    });
+                    updateLinkedOrderPaymentStatus(payment, PaymentStatus.PAID, false);
                 }
 
             } else if (isCustomerCancellation(resultCode, resultDesc)) {
@@ -209,12 +203,7 @@ public class DarajaCallbackService {
                 payment.setCallbackStatus("PROCESSED");
 
                 // Only update order payment status if no successful payment already exists
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                        order.setPaymentStatus(PaymentStatus.CANCELLED);
-                        orderRepository.save(order);
-                    }
-                });
+                updateLinkedOrderPaymentStatus(payment, PaymentStatus.CANCELLED, true);
 
             } else {
                 // OTHER FAILURE: Insufficient funds, invalid phone, timeout, etc.
@@ -225,12 +214,7 @@ public class DarajaCallbackService {
                 payment.setCallbackStatus("PROCESSED");
 
                 // Only update order payment status if no successful payment already exists
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                        order.setPaymentStatus(PaymentStatus.FAILED);
-                        orderRepository.save(order);
-                    }
-                });
+                updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, true);
             }
 
             paymentRepository.save(payment);
@@ -257,6 +241,25 @@ public class DarajaCallbackService {
     private boolean isSuccessfulOrderPaymentStatus(PaymentStatus status) {
         return status == PaymentStatus.PAID || status == PaymentStatus.HELD
                 || status == PaymentStatus.SETTLED;
+    }
+
+    /**
+     * Updates an order only when this payment is already linked to one.
+     * Payment-first checkout deliberately has no order until a successful
+     * M-PESA result is received, so failed and cancelled callbacks must never
+     * query the order repository with a null ID.
+     */
+    private void updateLinkedOrderPaymentStatus(Payment payment, PaymentStatus status,
+                                                boolean preserveSuccessfulStatus) {
+        if (payment.getOrderId() == null) {
+            return;
+        }
+        orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
+            if (!preserveSuccessfulStatus || !isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
+                order.setPaymentStatus(status);
+                orderRepository.save(order);
+            }
+        });
     }
 
     /**
@@ -357,10 +360,7 @@ public class DarajaCallbackService {
                     payment.setDarajaResultDesc("Amount mismatch: expected " + payment.getAmount()
                             + ", received " + callbackAmountDecimal);
                     paymentRepository.save(payment);
-                    orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                        order.setPaymentStatus(PaymentStatus.FAILED);
-                        orderRepository.save(order);
-                    });
+                    updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, false);
                     return;
                 }
             } catch (Exception e) {
@@ -401,10 +401,7 @@ public class DarajaCallbackService {
             if (payment.getOrderId() == null && payment.getQuoteId() != null) {
                 orderService.createOrderFromCheckoutQuote(payment.getQuoteId(), payment.getId());
             } else {
-                orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                    order.setPaymentStatus(PaymentStatus.PAID);
-                    orderRepository.save(order);
-                });
+                updateLinkedOrderPaymentStatus(payment, PaymentStatus.PAID, false);
             }
         } else if (isCustomerCancellation(resultCode, resultDesc)) {
             log.warn("M-PESA payment cancelled by customer via reconciliation: orderId={}, resultCode={}, resultDesc={}",
@@ -413,12 +410,7 @@ public class DarajaCallbackService {
             payment.setStatus(PaymentStatus.CANCELLED);
             payment.setCallbackStatus("PROCESSED");
 
-            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                    order.setPaymentStatus(PaymentStatus.CANCELLED);
-                    orderRepository.save(order);
-                }
-            });
+            updateLinkedOrderPaymentStatus(payment, PaymentStatus.CANCELLED, true);
         } else {
             log.warn("M-PESA payment failed via reconciliation: orderId={}, resultCode={}, resultDesc={}",
                     payment.getOrderId(), resultCode, resultDesc);
@@ -426,12 +418,7 @@ public class DarajaCallbackService {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setCallbackStatus("PROCESSED");
 
-            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                    order.setPaymentStatus(PaymentStatus.FAILED);
-                    orderRepository.save(order);
-                }
-            });
+            updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, true);
         }
 
         paymentRepository.save(payment);
@@ -463,14 +450,7 @@ public class DarajaCallbackService {
         payment.setDarajaResultDesc("STK Push timed out: no callback received before deadline");
         paymentRepository.save(payment);
 
-        if (payment.getOrderId() != null) {
-            orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
-                if (!isSuccessfulOrderPaymentStatus(order.getPaymentStatus())) {
-                    order.setPaymentStatus(PaymentStatus.FAILED);
-                    orderRepository.save(order);
-                }
-            });
-        }
+        updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, true);
 
         log.info("Timed out payment {} (orderId={}) marked FAILED", payment.getId(), payment.getOrderId());
     }
