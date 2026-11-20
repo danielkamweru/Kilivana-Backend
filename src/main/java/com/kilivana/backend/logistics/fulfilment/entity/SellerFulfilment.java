@@ -11,7 +11,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * One farmer's fulfilment portion of a multi-farmer customer order.
@@ -72,9 +71,6 @@ public class SellerFulfilment {
     @Column(nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "sellerFulfilment", fetch = FetchType.LAZY)
-    private List<ShipmentItem> shipmentItems;
 
     public Long getId() {
         return id;
@@ -179,7 +175,6 @@ public class SellerFulfilment {
         private LocalDateTime collectedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
-        private List<ShipmentItem> shipmentItems;
 
         public SellerFulfilmentBuilder id(Long id) {
             this.id = id;
@@ -231,11 +226,6 @@ public class SellerFulfilment {
             return this;
         }
 
-        public SellerFulfilmentBuilder shipmentItems(List<ShipmentItem> shipmentItems) {
-            this.shipmentItems = shipmentItems;
-            return this;
-        }
-
         public SellerFulfilment build() {
             SellerFulfilment fulfilment = new SellerFulfilment();
             fulfilment.id = this.id;
@@ -248,7 +238,6 @@ public class SellerFulfilment {
             fulfilment.collectedAt = this.collectedAt;
             fulfilment.createdAt = this.createdAt;
             fulfilment.updatedAt = this.updatedAt;
-            fulfilment.shipmentItems = this.shipmentItems;
             return fulfilment;
         }
     }
