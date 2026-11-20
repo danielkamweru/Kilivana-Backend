@@ -81,6 +81,7 @@ class ServiceAuthorizationTest {
         @Bean org.springframework.security.crypto.password.PasswordEncoder encoder() { return mock(org.springframework.security.crypto.password.PasswordEncoder.class); }
         @Bean com.kilivana.backend.common.service.UserReferenceCodeGenerator references() { return mock(com.kilivana.backend.common.service.UserReferenceCodeGenerator.class); }
         @Bean SellerFulfilmentService fulfilmentService() { return mock(SellerFulfilmentService.class); }
+        @Bean com.kilivana.backend.logistics.fulfilment.service.ShipmentService shipmentService() { return mock(com.kilivana.backend.logistics.fulfilment.service.ShipmentService.class); }
     }
     @Autowired UserRepository users;
     @Autowired InspectionRepository inspections;

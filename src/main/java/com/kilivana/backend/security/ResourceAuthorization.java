@@ -21,6 +21,7 @@ public class ResourceAuthorization {
     private final OrderRepository orders;
     private final OrderItemRepository orderItems;
     private final PaymentRepository payments;
+    private final CheckoutQuoteRepository checkoutQuotes;
     private final DisputeRepository disputes;
     private final CartRepository carts;
     private final NotificationRepository notifications;
@@ -107,7 +108,24 @@ public class ResourceAuthorization {
     }
 
     public boolean payment(Long id) {
-        return admin() || payments.findById(id).map(p -> order(p.getOrderId())).orElse(false);
+        if (admin()) {
+            return true;
+        }
+        return payments.findById(id).map(payment -> {
+            // Payment-first checkout records the payment before the M-PESA
+            // callback creates and links its order. Authorize that pending
+            // payment through its quote's buyer instead of querying orders
+            // with a null ID.
+            if (payment.getOrderId() != null) {
+                return order(payment.getOrderId());
+            }
+            if (payment.getQuoteId() != null) {
+                return checkoutQuotes.findById(payment.getQuoteId())
+                        .map(quote -> buyer(quote.getUserId()))
+                        .orElse(false);
+            }
+            return false;
+        }).orElse(false);
     }
     public boolean dispute(Long id) {
         return admin() || disputes.findById(id).map(d -> self(d.getRaisedBy()) || order(d.getOrderId())).orElse(false);
