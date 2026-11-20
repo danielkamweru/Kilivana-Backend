@@ -158,21 +158,21 @@ public class DarajaCallbackService {
             if (resultCode == 0) {
                 // SUCCESS: Payment confirmed by M-PESA
                 Long callbackAmount = stk.getAmount();
-                if (callbackAmount != null) {
-                    BigDecimal callbackAmountDecimal = BigDecimal.valueOf(callbackAmount);
-                    if (callbackAmountDecimal.compareTo(payment.getAmount()) != 0) {
-                        log.warn("M-PESA amount mismatch: expected={}, callback={}, orderId={}",
-                                payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
-                        payment.setStatus(PaymentStatus.FAILED);
-                        payment.setCallbackStatus("PROCESSED");
-                        payment.setDarajaResultCode(resultCode);
-                        payment.setDarajaResultDesc("Amount mismatch: expected " + payment.getAmount()
-                                + ", received " + callbackAmountDecimal);
-                        paymentRepository.save(payment);
-                        updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, false);
-                        return new DarajaCallbackResponse();
-                    }
+            if (callbackAmount != null) {
+                BigDecimal callbackAmountDecimal = BigDecimal.valueOf(callbackAmount);
+                if (!amountsMatch(payment.getAmount(), callbackAmountDecimal)) {
+                    log.warn("M-PESA amount mismatch: expected={}, callback={}, orderId={}",
+                            payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
+                    payment.setStatus(PaymentStatus.FAILED);
+                    payment.setCallbackStatus("PROCESSED");
+                    payment.setDarajaResultCode(resultCode);
+                    payment.setDarajaResultDesc("Amount mismatch: expected " + payment.getAmount()
+                            + ", received " + callbackAmountDecimal);
+                    paymentRepository.save(payment);
+                    updateLinkedOrderPaymentStatus(payment, PaymentStatus.FAILED, false);
+                    return new DarajaCallbackResponse();
                 }
+            }
 
                 log.info("M-PESA payment confirmed: orderId={}, amount={}, receipt={}",
                         payment.getOrderId(), payment.getAmount(), payment.getMpesaReceiptNumber());
@@ -278,6 +278,24 @@ public class DarajaCallbackService {
         return resultCode == 1032;
     }
 
+    /**
+     * Compares the stored payment amount with the M-Pesa callback amount.
+     *
+     * <p>M-Pesa only accepts integer KES amounts, so the amount sent to
+     * Daraja (and returned in the callback) is rounded to the nearest
+     * shilling, while the payment record stores the exact cart total
+     * (e.g. 30.73). Round both sides to whole shillings before comparing so
+     * a 30.73 order paid as 31 KES is accepted, while a genuine mismatch
+     * (e.g. expected 30.73, received 35) is still rejected.
+     */
+    private boolean amountsMatch(BigDecimal expected, BigDecimal actual) {
+        if (expected == null || actual == null) {
+            return expected == actual;
+        }
+        return expected.setScale(0, java.math.RoundingMode.HALF_UP)
+                .compareTo(actual.setScale(0, java.math.RoundingMode.HALF_UP)) == 0;
+    }
+
     /** Parses Daraja transaction date (yyyyMMddHHmmss) to LocalDateTime. */
     private LocalDateTime parseTransactionDate(String dateStr) {
         try {
@@ -352,7 +370,7 @@ public class DarajaCallbackService {
                 Long amount = (amountObj instanceof Number) ? ((Number) amountObj).longValue()
                         : new java.math.BigDecimal(String.valueOf(amountObj)).longValue();
                 BigDecimal callbackAmountDecimal = BigDecimal.valueOf(amount);
-                if (callbackAmountDecimal.compareTo(payment.getAmount()) != 0) {
+                if (!amountsMatch(payment.getAmount(), callbackAmountDecimal)) {
                     log.warn("M-PESA amount mismatch (reconciliation): expected={}, query={}, orderId={}",
                             payment.getAmount(), callbackAmountDecimal, payment.getOrderId());
                     payment.setStatus(PaymentStatus.FAILED);
