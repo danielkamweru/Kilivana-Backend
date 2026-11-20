@@ -33,7 +33,7 @@ public class ShipmentItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "shipment_id", nullable = false)
     private Long shipmentId;
 
     @Column(nullable = false)
