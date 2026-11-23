@@ -68,6 +68,10 @@ public class Shipment {
     @Column(columnDefinition = "TEXT")
     private String driverInstructions;
 
+    /** Whether sales have been recorded for this shipment's items. */
+    @Column(name = "sales_recorded", nullable = false)
+    private boolean salesRecorded;
+
     /** Distance of the full route in kilometres, when supplied. */
     private Double distanceKm;
 
@@ -225,6 +229,14 @@ public class Shipment {
         this.completedAt = completedAt;
     }
 
+    public boolean isSalesRecorded() {
+        return salesRecorded;
+    }
+
+    public void setSalesRecorded(boolean salesRecorded) {
+        this.salesRecorded = salesRecorded;
+    }
+
     public LocalDateTime getCancelledAt() {
         return cancelledAt;
     }
@@ -300,6 +312,7 @@ public class Shipment {
         private LocalDateTime updatedAt;
         private List<ShipmentItem> shipmentItems;
         private List<ShipmentStop> shipmentStops;
+        private boolean salesRecorded;
 
         public ShipmentBuilder id(Long id) {
             this.id = id;
@@ -411,6 +424,11 @@ public class Shipment {
             return this;
         }
 
+        public ShipmentBuilder salesRecorded(boolean salesRecorded) {
+            this.salesRecorded = salesRecorded;
+            return this;
+        }
+
         public Shipment build() {
             Shipment shipment = new Shipment();
             shipment.id = this.id;
@@ -435,6 +453,7 @@ public class Shipment {
             shipment.updatedAt = this.updatedAt;
             shipment.shipmentItems = this.shipmentItems;
             shipment.shipmentStops = this.shipmentStops;
+            shipment.salesRecorded = this.salesRecorded;
             return shipment;
         }
     }

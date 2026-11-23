@@ -34,6 +34,8 @@ import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.repository.PickupStationRepository;
 import com.kilivana.backend.logistics.service.LogisticsService;
+import com.kilivana.backend.logistics.fulfilment.repository.ShipmentItemRepository;
+import com.kilivana.backend.logistics.fulfilment.repository.ShipmentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -83,6 +85,8 @@ class OrderServiceTest {
     @Mock private LogisticsJobRepository logisticsJobRepository;
     @Mock private FarmRepository farmRepository;
     @Mock private com.kilivana.backend.admin.repository.SupplierWarehouseRepository warehouseRepository;
+    @Mock private com.kilivana.backend.logistics.fulfilment.repository.ShipmentRepository shipmentRepository;
+    @Mock private com.kilivana.backend.logistics.fulfilment.repository.ShipmentItemRepository shipmentItemRepository;
     @Mock private com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService fulfilmentService;
     @Mock private com.kilivana.backend.logistics.fulfilment.service.ShipmentService shipmentService;
 
@@ -100,8 +104,8 @@ class OrderServiceTest {
                 userRepository, addressRepository, pickupStationRepository,
                 cartRepository, cartItemRepository, checkoutQuoteRepository,
                 farmerProfileRepository, supplierProfileRepository, driverProfileRepository,
-                logisticsService, fulfilmentService, shipmentService, logisticsJobRepository,
-                farmRepository, warehouseRepository);
+                logisticsService, fulfilmentService, shipmentService, shipmentRepository, shipmentItemRepository,
+                logisticsJobRepository, farmRepository, warehouseRepository);
 
         when(userRepository.existsById(BUYER_ID)).thenReturn(true);
         when(userRepository.findById(BUYER_ID)).thenReturn(Optional.of(User.builder().id(BUYER_ID).role(UserRole.BUYER).build()));

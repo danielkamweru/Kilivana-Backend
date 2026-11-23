@@ -13,6 +13,7 @@ import com.kilivana.backend.logistics.fulfilment.enums.StopType;
 import com.kilivana.backend.logistics.fulfilment.repository.ShipmentRepository;
 import com.kilivana.backend.logistics.fulfilment.repository.ShipmentStopRepository;
 import com.kilivana.backend.logistics.fulfilment.service.ShipmentService;
+import com.kilivana.backend.ecommerce.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class DriverShipmentController {
     private final ShipmentService shipmentService;
     private final ShipmentRepository shipmentRepository;
     private final ShipmentStopRepository shipmentStopRepository;
+    private final OrderService orderService;
 
     @Operation(summary = "List my shipments", description = "Returns all shipments assigned to the authenticated driver.")
     @GetMapping
@@ -151,13 +153,11 @@ public class DriverShipmentController {
         if (request.getNote() != null) stop.setInstructions(request.getNote());
         ShipmentStop saved = shipmentStopRepository.save(stop);
 
-        // If all stops completed, move shipment to DELIVERED
+        // If all stops completed, complete the shipment (records sales and updates order status)
         List<ShipmentStop> allStops = shipmentStopRepository.findByShipmentIdOrderByStopSequenceAsc(shipmentId);
         boolean allCompleted = allStops.stream().allMatch(s -> s.getStatus() == StopStatus.COMPLETED);
         if (allCompleted) {
-            shipment.setStatus(ShipmentStatus.DELIVERED);
-            shipment.setCompletedAt(LocalDateTime.now());
-            shipmentRepository.save(shipment);
+            orderService.completeShipment(shipmentId);
         }
 
         return ResponseEntity.ok(ApiResponse.success(toStopResponse(saved)));
@@ -177,10 +177,12 @@ public class DriverShipmentController {
             throw new ForbiddenException("Driver not assigned to this shipment");
         }
         if (request.getStatus() != null) {
+            // If setting to DELIVERED, use completeShipment to record sales and update order status
+            if (request.getStatus() == ShipmentStatus.DELIVERED) {
+                Shipment completed = orderService.completeShipment(id);
+                return ResponseEntity.ok(ApiResponse.success(toResponse(completed)));
+            }
             shipment.setStatus(request.getStatus());
-        }
-        if (request.getStatus() == ShipmentStatus.DELIVERED) {
-            shipment.setCompletedAt(LocalDateTime.now());
         }
         Shipment saved = shipmentRepository.save(shipment);
         return ResponseEntity.ok(ApiResponse.success(toResponse(saved)));
@@ -204,10 +206,8 @@ public class DriverShipmentController {
             throw new BadRequestException("Proof of delivery can only be filed for an active shipment");
         }
         // OTP verification would be validated here
-        shipment.setStatus(ShipmentStatus.DELIVERED);
-        shipment.setCompletedAt(LocalDateTime.now());
-        Shipment saved = shipmentRepository.save(shipment);
-        return ResponseEntity.ok(ApiResponse.success(toResponse(saved)));
+        Shipment completed = orderService.completeShipment(id);
+        return ResponseEntity.ok(ApiResponse.success(toResponse(completed)));
     }
 
     private ShipmentResponse toResponse(Shipment s) {

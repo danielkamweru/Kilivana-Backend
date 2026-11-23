@@ -45,12 +45,18 @@ import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.repository.ProductRepository;
 import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.logistics.fulfilment.repository.ShipmentItemRepository;
+import com.kilivana.backend.logistics.fulfilment.repository.ShipmentRepository;
+import com.kilivana.backend.logistics.fulfilment.entity.Shipment;
+import com.kilivana.backend.logistics.fulfilment.entity.ShipmentItem;
+import com.kilivana.backend.logistics.fulfilment.enums.ShipmentStatus;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
 import com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService;
 import com.kilivana.backend.logistics.fulfilment.service.ShipmentService;
 import com.kilivana.backend.logistics.service.LogisticsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -60,6 +66,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +85,7 @@ import java.util.Set;
  * product had at purchase, so an order keeps reading correctly after the
  * product is renamed or deleted.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -99,6 +107,8 @@ public class OrderService {
     private final LogisticsService logisticsService;
     private final SellerFulfilmentService sellerFulfilmentService;
     private final ShipmentService shipmentService;
+    private final ShipmentRepository shipmentRepository;
+    private final ShipmentItemRepository shipmentItemRepository;
     private final LogisticsJobRepository logisticsJobRepository;
     private final FarmRepository farmRepository;
     private final SupplierWarehouseRepository supplierWarehouseRepository;
@@ -934,6 +944,109 @@ public class OrderService {
             productRepository.save(product);
         }
         order.setSalesRecorded(true);
+    }
+
+    /**
+     * Records sales for a specific shipment's items. This increases soldQty and
+     * decreases reservedQty for the products in the shipment. Prevents duplicate
+     * recording by checking the shipment's salesRecorded flag.
+     *
+     * @param shipmentId the shipment that was delivered
+     */
+    @Transactional
+    public void recordSalesForShipment(Long shipmentId) {
+        Shipment shipment = shipmentRepository.findByIdForUpdate(shipmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment", shipmentId));
+
+        if (shipment.isSalesRecorded()) {
+            log.info("Sales already recorded for shipment {}", shipmentId);
+            return;
+        }
+
+        if (shipment.getStatus() != ShipmentStatus.DELIVERED) {
+            throw new BadRequestException("Can only record sales for a delivered shipment");
+        }
+
+        Order order = orderRepository.findById(shipment.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", shipment.getOrderId()));
+
+        if (!hasSuccessfulPayment(order.getPaymentStatus())) {
+            throw new BadRequestException("Order payment not successful");
+        }
+
+        // Get shipment items with their allocated quantities
+        List<ShipmentItem> shipmentItems = shipmentItemRepository.findByShipmentId(shipmentId);
+
+        // Group by product and sum allocated quantities
+        Map<Long, Integer> productQuantities = new TreeMap<>();
+        for (ShipmentItem si : shipmentItems) {
+            OrderItem oi = orderItemRepository.findById(si.getOrderItemId())
+                    .orElseThrow(() -> new ResourceNotFoundException("OrderItem", si.getOrderItemId()));
+            // Verify the order item belongs to this order
+            if (!oi.getOrderId().equals(order.getId())) {
+                throw new BadRequestException("Shipment item references order item from different order");
+            }
+            productQuantities.merge(oi.getProductId(), si.getAllocatedQuantity(), Math::addExact);
+        }
+
+        // Update product quantities
+        for (Map.Entry<Long, Integer> entry : productQuantities.entrySet()) {
+            Product product = productRepository.findByIdForUpdate(entry.getKey())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", entry.getKey()));
+            product.setSoldQty(Math.addExact(nullToZero(product.getSoldQty()), entry.getValue()));
+            product.setReservedQty(Math.max(0, nullToZero(product.getReservedQty()) - entry.getValue()));
+            productRepository.save(product);
+        }
+
+        // Mark shipment as sales recorded
+        shipment.setSalesRecorded(true);
+        shipmentRepository.save(shipment);
+
+        log.info("Recorded sales for shipment {}: {} products", shipmentId, productQuantities.size());
+    }
+
+    /**
+     * Completes a shipment: marks it as DELIVERED, records sales for its items,
+     * and updates the order status to DELIVERED if all shipments are delivered.
+     *
+     * @param shipmentId the shipment to complete
+     * @return the updated shipment
+     */
+    @Transactional
+    public Shipment completeShipment(Long shipmentId) {
+        Shipment shipment = shipmentRepository.findByIdForUpdate(shipmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment", shipmentId));
+
+        boolean wasAlreadyDelivered = shipment.getStatus() == ShipmentStatus.DELIVERED;
+
+        // Mark shipment as delivered if not already
+        if (!wasAlreadyDelivered) {
+            shipment.setStatus(ShipmentStatus.DELIVERED);
+            shipment.setCompletedAt(LocalDateTime.now());
+            shipmentRepository.save(shipment);
+        }
+
+        // Record sales for this shipment's items (idempotent via salesRecorded flag)
+        recordSalesForShipment(shipmentId);
+
+        // Check if all shipments for this order are delivered
+        List<Shipment> orderShipments = shipmentRepository.findByOrderId(shipment.getOrderId());
+        boolean allDelivered = orderShipments.stream()
+                .allMatch(s -> s.getStatus() == ShipmentStatus.DELIVERED);
+
+        if (allDelivered) {
+            Order order = orderRepository.findByIdForUpdate(shipment.getOrderId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Order", shipment.getOrderId()));
+            if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.COMPLETED) {
+                order.setStatus(OrderStatus.DELIVERED);
+                orderRepository.save(order);
+                orderEventRepository.save(OrderEvent.builder()
+                        .orderId(order.getId()).status(OrderStatus.DELIVERED).build());
+                log.info("Order {} marked as DELIVERED (all shipments delivered)", order.getId());
+            }
+        }
+
+        return shipment;
     }
 
     private void reverseRecordedSales(Order order) {
