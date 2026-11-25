@@ -69,7 +69,7 @@ public class Shipment {
     private String driverInstructions;
 
     /** Whether sales have been recorded for this shipment's items. */
-    @Column(name = "sales_recorded", nullable = false)
+    @Column(name = "sales_recorded", nullable = false, columnDefinition = "BOOLEAN NOT NULL DEFAULT FALSE")
     private boolean salesRecorded;
 
     /** Distance of the full route in kilometres, when supplied. */
