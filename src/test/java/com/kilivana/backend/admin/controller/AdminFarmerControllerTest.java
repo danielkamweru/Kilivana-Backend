@@ -13,6 +13,7 @@ import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.entity.FarmImage;
 import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.farm.service.AdminFarmerService;
 import com.kilivana.backend.config.SecurityConfig;
 import com.kilivana.backend.security.AccountAccessValidator;
 import com.kilivana.backend.security.JwtService;
@@ -63,6 +64,9 @@ class AdminFarmerControllerTest {
 
     @MockBean
     private FarmerProfileImageRepository farmerProfileImageRepository;
+
+    @MockBean
+    private AdminFarmerService adminFarmerService;
 
     private User farmer;
     private FarmerProfileImage profileImage;

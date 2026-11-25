@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,14 +20,33 @@ import java.util.stream.Collectors;
     public class AuditLogService {
 
     /**
-     * Read-only access to the immutable audit trail.
-     *
-     * <p>Audit logs are written by the {@code @EnableJpaAuditing} listener on every entity
-     * change; this service only exposes them. No write methods exist because the trail must
-     * never be altered.
+     * Read-only access to the immutable audit trail, plus a write method for
+     * recording administrative actions.
      */
 
     private final AuditLogRepository auditLogRepository;
+
+    /**
+     * Records an administrative action in the audit trail.
+     * This is the only write method — audit records are never updated or deleted.
+     *
+     * @param actorId    the administrator who performed the action
+     * @param action     the action type (e.g. UPDATE_PLATFORM_SETTINGS)
+     * @param entityType the type of entity affected (e.g. PlatformSetting)
+     * @param entityId   the ID of the affected entity
+     * @param metadata   optional JSON or text metadata (no secrets)
+     */
+    @Transactional
+    public AuditLog log(Long actorId, String action, String entityType, Long entityId, String metadata) {
+        AuditLog entry = AuditLog.builder()
+                .actorId(actorId)
+                .action(action)
+                .entityType(entityType)
+                .entityId(entityId)
+                .metadata(metadata)
+                .build();
+        return auditLogRepository.save(entry);
+    }
 
     public AuditLogResponse getAuditLogById(Long id) {
         AuditLog auditLog = auditLogRepository.findById(id)

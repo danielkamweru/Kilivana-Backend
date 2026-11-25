@@ -52,6 +52,23 @@ public class NotificationController {
     }
 
     /**
+     * Broadcasts a notification to every user on the platform.
+     *
+     * @param request the broadcast payload (type, title, message)
+     * @return the number of notifications created
+     */
+    @Operation(summary = "Broadcast a notification to all users",
+            description = "Creates a notification for every user on the platform. "
+                    + "Each user gets an independent notification with its own read state.")
+    @PostMapping("/broadcast")
+    public ResponseEntity<ApiResponse<Integer>> broadcastNotification(@RequestBody Notification request) {
+        int count = notificationService.broadcastNotification(
+                request.getType(), request.getTitle(), request.getMessage());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Broadcast sent to " + count + " users", count));
+    }
+
+    /**
      * Fetches a single notification by id.
      *
      * @param id the notification id

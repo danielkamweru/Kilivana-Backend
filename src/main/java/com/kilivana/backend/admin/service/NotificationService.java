@@ -3,6 +3,7 @@ package com.kilivana.backend.admin.service;
 import com.kilivana.backend.admin.dto.NotificationResponse;
 import com.kilivana.backend.admin.entity.Notification;
 import com.kilivana.backend.admin.repository.NotificationRepository;
+import com.kilivana.backend.admin.repository.UserRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
@@ -28,6 +29,7 @@ public class NotificationService {
      */
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public NotificationResponse createNotification(Notification notification) {
@@ -42,6 +44,35 @@ public class NotificationService {
         }
         Notification saved = notificationRepository.save(notification);
         return NotificationResponse.fromEntity(saved);
+    }
+
+    /**
+     * Broadcasts a notification to every active user. Creates one notification
+     * row per user so each user's read state is independent.
+     *
+     * @param type    the notification type
+     * @param title   the notification title
+     * @param message the notification body
+     * @return the number of notifications created
+     */
+    @Transactional
+    public int broadcastNotification(String type, String title, String message) {
+        if (type == null || type.isBlank()) {
+            throw new BadRequestException("type is required");
+        }
+        if (title == null || title.isBlank()) {
+            throw new BadRequestException("title is required");
+        }
+        List<Notification> notifications = userRepository.findAll().stream()
+                .map(user -> Notification.builder()
+                        .userId(user.getId())
+                        .type(type)
+                        .title(title)
+                        .message(message)
+                        .build())
+                .collect(Collectors.toList());
+        notificationRepository.saveAll(notifications);
+        return notifications.size();
     }
 
     @PreAuthorize("@resourceAuthorization.notification(#id)")
