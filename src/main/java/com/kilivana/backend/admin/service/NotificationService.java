@@ -4,6 +4,7 @@ import com.kilivana.backend.admin.dto.NotificationResponse;
 import com.kilivana.backend.admin.entity.Notification;
 import com.kilivana.backend.admin.repository.NotificationRepository;
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,6 +31,15 @@ public class NotificationService {
 
     @Transactional
     public NotificationResponse createNotification(Notification notification) {
+        if (notification.getUserId() == null) {
+            throw new BadRequestException("userId is required to create a notification");
+        }
+        if (notification.getType() == null || notification.getType().isBlank()) {
+            throw new BadRequestException("type is required to create a notification");
+        }
+        if (notification.getTitle() == null || notification.getTitle().isBlank()) {
+            throw new BadRequestException("title is required to create a notification");
+        }
         Notification saved = notificationRepository.save(notification);
         return NotificationResponse.fromEntity(saved);
     }
