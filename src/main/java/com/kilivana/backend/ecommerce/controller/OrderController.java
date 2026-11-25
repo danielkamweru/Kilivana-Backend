@@ -178,11 +178,19 @@ public class OrderController {
         java.util.List<SellerOrderSummary> summaries = orderService.searchOrders(null, sellerId, null, org.springframework.data.domain.Pageable.unpaged())
                 .getContent().stream().map(o -> {
                     java.math.BigDecimal total = java.math.BigDecimal.ZERO;
-                    int count = 0;
+                    java.util.List<SellerOrderSummary.SellerOrderItem> sellerItems = new java.util.ArrayList<>();
                     for (com.kilivana.backend.ecommerce.entity.OrderItem item : orderItemRepository.findByOrderId(o.getId())) {
                         if (sellerId.equals(item.getSellerId())) {
-                            count++;
-                            total = total.add(item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));
+                            java.math.BigDecimal subtotal = item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity()));
+                            total = total.add(subtotal);
+                            sellerItems.add(SellerOrderSummary.SellerOrderItem.builder()
+                                    .productId(item.getProductId())
+                                    .productName(item.getProductName())
+                                    .unit(item.getUnit())
+                                    .quantity(item.getQuantity())
+                                    .unitPrice(item.getUnitPrice())
+                                    .subtotal(subtotal)
+                                    .build());
                         }
                     }
                     return SellerOrderSummary.builder()
@@ -190,7 +198,8 @@ public class OrderController {
                             .status(o.getStatus().name())
                             .total(total)
                             .createdAt(o.getCreatedAt())
-                            .itemCount(count)
+                            .itemCount(sellerItems.size())
+                            .items(sellerItems)
                             .build();
                 }).toList();
         return ResponseEntity.ok(ApiResponse.success(summaries));
