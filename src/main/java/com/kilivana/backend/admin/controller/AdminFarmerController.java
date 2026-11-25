@@ -16,6 +16,7 @@ import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.admin.repository.UserRepository;
+import com.kilivana.backend.ecommerce.dto.OrderResponse;
 import com.kilivana.backend.farm.dto.FarmerListItem;
 import com.kilivana.backend.farm.dto.FarmerResponse;
 import com.kilivana.backend.farm.dto.FarmResponse;
@@ -24,6 +25,7 @@ import com.kilivana.backend.farm.entity.Farm;
 import com.kilivana.backend.farm.entity.FarmImage;
 import com.kilivana.backend.farm.repository.FarmImageRepository;
 import com.kilivana.backend.farm.repository.FarmRepository;
+import com.kilivana.backend.farm.service.AdminFarmerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +56,7 @@ public class AdminFarmerController {
     private final FarmImageRepository farmImageRepository;
     private final FarmerProfileImageRepository farmerProfileImageRepository;
     private final ProfileService profileService;
+    private final AdminFarmerService adminFarmerService;
 
     @Operation(summary = "Suspend a farmer",
             description = "Suspends the farmer account. The account stays; the farmer cannot sell or interact with the platform.")
@@ -122,6 +125,15 @@ public class AdminFarmerController {
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
         return ResponseEntity.ok(ApiResponse.success(toFarmerResponse(user)));
+    }
+
+    @Operation(summary = "Get farmer purchases",
+            description = "Returns all orders the farmer has placed as a buyer.")
+    @GetMapping("/{farmerId}/purchases")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getFarmerPurchases(
+            @PathVariable Long farmerId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminFarmerService.getFarmerPurchases(farmerId)));
     }
 
     @Operation(summary = "Update a farmer profile")

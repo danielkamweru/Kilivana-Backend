@@ -10,6 +10,9 @@ import com.kilivana.backend.common.enums.UserStatus;
 import com.kilivana.backend.common.enums.VerificationStatus;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.ecommerce.dto.OrderResponse;
+import com.kilivana.backend.ecommerce.repository.OrderRepository;
+import com.kilivana.backend.ecommerce.service.OrderService;
 import com.kilivana.backend.farm.dto.FarmerListItem;
 import com.kilivana.backend.farm.dto.FarmerResponse;
 import com.kilivana.backend.farm.dto.FarmImageResponse;
@@ -45,6 +48,8 @@ import java.util.stream.Collectors;
     private final FarmRepository farmRepository;
     private final FarmImageRepository farmImageRepository;
     private final FarmerProfileImageRepository farmerProfileImageRepository;
+    private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
     @Transactional(readOnly = true)
     public Page<FarmerListItem> listFarmers(String search, String county, UserStatus accountStatus,
@@ -106,6 +111,19 @@ import java.util.stream.Collectors;
         User user = userRepository.findByIdAndRole(id, UserRole.FARMER)
                 .orElseThrow(() -> new ResourceNotFoundException("Farmer", id));
         return toFarmerResponse(user);
+    }
+
+    /**
+     * Returns all orders the farmer has placed as a buyer.
+     * Uses the existing {@code buyerId} relationship on {@link com.kilivana.backend.ecommerce.entity.Order}.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getFarmerPurchases(Long farmerId) {
+        userRepository.findByIdAndRole(farmerId, UserRole.FARMER)
+                .orElseThrow(() -> new ResourceNotFoundException("Farmer", farmerId));
+        return orderRepository.findByBuyerId(farmerId).stream()
+                .map(orderService::toResponse)
+                .toList();
     }
 
     @Transactional
