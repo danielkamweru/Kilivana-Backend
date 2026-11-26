@@ -56,7 +56,10 @@ public class SecurityConfig {
         // endpoint is public. It is defended in the callback service instead: the
         // callback must match a payment that was really initiated (checkout request
         // and merchant request ids) and is applied idempotently.
-        "/api/v1/payments/daraja/callback"
+        "/api/v1/payments/daraja/callback",
+        // B2C callbacks for seller payouts
+        "/api/v1/payments/b2c/callback",
+        "/api/v1/payments/b2c/queue-timeout"
     };
 
     @Bean

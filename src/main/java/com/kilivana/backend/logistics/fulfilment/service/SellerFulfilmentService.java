@@ -7,6 +7,7 @@ import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.ecommerce.entity.OrderItem;
 import com.kilivana.backend.ecommerce.repository.OrderItemRepository;
+import com.kilivana.backend.finance.service.FulfilmentWalletService;
 import com.kilivana.backend.logistics.fulfilment.entity.SellerFulfilment;
 import com.kilivana.backend.logistics.fulfilment.enums.FulfilmentStatus;
 import com.kilivana.backend.logistics.fulfilment.repository.SellerFulfilmentRepository;
@@ -40,6 +41,7 @@ public class SellerFulfilmentService {
     private final SellerFulfilmentRepository fulfilmentRepository;
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
+    private final FulfilmentWalletService fulfilmentWalletService;
 
     /**
      * Creates (or returns existing) seller fulfilment records for every distinct
@@ -125,6 +127,20 @@ public class SellerFulfilmentService {
         SellerFulfilment saved = fulfilmentRepository.save(fulfilment);
         log.info("Seller fulfilment {} status {} -> {} (updated by {})",
                 fulfilmentId, previous.wire(), status.wire(), updatedBy);
+
+        // Integrate with wallet service for financial lifecycle
+        try {
+            if (status == FulfilmentStatus.COLLECTED) {
+                fulfilmentWalletService.onFulfilmentDelivered(fulfilmentId, updatedBy);
+            } else if (status == FulfilmentStatus.CANCELLED) {
+                String reason = "Fulfilment cancelled by user " + updatedBy;
+                fulfilmentWalletService.onFulfilmentCancelled(fulfilmentId, updatedBy, reason);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process wallet integration for fulfilment {}: {}", fulfilmentId, e.getMessage(), e);
+            // Don't fail the status update - wallet integration can be retried
+        }
+
         return saved;
     }
 
