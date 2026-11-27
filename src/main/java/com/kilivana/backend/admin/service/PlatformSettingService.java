@@ -7,10 +7,11 @@ import com.kilivana.backend.admin.repository.PlatformSettingRepository;
 import com.kilivana.backend.common.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -30,16 +31,20 @@ public class PlatformSettingService {
     private static final int MAX_PAYOUT_DELAY_DAYS = 365;
     private static final BigDecimal MAX_FEE_VALUE = new BigDecimal("100000.00");
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void initializeDefaults() {
-        if (settingRepository.findTopByOrderByIdAsc().isEmpty()) {
-            settingRepository.save(PlatformSetting.builder()
-                    .transactionFee(DEFAULT_TRANSACTION_FEE)
-                    .inspectionFee(DEFAULT_INSPECTION_FEE)
-                    .payoutDelayDays(DEFAULT_PAYOUT_DELAY_DAYS)
-                    .build());
-            log.info("Initialized default platform settings");
+        try {
+            if (settingRepository.findTopByOrderByIdAsc().isEmpty()) {
+                settingRepository.save(PlatformSetting.builder()
+                        .transactionFee(DEFAULT_TRANSACTION_FEE)
+                        .inspectionFee(DEFAULT_INSPECTION_FEE)
+                        .payoutDelayDays(DEFAULT_PAYOUT_DELAY_DAYS)
+                        .build());
+                log.info("Initialized default platform settings");
+            }
+        } catch (Exception e) {
+            log.warn("Could not initialize platform settings (schema may not be ready yet): {}", e.getMessage());
         }
     }
 
