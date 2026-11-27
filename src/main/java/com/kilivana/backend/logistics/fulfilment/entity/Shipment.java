@@ -256,6 +256,14 @@ public class Shipment {
         this.cancellationReason = cancellationReason;
     }
 
+    public Long getSettlementId() {
+        return settlementId;
+    }
+
+    public void setSettlementId(Long settlementId) {
+        this.settlementId = settlementId;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -316,6 +324,7 @@ public class Shipment {
         private List<ShipmentItem> shipmentItems;
         private List<ShipmentStop> shipmentStops;
         private boolean salesRecorded;
+        private Long settlementId;
 
         public ShipmentBuilder id(Long id) {
             this.id = id;
@@ -432,6 +441,11 @@ public class Shipment {
             return this;
         }
 
+        public ShipmentBuilder settlementId(Long settlementId) {
+            this.settlementId = settlementId;
+            return this;
+        }
+
         public Shipment build() {
             Shipment shipment = new Shipment();
             shipment.id = this.id;
@@ -457,6 +471,7 @@ public class Shipment {
             shipment.shipmentItems = this.shipmentItems;
             shipment.shipmentStops = this.shipmentStops;
             shipment.salesRecorded = this.salesRecorded;
+            shipment.settlementId = this.settlementId;
             return shipment;
         }
     }
