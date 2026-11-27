@@ -50,13 +50,23 @@ public class SellerWalletService {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", sellerId));
 
-        if (seller.getRole() != UserRole.FARMER && seller.getRole() != UserRole.SUPPLIER) {
-            throw new BadRequestException("User " + sellerId + " is not a farmer or supplier");
+        if (seller.getRole() != UserRole.FARMER
+                && seller.getRole() != UserRole.SUPPLIER
+                && seller.getRole() != UserRole.TRANSPORT_PROVIDER) {
+            throw new BadRequestException("User " + sellerId + " is not a farmer, supplier, or transport provider");
         }
 
-        // Get or create seller payable ledger account
-        ledgerService.getOrCreateSellerAccount(sellerId, com.kilivana.backend.finance.enums.LedgerAccountType.SELLER_PAYABLES,
-                "Payable - " + seller.getName());
+        // Get or create appropriate payable ledger account based on role
+        com.kilivana.backend.finance.enums.LedgerAccountType accountType;
+        String accountName;
+        if (seller.getRole() == UserRole.TRANSPORT_PROVIDER) {
+            accountType = com.kilivana.backend.finance.enums.LedgerAccountType.TRANSPORT_PAYABLES;
+            accountName = "Transport Payable - " + seller.getName();
+        } else {
+            accountType = com.kilivana.backend.finance.enums.LedgerAccountType.SELLER_PAYABLES;
+            accountName = "Payable - " + seller.getName();
+        }
+        ledgerService.getOrCreateSellerAccount(sellerId, accountType, accountName);
 
         SellerWallet wallet = SellerWallet.builder()
                 .sellerId(sellerId)

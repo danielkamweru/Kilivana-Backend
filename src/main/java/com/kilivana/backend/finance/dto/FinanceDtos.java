@@ -3,6 +3,8 @@ package com.kilivana.backend.finance.dto;
 import com.kilivana.backend.finance.enums.LedgerAccountType;
 import com.kilivana.backend.finance.enums.PayoutMethod;
 import com.kilivana.backend.finance.enums.PayoutStatus;
+import com.kilivana.backend.finance.enums.SettlementAllocationType;
+import com.kilivana.backend.finance.enums.SettlementStatus;
 import com.kilivana.backend.finance.enums.WalletTransactionStatus;
 import com.kilivana.backend.finance.enums.WalletTransactionType;
 import com.kilivana.backend.finance.entity.FinancialAuditLog;
@@ -13,6 +15,8 @@ import com.kilivana.backend.finance.entity.RefundTransaction;
 import com.kilivana.backend.finance.entity.SellerPayout;
 import com.kilivana.backend.finance.entity.SellerPayoutAccount;
 import com.kilivana.backend.finance.entity.SellerWallet;
+import com.kilivana.backend.finance.entity.Settlement;
+import com.kilivana.backend.finance.entity.SettlementAllocation;
 import com.kilivana.backend.finance.entity.WalletTransaction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -519,5 +523,111 @@ public class FinanceDtos {
         private BigDecimal totalCollections;
         private BigDecimal totalPayouts;
         private BigDecimal totalRefunds;
+    }
+
+    // ==================== SETTLEMENT DTOs ====================
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SettlementAllocationResponse {
+        private Long id;
+        private UUID uuid;
+        private Long settlementId;
+        private SettlementAllocationType allocationType;
+        private BigDecimal amount;
+        private String description;
+        private Long sellerId;
+        private Long walletTransactionId;
+        private String walletTransactionReference;
+        private LocalDateTime createdAt;
+
+        public static SettlementAllocationResponse fromEntity(SettlementAllocation allocation) {
+            return SettlementAllocationResponse.builder()
+                    .id(allocation.getId())
+                    .uuid(allocation.getUuid())
+                    .settlementId(allocation.getSettlementId())
+                    .allocationType(allocation.getAllocationType())
+                    .amount(allocation.getAmount())
+                    .description(allocation.getDescription())
+                    .sellerId(allocation.getSellerId())
+                    .walletTransactionId(allocation.getWalletTransactionId())
+                    .walletTransactionReference(allocation.getWalletTransactionReference())
+                    .createdAt(allocation.getCreatedAt())
+                    .build();
+        }
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SettlementResponse {
+        private Long id;
+        private UUID uuid;
+        private String settlementReference;
+        private Long shipmentId;
+        private Long orderId;
+        private Long sellerId;
+        private Long buyerId;
+        private Long transportProviderId;
+        private Long paymentId;
+        private SettlementStatus status;
+        private BigDecimal grossAmount;
+        private BigDecimal commissionAmount;
+        private BigDecimal transportFeeAmount;
+        private BigDecimal inspectionFeeAmount;
+        private BigDecimal platformRevenue;
+        private BigDecimal sellerNetEarnings;
+        private BigDecimal transportProviderPayable;
+        private BigDecimal buyerPaidAmount;
+        private String description;
+        private LocalDateTime createdAt;
+        private LocalDateTime settlementDate;
+        private LocalDateTime settledAt;
+        private LocalDateTime confirmedAt;
+        private LocalDateTime failedAt;
+        private String failureReason;
+        private Integer retryCount;
+        private List<SettlementAllocationResponse> allocations;
+
+        public static SettlementResponse fromEntity(Settlement settlement) {
+            List<SettlementAllocationResponse> allocations = settlement.getAllocations() == null
+                    ? List.of()
+                    : settlement.getAllocations().stream()
+                    .map(SettlementAllocationResponse::fromEntity)
+                    .collect(java.util.stream.Collectors.toList());
+
+            return SettlementResponse.builder()
+                    .id(settlement.getId())
+                    .uuid(settlement.getUuid())
+                    .settlementReference(settlement.getSettlementReference())
+                    .shipmentId(settlement.getShipmentId())
+                    .orderId(settlement.getOrderId())
+                    .sellerId(settlement.getSellerId())
+                    .buyerId(settlement.getBuyerId())
+                    .transportProviderId(settlement.getTransportProviderId())
+                    .paymentId(settlement.getPaymentId())
+                    .status(settlement.getStatus())
+                    .grossAmount(settlement.getGrossAmount())
+                    .commissionAmount(settlement.getCommissionAmount())
+                    .transportFeeAmount(settlement.getTransportFeeAmount())
+                    .inspectionFeeAmount(settlement.getInspectionFeeAmount())
+                    .platformRevenue(settlement.getPlatformRevenue())
+                    .sellerNetEarnings(settlement.getSellerNetEarnings())
+                    .transportProviderPayable(settlement.getTransportProviderPayable())
+                    .buyerPaidAmount(settlement.getBuyerPaidAmount())
+                    .description(settlement.getDescription())
+                    .createdAt(settlement.getCreatedAt())
+                    .settlementDate(settlement.getSettlementDate())
+                    .settledAt(settlement.getSettledAt())
+                    .confirmedAt(settlement.getConfirmedAt())
+                    .failedAt(settlement.getFailedAt())
+                    .failureReason(settlement.getFailureReason())
+                    .retryCount(settlement.getRetryCount())
+                    .allocations(allocations)
+                    .build();
+        }
     }
 }

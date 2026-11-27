@@ -4,6 +4,10 @@ import com.kilivana.backend.common.dto.ApiResponse;
 import com.kilivana.backend.common.exception.BadRequestException;
 import com.kilivana.backend.common.exception.ForbiddenException;
 import com.kilivana.backend.common.exception.ResourceNotFoundException;
+import com.kilivana.backend.finance.dto.FinanceDtos;
+import com.kilivana.backend.finance.entity.DeliveryOtpVerification;
+import com.kilivana.backend.finance.entity.Settlement;
+import com.kilivana.backend.finance.service.SettlementService;
 import com.kilivana.backend.logistics.fulfilment.dto.*;
 import com.kilivana.backend.logistics.fulfilment.entity.Shipment;
 import com.kilivana.backend.logistics.fulfilment.entity.ShipmentStop;
@@ -23,13 +27,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * Driver-facing shipment management: accept assigned shipments, mark arrival
- * and completion of stops, update shipment status, and file proof of delivery.
+ * and completion of stops, update shipment status, request/verify delivery OTP,
+ * and file proof of delivery.
  */
-@Tag(name = "Driver Shipments", description = "Driver shipment tasks: accept, stop arrival/completion, proof of delivery")
+@Tag(name = "Driver Shipments", description = "Driver shipment tasks: accept, stop arrival/completion, OTP request/verify, proof of delivery")
 @RestController
 @RequestMapping("/api/v1/driver/shipments")
 @RequiredArgsConstructor
@@ -39,6 +45,7 @@ public class DriverShipmentController {
     private final ShipmentRepository shipmentRepository;
     private final ShipmentStopRepository shipmentStopRepository;
     private final OrderService orderService;
+    private final SettlementService settlementService;
 
     @Operation(summary = "List my shipments", description = "Returns all shipments assigned to the authenticated driver.")
     @GetMapping
@@ -208,6 +215,85 @@ public class DriverShipmentController {
         // OTP verification would be validated here
         Shipment completed = orderService.completeShipment(id);
         return ResponseEntity.ok(ApiResponse.success(toResponse(completed)));
+    }
+
+    // ==================== DELIVERY OTP ENDPOINTS ====================
+
+    @Operation(summary = "Request delivery OTP", description = "Driver requests a delivery OTP for a specific shipment. The OTP is sent to the buyer.")
+    @PostMapping("/{shipmentId}/request-otp")
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> requestDeliveryOtp(
+            @PathVariable Long shipmentId,
+            @RequestParam Long driverId) {
+        Long actorId = com.kilivana.backend.security.CurrentUser.id();
+        if (!java.util.Objects.equals(driverId, actorId) && !com.kilivana.backend.security.CurrentUser.hasRole("ADMIN")) {
+            throw new ForbiddenException("Driver may only request OTP for their own shipments");
+        }
+
+        DeliveryOtpVerification verification = settlementService.requestDeliveryOtp(shipmentId, driverId);
+
+        Map<String, Object> response = Map.of(
+                "shipmentId", shipmentId,
+                "orderId", verification.getOrderId(),
+                "status", "OTP_SENT",
+                "otpVerificationId", verification.getId(),
+                "expiresAt", verification.getOtpExpiresAt()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(summary = "Confirm delivery with OTP", description = "Driver submits the OTP received from the buyer to confirm delivery and trigger settlement.")
+    @PostMapping("/{shipmentId}/confirm-delivery")
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> confirmDeliveryWithOtp(
+            @PathVariable Long shipmentId,
+            @RequestParam Long driverId,
+            @RequestBody Map<String, String> request) {
+        Long actorId = com.kilivana.backend.security.CurrentUser.id();
+        if (!java.util.Objects.equals(driverId, actorId) && !com.kilivana.backend.security.CurrentUser.hasRole("ADMIN")) {
+            throw new ForbiddenException("Driver may only confirm delivery for their own shipments");
+        }
+
+        String otp = request.get("otp");
+        if (otp == null || otp.trim().isEmpty()) {
+            throw new BadRequestException("OTP is required");
+        }
+
+        Settlement settlement = settlementService.confirmDeliveryWithOtp(shipmentId, driverId, otp);
+
+        Map<String, Object> response = Map.of(
+                "shipmentId", shipmentId,
+                "deliveryStatus", "DELIVERED",
+                "settlementStatus", settlement.getStatus().wire(),
+                "settlementId", settlement.getId(),
+                "settlementReference", settlement.getSettlementReference(),
+                "deliveredAt", settlement.getSettledAt(),
+                "sellerNetEarnings", settlement.getSellerNetEarnings(),
+                "transportProviderPayable", settlement.getTransportProviderPayable(),
+                "platformRevenue", settlement.getPlatformRevenue()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // ==================== SETTLEMENT VIEW ENDPOINTS ====================
+
+    @Operation(summary = "Get settlement for shipment", description = "Returns the financial settlement details for a shipment.")
+    @GetMapping("/{shipmentId}/settlement")
+    @PreAuthorize("@resourceAuthorization.driver(#driverId)")
+    public ResponseEntity<ApiResponse<FinanceDtos.SettlementResponse>> getShipmentSettlement(
+            @PathVariable Long shipmentId,
+            @RequestParam Long driverId) {
+        Long actorId = com.kilivana.backend.security.CurrentUser.id();
+        if (!java.util.Objects.equals(driverId, actorId) && !com.kilivana.backend.security.CurrentUser.hasRole("ADMIN")) {
+            throw new ForbiddenException("Driver may only view settlement for their own shipments");
+        }
+
+        Settlement settlement = settlementService.getSettlementByShipmentId(shipmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Settlement for shipment", shipmentId));
+
+        return ResponseEntity.ok(ApiResponse.success(FinanceDtos.SettlementResponse.fromEntity(settlement)));
     }
 
     private ShipmentResponse toResponse(Shipment s) {
