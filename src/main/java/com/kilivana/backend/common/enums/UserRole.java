@@ -12,6 +12,7 @@ public enum UserRole {
     SUPPLIER,
     INSPECTOR,
     DRIVER,
+    TRANSPORT_PROVIDER,
     ADMIN;
 
     /**
@@ -37,6 +38,7 @@ public enum UserRole {
             case BUYER -> "B";
             case SUPPLIER -> "S";
             case DRIVER -> "DA";
+            case TRANSPORT_PROVIDER -> "TP";
             case INSPECTOR -> "IN";
             case ADMIN -> "AD";
         };
@@ -44,5 +46,13 @@ public enum UserRole {
 
     public String referenceCode(long sequence) {
         return referencePrefix() + "-" + String.format("%03d", sequence);
+    }
+
+    public boolean isSeller() {
+        return this == FARMER || this == SUPPLIER;
+    }
+
+    public boolean isTransportRelated() {
+        return this == DRIVER || this == TRANSPORT_PROVIDER;
     }
 }

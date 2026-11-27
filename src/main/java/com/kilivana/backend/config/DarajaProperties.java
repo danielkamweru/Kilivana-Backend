@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Safaricom Daraja (M-PESA Express / STK Push) configuration.
+ * Safaricom Daraja (M-PESA Express / STK Push and B2C) configuration.
  * All credentials are sourced from environment variables — never committed to source.
  * The sandbox environment is the default; switch to "production" only after
  * passing Safaricom's go-live checks.
@@ -73,6 +73,14 @@ public class DarajaProperties {
      * payments, and any linked order is marked payment-failed.
      */
     private int pendingTimeoutMinutes = 30;
+
+    // B2C (Business to Customer) Configuration for seller payouts
+    private String initiatorName;
+    private String initiatorPassword;
+    private String securityCredential;
+    private String b2cShortcode;
+    private String b2cResultUrl;
+    private String b2cQueueTimeoutUrl;
 
     public String getConsumerKey() {
         return consumerKey;
@@ -193,5 +201,66 @@ public class DarajaProperties {
             return "https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query";
         }
         return "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query";
+    }
+
+    // B2C Getters and Setters
+    public String getInitiatorName() {
+        return initiatorName;
+    }
+
+    public void setInitiatorName(String initiatorName) {
+        this.initiatorName = initiatorName;
+    }
+
+    public String getInitiatorPassword() {
+        return initiatorPassword;
+    }
+
+    public void setInitiatorPassword(String initiatorPassword) {
+        this.initiatorPassword = initiatorPassword;
+    }
+
+    public String getSecurityCredential() {
+        return securityCredential;
+    }
+
+    public void setSecurityCredential(String securityCredential) {
+        this.securityCredential = securityCredential;
+    }
+
+    public String getB2cShortcode() {
+        return b2cShortcode != null ? b2cShortcode : shortcode;
+    }
+
+    public void setB2cShortcode(String b2cShortcode) {
+        this.b2cShortcode = b2cShortcode;
+    }
+
+    public String getB2cResultUrl() {
+        if (b2cResultUrl != null && !b2cResultUrl.isBlank()) return b2cResultUrl;
+        if (publicBaseUrl == null || publicBaseUrl.isBlank()) return "/api/v1/payments/b2c/callback";
+        return publicBaseUrl.replaceAll("\\/+$", "") + "/api/v1/payments/b2c/callback";
+    }
+
+    public void setB2cResultUrl(String b2cResultUrl) {
+        this.b2cResultUrl = b2cResultUrl;
+    }
+
+    public String getB2cQueueTimeoutUrl() {
+        if (b2cQueueTimeoutUrl != null && !b2cQueueTimeoutUrl.isBlank()) return b2cQueueTimeoutUrl;
+        if (publicBaseUrl == null || publicBaseUrl.isBlank()) return "/api/v1/payments/b2c/queue-timeout";
+        return publicBaseUrl.replaceAll("\\/+$", "") + "/api/v1/payments/b2c/queue-timeout";
+    }
+
+    public void setB2cQueueTimeoutUrl(String b2cQueueTimeoutUrl) {
+        this.b2cQueueTimeoutUrl = b2cQueueTimeoutUrl;
+    }
+
+    /** Returns the B2C endpoint for the configured environment. */
+    public String getB2cUrl() {
+        if ("production".equalsIgnoreCase(environment)) {
+            return "https://api.safaricom.co.ke/mpesa/b2c/v1/paymentrequest";
+        }
+        return "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest";
     }
 }

@@ -12,6 +12,7 @@ import com.kilivana.backend.ecommerce.repository.CallbackInboxRepository;
 import com.kilivana.backend.ecommerce.repository.OrderRepository;
 import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.ecommerce.service.OrderService;
+import com.kilivana.backend.finance.service.PaymentAllocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,7 @@ public class DarajaCallbackService {
     private final DarajaService darajaService;
     private final CallbackInboxRepository callbackInboxRepository;
     private final DarajaProperties darajaProperties;
+    private final PaymentAllocationService paymentAllocationService;
 
     /**
      * Processes the Daraja callback and updates the payment.
@@ -220,6 +222,16 @@ public class DarajaCallbackService {
             paymentRepository.save(payment);
             log.info("Daraja callback processed for orderId={}, paymentId={}, status={}",
                     payment.getOrderId(), payment.getId(), payment.getStatus());
+
+            // Allocate payment to seller wallets if payment is successful and order exists
+            if (payment.getStatus() == PaymentStatus.PAID && payment.getOrderId() != null) {
+                try {
+                    paymentAllocationService.allocatePayment(payment.getId());
+                } catch (Exception e) {
+                    log.error("Failed to allocate payment {} to seller wallets: {}", payment.getId(), e.getMessage(), e);
+                    // Don't fail the callback - allocation can be retried via reconciliation
+                }
+            }
 
         } catch (Exception e) {
             log.error("Error processing Daraja callback for checkoutRequestId={}: {}: {}",
@@ -442,6 +454,15 @@ public class DarajaCallbackService {
         paymentRepository.save(payment);
         log.info("Reconciliation complete for orderId={}, paymentId={}, status={}",
                 payment.getOrderId(), payment.getId(), payment.getStatus());
+
+        // Allocate payment to seller wallets if reconciliation confirms PAID and order exists
+        if (payment.getStatus() == PaymentStatus.PAID && payment.getOrderId() != null) {
+            try {
+                paymentAllocationService.allocatePayment(payment.getId());
+            } catch (Exception e) {
+                log.error("Failed to allocate payment {} to seller wallets after reconciliation: {}", payment.getId(), e.getMessage(), e);
+            }
+        }
     }
 
     /**
