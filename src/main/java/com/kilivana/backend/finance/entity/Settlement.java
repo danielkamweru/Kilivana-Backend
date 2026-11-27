@@ -263,6 +263,11 @@ public class Settlement {
         return createdAt;
     }
 
+    /** Delivery confirmed timestamp (alias for deliveryConfirmedAt). */
+    public LocalDateTime getConfirmedAt() {
+        return deliveryConfirmedAt;
+    }
+
     public boolean isTerminal() {
         return status == SettlementStatus.SETTLED
                 || status == SettlementStatus.REFUNDED

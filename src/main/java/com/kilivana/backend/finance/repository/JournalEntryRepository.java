@@ -43,4 +43,6 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, Long
 
     @Query("SELECT SUM(l.creditAmount) FROM JournalLine l JOIN l.journalEntry j WHERE j.posted = true AND l.account.accountType = :accountType AND j.entryDate BETWEEN :from AND :to")
     BigDecimal sumCreditsByAccountTypeAndDateRange(@Param("accountType") com.kilivana.backend.finance.enums.LedgerAccountType accountType, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    boolean existsByReversalOf(Long journalEntryId);
 }

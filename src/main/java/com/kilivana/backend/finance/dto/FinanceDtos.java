@@ -1,5 +1,6 @@
 package com.kilivana.backend.finance.dto;
 
+import com.kilivana.backend.common.enums.PaymentStatus;
 import com.kilivana.backend.finance.enums.LedgerAccountType;
 import com.kilivana.backend.finance.enums.PayoutMethod;
 import com.kilivana.backend.finance.enums.PayoutStatus;
