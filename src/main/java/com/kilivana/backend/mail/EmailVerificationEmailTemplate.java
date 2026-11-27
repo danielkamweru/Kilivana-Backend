@@ -8,7 +8,8 @@ public class EmailVerificationEmailTemplate {
     public String roleLabel(UserRole role) {
         return switch(role) {
             case FARMER -> "Farmer"; case SUPPLIER -> "Supplier"; case INSPECTOR -> "Inspector";
-            case BUYER -> "Customer"; case DRIVER -> "Driver"; case ADMIN -> "Administrator";
+            case BUYER -> "Customer"; case DRIVER -> "Driver"; case TRANSPORT_PROVIDER -> "Transport provider";
+            case ADMIN -> "Administrator";
         };
     }
     public String subject(UserRole role) { return "Kilivana \u2014 "+roleLabel(role)+" Email Verification"; }
