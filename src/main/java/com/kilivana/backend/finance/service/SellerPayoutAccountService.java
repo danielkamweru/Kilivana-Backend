@@ -102,7 +102,7 @@ public class SellerPayoutAccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("SellerPayoutAccount", accountId));
 
         // Verify ownership
-        if (!account.getSellerId().equals(request.getSellerId())) {
+        if (!account.getSellerId().equals(actorId)) {
             throw new BadRequestException("Account does not belong to this seller");
         }
 

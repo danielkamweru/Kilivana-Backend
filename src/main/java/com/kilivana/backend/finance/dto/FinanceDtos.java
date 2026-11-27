@@ -182,7 +182,7 @@ public class FinanceDtos {
                     .id(wallet.getId())
                     .uuid(wallet.getUuid())
                     .sellerId(wallet.getSellerId())
-                    .sellerType(wallet.getSellerType() != null ? wallet.getSellerType().wire() : null)
+                    .sellerType(wallet.getSellerType() != null ? wallet.getSellerType().name() : null)
                     .pendingBalance(wallet.getPendingBalance())
                     .availableBalance(wallet.getAvailableBalance())
                     .processingBalance(wallet.getProcessingBalance())
@@ -433,11 +433,12 @@ public class FinanceDtos {
         private Long buyerId;
         private BigDecimal amount;
         private String reason;
-        private String status;
+        private PaymentStatus status;
         private String reference;
         private String providerReference;
         private Integer providerResultCode;
         private String providerResultDesc;
+        private String mpesaReceiptNumber;
         private Long approvedBy;
         private LocalDateTime approvedAt;
         private String rejectionReason;
@@ -461,6 +462,7 @@ public class FinanceDtos {
                     .providerReference(refund.getProviderReference())
                     .providerResultCode(refund.getProviderResultCode())
                     .providerResultDesc(refund.getProviderResultDesc())
+                    .mpesaReceiptNumber(refund.getMpesaReceiptNumber())
                     .approvedBy(refund.getApprovedBy())
                     .approvedAt(refund.getApprovedAt())
                     .rejectionReason(refund.getRejectionReason())
@@ -538,9 +540,9 @@ public class FinanceDtos {
         private SettlementAllocationType allocationType;
         private BigDecimal amount;
         private String description;
-        private Long sellerId;
+        private Long recipientUserId;
         private Long walletTransactionId;
-        private String walletTransactionReference;
+        private Long ledgerJournalEntryId;
         private LocalDateTime createdAt;
 
         public static SettlementAllocationResponse fromEntity(SettlementAllocation allocation) {
@@ -551,9 +553,9 @@ public class FinanceDtos {
                     .allocationType(allocation.getAllocationType())
                     .amount(allocation.getAmount())
                     .description(allocation.getDescription())
-                    .sellerId(allocation.getSellerId())
+                    .recipientUserId(allocation.getRecipientUserId())
                     .walletTransactionId(allocation.getWalletTransactionId())
-                    .walletTransactionReference(allocation.getWalletTransactionReference())
+                    .ledgerJournalEntryId(allocation.getLedgerJournalEntryId())
                     .createdAt(allocation.getCreatedAt())
                     .build();
         }

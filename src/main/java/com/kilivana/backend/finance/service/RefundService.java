@@ -219,7 +219,7 @@ public class RefundService {
     public void processRefundCallback(String providerReference, int resultCode, String resultDesc,
                                       String mpesaReceiptNumber, Long actorId) {
         RefundTransaction refund = refundRepository.findByProviderReference(providerReference)
-                .orElseThrow(() -> new ResourceNotFoundException("RefundTransaction by provider reference", providerReference));
+                .orElseThrow(() -> new ResourceNotFoundException("RefundTransaction with providerReference: " + providerReference));
 
         refund.setProviderReference(providerReference);
         refund.setProviderResultCode(resultCode);

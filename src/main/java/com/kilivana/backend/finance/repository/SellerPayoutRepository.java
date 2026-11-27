@@ -35,7 +35,7 @@ public interface SellerPayoutRepository extends JpaRepository<SellerPayout, Long
 
     List<SellerPayout> findByStatus(PayoutStatus status);
 
-    List<SellerPayout> findByProviderReference(String providerReference);
+    Optional<SellerPayout> findByProviderReference(String providerReference);
 
     List<SellerPayout> findByIdempotencyKey(String idempotencyKey);
 

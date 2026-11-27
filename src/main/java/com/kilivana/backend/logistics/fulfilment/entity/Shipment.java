@@ -87,6 +87,9 @@ public class Shipment {
     @Column(columnDefinition = "TEXT")
     private String cancellationReason;
 
+    /** Settlement ID linked to this shipment. */
+    private Long settlementId;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

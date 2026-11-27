@@ -22,6 +22,9 @@ public enum LedgerAccountType {
     /** Amounts owed to sellers (farmers/suppliers). */
     SELLER_PAYABLES,
 
+    /** Amounts owed to transport providers. */
+    TRANSPORT_PAYABLES,
+
     /** Amounts owed to buyers for refunds. */
     REFUND_PAYABLE,
 
