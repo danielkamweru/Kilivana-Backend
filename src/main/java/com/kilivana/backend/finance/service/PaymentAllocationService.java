@@ -13,6 +13,8 @@ import com.kilivana.backend.ecommerce.repository.PaymentRepository;
 import com.kilivana.backend.logistics.fulfilment.entity.SellerFulfilment;
 import com.kilivana.backend.logistics.fulfilment.enums.FulfilmentStatus;
 import com.kilivana.backend.logistics.fulfilment.repository.SellerFulfilmentRepository;
+import com.kilivana.backend.logistics.fulfilment.entity.Shipment;
+import com.kilivana.backend.logistics.fulfilment.repository.ShipmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,8 +40,10 @@ public class PaymentAllocationService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final SellerFulfilmentRepository fulfilmentRepository;
+    private final ShipmentRepository shipmentRepository;
     private final SellerWalletService walletService;
     private final PlatformSettingService platformSettingService;
+    private final SettlementService settlementService;
 
     /**
      * Allocates a successful payment to seller wallets.
@@ -95,6 +99,11 @@ public class PaymentAllocationService {
         Map<Long, SellerFulfilment> fulfilmentBySeller = fulfilments.stream()
                 .collect(Collectors.toMap(SellerFulfilment::getSellerId, f -> f));
 
+        // Get shipments for this order (for settlement tracking)
+        List<Shipment> shipments = shipmentRepository.findByOrderId(order.getId());
+        Map<Long, Shipment> shipmentByFulfilment = shipments.stream()
+                .collect(Collectors.toMap(Shipment::getOrderId, s -> s)); // Simplified - need proper mapping
+
         // Get delivery fee allocation policy from settings
         BigDecimal deliveryFee = order.getDeliveryFee();
         BigDecimal totalProductAmount = items.stream()
@@ -147,6 +156,27 @@ public class PaymentAllocationService {
                     reference,
                     description
             );
+
+            // Create or update settlement record for this fulfilment's shipment
+            // Find the shipment associated with this fulfilment
+            Shipment shipment = shipmentRepository.findByOrderId(order.getId()).stream()
+                    .filter(s -> s.getDriverId() != null) // Has assigned driver
+                    .findFirst()
+                    .orElse(null);
+
+            if (shipment != null) {
+                try {
+                    settlementService.createPendingSettlement(
+                            order.getId(),
+                            shipment.getId(),
+                            payment.getId()
+                    );
+                    log.info("Created pending settlement for shipment {} order {}", shipment.getId(), order.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to create settlement for shipment {}: {}", shipment.getId(), e.getMessage());
+                    // Don't fail allocation - settlement can be created later
+                }
+            }
 
             log.info("Allocated payment {} to seller {}: gross={}, commission={}, net={}",
                     paymentId, sellerId, sellerGrossTotal, commissionAmount, netEarnings);

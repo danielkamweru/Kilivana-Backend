@@ -10,6 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -47,8 +48,11 @@ public class PlatformSetting {
     @Column(name = "platform_fee_charged_to", nullable = false, length = 16)
     private String platformFeeChargedTo = "SELLER"; // SELLER, BUYER
 
-    @Column(name = "platform_fee_by_category", columnDefinition = "JSONB")
-    private Map<String, BigDecimal> platformFeeByCategory; // {"FARMER": 3.0, "SUPPLIER": 5.0}
+    @ElementCollection
+    @CollectionTable(name = "platform_fee_by_category", joinColumns = @JoinColumn(name = "platform_setting_id"))
+    @MapKeyColumn(name = "category", length = 32)
+    @Column(name = "fee_value", precision = 10, scale = 2)
+    private Map<String, BigDecimal> platformFeeByCategory = new HashMap<>(); // {"FARMER": 3.0, "SUPPLIER": 5.0}
 
     // Transport fee settings
     @Column(name = "transport_fee_type", nullable = false, length = 16)

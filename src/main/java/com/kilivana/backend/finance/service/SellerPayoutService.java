@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Service for managing seller withdrawal/payout requests.
+ * Service for managing seller/transport provider withdrawal/payout requests.
  * Handles the full lifecycle: request -> admin approval -> B2C processing -> completion.
  */
 @Slf4j
@@ -43,15 +43,18 @@ public class SellerPayoutService {
     private static final BigDecimal MAX_WITHDRAWAL_AMOUNT = new BigDecimal("70000.00"); // M-Pesa B2C limit
 
     /**
-     * Creates a new withdrawal request from a seller.
+     * Creates a new withdrawal request from a seller or transport provider.
      */
     @Transactional
     public SellerPayout requestWithdrawal(Long sellerId, FinanceDtos.SellerPayoutRequest request, Long actorId) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", sellerId));
 
-        if (seller.getRole() != UserRole.FARMER && seller.getRole() != UserRole.SUPPLIER) {
-            throw new BadRequestException("Only farmers and suppliers can request withdrawals");
+        // Support farmers, suppliers, and transport providers
+        if (seller.getRole() != UserRole.FARMER 
+                && seller.getRole() != UserRole.SUPPLIER
+                && seller.getRole() != UserRole.TRANSPORT_PROVIDER) {
+            throw new BadRequestException("Only farmers, suppliers, and transport providers can request withdrawals");
         }
 
         // Validate amount
@@ -131,12 +134,12 @@ public class SellerPayoutService {
                 "PAYOUT_REQUESTED",
                 "SellerPayout",
                 saved.getId(),
-                String.format("seller_id=%d, amount=%s, account_id=%d, reference=%s",
-                        sellerId, request.getAmount(), account.getId(), reference)
+                String.format("seller_id=%d, amount=%s, account_id=%d, reference=%s, role=%s",
+                        sellerId, request.getAmount(), account.getId(), reference, seller.getRole().name())
         );
 
-        log.info("Withdrawal request {} created for seller {}: amount={}, account={}",
-                saved.getId(), sellerId, request.getAmount(), account.getId());
+        log.info("Withdrawal request {} created for seller {} ({}): amount={}, account={}",
+                saved.getId(), sellerId, seller.getRole().name(), request.getAmount(), account.getId());
         return saved;
     }
 
@@ -283,7 +286,7 @@ public class SellerPayoutService {
     public void processB2CCallback(String providerReference, int resultCode, String resultDesc,
                                    String mpesaReceiptNumber, Long actorId) {
         SellerPayout payout = payoutRepository.findByProviderReference(providerReference)
-                .orElseThrow(() -> new ResourceNotFoundException("SellerPayout by provider reference", providerReference));
+                .orElseThrow(() -> new ResourceNotFoundException("SellerPayout with providerReference: " + providerReference));
 
         payout.setProviderReference(providerReference);
         payout.setProviderResultCode(resultCode);

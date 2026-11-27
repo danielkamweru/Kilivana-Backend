@@ -37,7 +37,11 @@ public class SettlementAllocation {
     @Column(nullable = false, updatable = false, unique = true)
     private UUID uuid;
 
-    @Column(name = "settlement_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "settlement_id", nullable = false)
+    private Settlement settlement;
+
+    @Column(name = "settlement_id", nullable = false, insertable = false, updatable = false)
     private Long settlementId;
 
     /** Type of allocation. */

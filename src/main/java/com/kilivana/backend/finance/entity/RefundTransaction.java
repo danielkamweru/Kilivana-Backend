@@ -89,6 +89,10 @@ public class RefundTransaction {
     @Column(name = "provider_result_desc", columnDefinition = "TEXT")
     private String providerResultDesc;
 
+    /** M-Pesa receipt number. */
+    @Column(name = "mpesa_receipt_number", length = 64)
+    private String mpesaReceiptNumber;
+
     /** Admin who approved the refund. */
     @Column(name = "approved_by")
     private Long approvedBy;

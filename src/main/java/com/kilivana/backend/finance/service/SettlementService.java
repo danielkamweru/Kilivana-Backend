@@ -106,6 +106,7 @@ public class SettlementService {
                 .shipmentId(shipmentId)
                 .orderId(order.getId())
                 .sellerId(sellerId)
+                .buyerId(order.getBuyerId())
                 .driverId(shipment.getDriverId())
                 .transportProviderId(transportProviderId)
                 .status(SettlementStatus.PENDING_DELIVERY)
@@ -690,6 +691,47 @@ public class SettlementService {
     @Transactional(readOnly = true)
     public List<DeliveryOtpVerification> getOtpVerificationsByDriver(Long driverId) {
         return otpVerificationRepository.findByDriverId(driverId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Settlement> getAllSettlements() {
+        return settlementRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Settlement> getSettlementsByStatus(SettlementStatus status) {
+        return settlementRepository.findByStatus(status);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Settlement> getSettlementsByDateRange(LocalDateTime from, LocalDateTime to) {
+        return settlementRepository.findByCreatedAtBetween(from, to);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Settlement> getSettlement(Long settlementId) {
+        return settlementRepository.findById(settlementId);
+    }
+
+    /**
+     * Processes settlement for a shipment after delivery confirmation.
+     * Called from OrderService.completeShipment after OTP verification.
+     */
+    @Transactional
+    public Settlement processSettlementForShipment(Long shipmentId) {
+        // Find existing settlement
+        Settlement settlement = settlementRepository.findByShipmentId(shipmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Settlement for shipment", shipmentId));
+
+        // Only process if in DELIVERY_CONFIRMED status
+        if (settlement.getStatus() != SettlementStatus.DELIVERY_CONFIRMED) {
+            log.info("Settlement {} not in DELIVERY_CONFIRMED status ({}), skipping processing",
+                    settlement.getId(), settlement.getStatus());
+            return settlement;
+        }
+
+        // Process the settlement with system user
+        return processSettlement(settlement.getId(), 1L); // System user
     }
 
     // Inner class for settlement calculation result

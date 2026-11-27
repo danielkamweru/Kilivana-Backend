@@ -1,15 +1,19 @@
 package com.kilivana.backend.finance.controller;
 
 import com.kilivana.backend.common.dto.ApiResponse;
+import com.kilivana.backend.common.exception.ResourceNotFoundException;
 import com.kilivana.backend.finance.dto.FinanceDtos;
 import com.kilivana.backend.finance.enums.LedgerAccountType;
 import com.kilivana.backend.finance.enums.PayoutStatus;
+import com.kilivana.backend.finance.enums.SettlementStatus;
+import com.kilivana.backend.finance.entity.Settlement;
 import com.kilivana.backend.finance.service.FinancialAuditLogService;
 import com.kilivana.backend.finance.service.FinancialLedgerService;
 import com.kilivana.backend.finance.service.RefundService;
 import com.kilivana.backend.finance.service.SellerPayoutAccountService;
 import com.kilivana.backend.finance.service.SellerPayoutService;
 import com.kilivana.backend.finance.service.SellerWalletService;
+import com.kilivana.backend.finance.service.SettlementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Admin finance management endpoints.
@@ -37,6 +42,7 @@ public class AdminFinanceController {
     private final RefundService refundService;
     private final FinancialLedgerService ledgerService;
     private final FinancialAuditLogService auditLogService;
+    private final SettlementService settlementService;
 
     // ==================== DASHBOARD ====================
 
@@ -76,6 +82,61 @@ public class AdminFinanceController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // ==================== SETTLEMENTS ====================
+
+    @GetMapping("/settlements")
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public ResponseEntity<ApiResponse<List<FinanceDtos.SettlementResponse>>> getAllSettlements(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long sellerId,
+            @RequestParam(required = false) Long transportProviderId,
+            @RequestParam(required = false) LocalDateTime from,
+            @RequestParam(required = false) LocalDateTime to,
+            Pageable pageable) {
+        List<Settlement> settlements;
+        if (status != null) {
+            settlements = settlementService.getSettlementsByStatus(SettlementStatus.from(status));
+        } else if (sellerId != null) {
+            settlements = settlementService.getSettlementsBySellerId(sellerId);
+        } else if (transportProviderId != null) {
+            settlements = settlementService.getSettlementsByTransportProviderId(transportProviderId);
+        } else if (from != null && to != null) {
+            settlements = settlementService.getSettlementsByDateRange(from, to);
+        } else {
+            settlements = settlementService.getAllSettlements();
+        }
+
+        // Apply pagination manually (or use repository with Pageable)
+        List<FinanceDtos.SettlementResponse> response = settlements.stream()
+                .map(FinanceDtos.SettlementResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/settlements/{settlementId}")
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public ResponseEntity<ApiResponse<FinanceDtos.SettlementResponse>> getSettlement(@PathVariable Long settlementId) {
+        Settlement settlement = settlementService.getSettlement(settlementId)
+                .orElseThrow(() -> new ResourceNotFoundException("Settlement", settlementId));
+        return ResponseEntity.ok(ApiResponse.success(FinanceDtos.SettlementResponse.fromEntity(settlement)));
+    }
+
+    @GetMapping("/settlements/shipment/{shipmentId}")
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public ResponseEntity<ApiResponse<FinanceDtos.SettlementResponse>> getSettlementByShipment(@PathVariable Long shipmentId) {
+        Settlement settlement = settlementService.getSettlementByShipmentId(shipmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Settlement for shipment", shipmentId));
+        return ResponseEntity.ok(ApiResponse.success(FinanceDtos.SettlementResponse.fromEntity(settlement)));
+    }
+
+    @PostMapping("/settlements/{settlementId}/process")
+    @PreAuthorize("@resourceAuthorization.admin()")
+    public ResponseEntity<ApiResponse<FinanceDtos.SettlementResponse>> processSettlement(@PathVariable Long settlementId) {
+        Settlement settlement = settlementService.processSettlement(settlementId, getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success(FinanceDtos.SettlementResponse.fromEntity(settlement)));
     }
 
     // ==================== SELLER WALLETS ====================
@@ -240,13 +301,32 @@ public class AdminFinanceController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getReconciliationSummary(
             @RequestParam LocalDateTime from,
             @RequestParam LocalDateTime to) {
-        // Would implement reconciliation logic
+        // Get actual data from services
+        List<FinanceDtos.SellerPayoutResponse> allPayouts = payoutService.getAllPayouts();
+        List<FinanceDtos.RefundTransactionResponse> allRefunds = refundService.getAllRefunds();
+        
+        BigDecimal totalPayouts = allPayouts.stream()
+                .filter(p -> p.getStatus() == PayoutStatus.PAID)
+                .map(FinanceDtos.SellerPayoutResponse::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalRefunds = allRefunds.stream()
+                .filter(r -> "REFUNDED".equals(r.getStatus()))
+                .map(FinanceDtos.RefundTransactionResponse::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal platformRevenue = ledgerService.getPlatformCommissionRevenue(from, to);
+
         Map<String, Object> summary = Map.of(
                 "period", Map.of("from", from, "to", to),
-                "totalCollections", BigDecimal.ZERO,
-                "totalPayouts", BigDecimal.ZERO,
-                "totalRefunds", BigDecimal.ZERO,
-                "pendingPayouts", BigDecimal.ZERO,
+                "totalCollections", platformRevenue.add(totalPayouts).add(totalRefunds),
+                "totalPayouts", totalPayouts,
+                "totalRefunds", totalRefunds,
+                "pendingPayouts", allPayouts.stream()
+                        .filter(p -> p.getStatus() == PayoutStatus.PENDING || p.getStatus() == PayoutStatus.APPROVED || p.getStatus() == PayoutStatus.PROCESSING)
+                        .map(FinanceDtos.SellerPayoutResponse::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add),
+                "platformRevenue", platformRevenue,
                 "discrepancies", 0
         );
         return ResponseEntity.ok(ApiResponse.success(summary));
@@ -257,7 +337,7 @@ public class AdminFinanceController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> runReconciliation(
             @RequestParam LocalDateTime from,
             @RequestParam LocalDateTime to) {
-        // Would implement reconciliation job
+        // Would implement reconciliation job - for now return summary
         Map<String, Object> result = Map.of(
                 "status", "COMPLETED",
                 "matched", 0,

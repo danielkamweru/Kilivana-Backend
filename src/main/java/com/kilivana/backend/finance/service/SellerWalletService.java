@@ -80,7 +80,7 @@ public class SellerWalletService {
                 .build();
 
         SellerWallet saved = walletRepository.save(wallet);
-        log.info("Created wallet {} for seller {} ({})", saved.getId(), sellerId, seller.getRole().wire());
+        log.info("Created wallet {} for seller {} ({})", saved.getId(), sellerId, seller.getRole().name());
         return saved;
     }
 

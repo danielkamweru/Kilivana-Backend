@@ -11,6 +11,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -53,6 +54,10 @@ public class Settlement {
     /** The seller (farmer/supplier) for this settlement. */
     @Column(name = "seller_id")
     private Long sellerId;
+
+    /** The buyer for this settlement. */
+    @Column(name = "buyer_id")
+    private Long buyerId;
 
     /** The driver assigned to the shipment. */
     @Column(name = "driver_id")
@@ -162,6 +167,14 @@ public class Settlement {
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
 
+    /** When settlement failed. */
+    @Column(name = "failed_at")
+    private LocalDateTime failedAt;
+
+    /** Settlement description/notes. */
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     // ==================== REFERENCES ====================
 
     /** The payment that funded this settlement. */
@@ -182,6 +195,15 @@ public class Settlement {
     @Column(name = "created_by")
     private Long createdBy;
 
+    /** Failure reason if settlement failed. */
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
+    /** Number of retry attempts for settlement processing. */
+    @Column(name = "retry_count", nullable = false)
+    @Builder.Default
+    private Integer retryCount = 0;
+
     @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -189,6 +211,11 @@ public class Settlement {
     @Column(nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /** Allocation breakdown for this settlement. */
+    @OneToMany(mappedBy = "settlement", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<SettlementAllocation> allocations = new java.util.ArrayList<>();
 
     @PrePersist
     public void prePersist() {
@@ -204,6 +231,36 @@ public class Settlement {
 
     public BigDecimal getTotalPayable() {
         return sellerNetEarnings.add(transportProviderPayable).add(platformRevenue);
+    }
+
+    /** Gross amount (product subtotal + transport fee + inspection fee). */
+    public BigDecimal getGrossAmount() {
+        return productSubtotal.add(transportFee).add(inspectionFee);
+    }
+
+    /** Commission amount (same as platform fee). */
+    public BigDecimal getCommissionAmount() {
+        return platformFee;
+    }
+
+    /** Transport fee amount. */
+    public BigDecimal getTransportFeeAmount() {
+        return transportFee;
+    }
+
+    /** Inspection fee amount. */
+    public BigDecimal getInspectionFeeAmount() {
+        return inspectionFee;
+    }
+
+    /** Total amount paid by buyer. */
+    public BigDecimal getBuyerPaidAmount() {
+        return totalCollected;
+    }
+
+    /** Settlement date (uses creation timestamp). */
+    public LocalDateTime getSettlementDate() {
+        return createdAt;
     }
 
     public boolean isTerminal() {

@@ -52,11 +52,15 @@ import com.kilivana.backend.logistics.fulfilment.entity.ShipmentItem;
 import com.kilivana.backend.logistics.fulfilment.enums.ShipmentStatus;
 import com.kilivana.backend.logistics.entity.LogisticsJob;
 import com.kilivana.backend.logistics.repository.LogisticsJobRepository;
+import com.kilivana.backend.finance.service.SettlementService;
+import com.kilivana.backend.farm.entity.Farm;
+import com.kilivana.backend.farm.repository.FarmRepository;
 import com.kilivana.backend.logistics.fulfilment.service.SellerFulfilmentService;
 import com.kilivana.backend.logistics.fulfilment.service.ShipmentService;
 import com.kilivana.backend.logistics.service.LogisticsService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -87,7 +91,6 @@ import java.util.Set;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -112,6 +115,56 @@ public class OrderService {
     private final LogisticsJobRepository logisticsJobRepository;
     private final FarmRepository farmRepository;
     private final SupplierWarehouseRepository supplierWarehouseRepository;
+
+    @Autowired(required = false)
+    @Lazy
+    private SettlementService settlementService;
+
+    public OrderService(OrderRepository orderRepository,
+                        OrderItemRepository orderItemRepository,
+                        OrderEventRepository orderEventRepository,
+                        PaymentRepository paymentRepository,
+                        ProductRepository productRepository,
+                        UserRepository userRepository,
+                        AddressRepository addressRepository,
+                        PickupStationRepository pickupStationRepository,
+                        CartRepository cartRepository,
+                        CartItemRepository cartItemRepository,
+                        CheckoutQuoteRepository checkoutQuoteRepository,
+                        FarmerProfileRepository farmerProfileRepository,
+                        SupplierProfileRepository supplierProfileRepository,
+                        DriverProfileRepository driverProfileRepository,
+                        LogisticsService logisticsService,
+                        SellerFulfilmentService sellerFulfilmentService,
+                        ShipmentService shipmentService,
+                        ShipmentRepository shipmentRepository,
+                        ShipmentItemRepository shipmentItemRepository,
+                        LogisticsJobRepository logisticsJobRepository,
+                        FarmRepository farmRepository,
+                        SupplierWarehouseRepository supplierWarehouseRepository) {
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.orderEventRepository = orderEventRepository;
+        this.paymentRepository = paymentRepository;
+        this.productRepository = productRepository;
+        this.userRepository = userRepository;
+        this.addressRepository = addressRepository;
+        this.pickupStationRepository = pickupStationRepository;
+        this.cartRepository = cartRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.checkoutQuoteRepository = checkoutQuoteRepository;
+        this.farmerProfileRepository = farmerProfileRepository;
+        this.supplierProfileRepository = supplierProfileRepository;
+        this.driverProfileRepository = driverProfileRepository;
+        this.logisticsService = logisticsService;
+        this.sellerFulfilmentService = sellerFulfilmentService;
+        this.shipmentService = shipmentService;
+        this.shipmentRepository = shipmentRepository;
+        this.shipmentItemRepository = shipmentItemRepository;
+        this.logisticsJobRepository = logisticsJobRepository;
+        this.farmRepository = farmRepository;
+        this.supplierWarehouseRepository = supplierWarehouseRepository;
+    }
 
     @PreAuthorize("@resourceAuthorization.order(#id) || @resourceAuthorization.orderSeller(#id)")
     public Order getOrderById(Long id) {
@@ -1028,6 +1081,17 @@ public class OrderService {
 
         // Record sales for this shipment's items (idempotent via salesRecorded flag)
         recordSalesForShipment(shipmentId);
+
+        // Trigger financial settlement for this shipment if not already processed
+        if (settlementService != null) {
+            try {
+                settlementService.processSettlementForShipment(shipmentId);
+                log.info("Settlement processed for shipment {}", shipmentId);
+            } catch (Exception e) {
+                log.warn("Failed to process settlement for shipment {}: {}", shipmentId, e.getMessage());
+                // Don't fail the shipment completion - settlement can be retried
+            }
+        }
 
         // Check if all shipments for this order are delivered
         List<Shipment> orderShipments = shipmentRepository.findByOrderId(shipment.getOrderId());

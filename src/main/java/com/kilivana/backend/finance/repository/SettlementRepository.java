@@ -55,6 +55,9 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     @Query("SELECT s FROM Settlement s WHERE s.status = :status AND s.paymentConfirmedAt IS NOT NULL AND s.deliveryConfirmedAt IS NULL")
     List<Settlement> findPendingDelivery(@Param("status") SettlementStatus status);
 
+    // Date range query
+    List<Settlement> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+
     // Pessimistic locking for settlement processing
     @Query(value = "SELECT * FROM settlements WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Settlement> findByIdForUpdate(@Param("id") Long id);
