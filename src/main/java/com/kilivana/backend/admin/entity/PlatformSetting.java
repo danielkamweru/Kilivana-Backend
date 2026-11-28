@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -39,12 +40,15 @@ public class PlatformSetting {
     private Integer payoutDelayDays;
 
     // Platform fee settings
+    @ColumnDefault("'PERCENTAGE'")
     @Column(name = "platform_fee_type", nullable = false, length = 16)
     private String platformFeeType = "PERCENTAGE"; // PERCENTAGE, FIXED
 
+    @ColumnDefault("3.00")
     @Column(name = "platform_fee_value", nullable = false, precision = 10, scale = 2)
     private BigDecimal platformFeeValue = new BigDecimal("3.00");
 
+    @ColumnDefault("'SELLER'")
     @Column(name = "platform_fee_charged_to", nullable = false, length = 16)
     private String platformFeeChargedTo = "SELLER"; // SELLER, BUYER
 
@@ -55,9 +59,11 @@ public class PlatformSetting {
     private Map<String, BigDecimal> platformFeeByCategory = new HashMap<>(); // {"FARMER": 3.0, "SUPPLIER": 5.0}
 
     // Transport fee settings
+    @ColumnDefault("'FIXED'")
     @Column(name = "transport_fee_type", nullable = false, length = 16)
     private String transportFeeType = "FIXED"; // FIXED, PER_KM
 
+    @ColumnDefault("100.00")
     @Column(name = "transport_fee_default", nullable = false, precision = 10, scale = 2)
     private BigDecimal transportFeeDefault = new BigDecimal("100.00");
 
@@ -70,28 +76,36 @@ public class PlatformSetting {
     @Column(name = "transport_fee_max", precision = 10, scale = 2)
     private BigDecimal transportFeeMax;
 
+    @ColumnDefault("true")
     @Column(name = "transport_fee_paid_to_provider", nullable = false)
     private Boolean transportFeePaidToProvider = true;
 
+    @ColumnDefault("true")
     @Column(name = "transport_fee_per_shipment", nullable = false)
     private Boolean transportFeePerShipment = true;
 
     // Payout settings
+    @ColumnDefault("100.00")
     @Column(name = "min_withdrawal_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal minWithdrawalAmount = new BigDecimal("100.00");
 
+    @ColumnDefault("70000.00")
     @Column(name = "max_withdrawal_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal maxWithdrawalAmount = new BigDecimal("70000.00");
 
+    @ColumnDefault("true")
     @Column(name = "withdrawal_approval_required", nullable = false)
     private Boolean withdrawalApprovalRequired = true;
 
+    @ColumnDefault("false")
     @Column(name = "auto_payout_enabled", nullable = false)
     private Boolean autoPayoutEnabled = false;
 
+    @ColumnDefault("'MPESA_B2C'")
     @Column(name = "supported_payout_methods", nullable = false, length = 255)
     private String supportedPayoutMethods = "MPESA_B2C";
 
+    @ColumnDefault("3")
     @Column(name = "payout_retry_limit", nullable = false)
     private Integer payoutRetryLimit = 3;
 
